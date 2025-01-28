@@ -105,9 +105,9 @@ or
 
 **nginx.conf configuration**
 
-http like this: [nginx_http.conf](./vue-project/nginx_http.conf), you may need modify some path according to your directory. 
+http like this: [nginx_http.conf](./nginx_http.conf), you may need modify some path according to your directory. 
 
-https with ssl_certificate like this: [nginx_https.conf], you may need modify some path according to your directory. 
+https with ssl_certificate like this: [nginx_https.conf](./nginx_https.conf), you may need modify some path according to your directory. 
 
 ### 3.3 start or restart
 start: `nginx -c /etc/nginx/conf/nginx.conf`
