@@ -152,13 +152,13 @@ def ontime_apscheduler():
     trigger_combine_audio_video = CronTrigger(hour=9, timezone='Asia/Chongqing')
     # trigger_combine_audio_video = IntervalTrigger(seconds=3)
     scheduler = BackgroundScheduler()
-    scheduler.add_job(
-        write_password,
-        trigger_write_password,
-        id="write_password",
-        max_instances=1,
-        replace_existing=True,
-    )
+    # scheduler.add_job(
+    #     write_password,
+    #     trigger_write_password,
+    #     id="write_password",
+    #     max_instances=1,
+    #     replace_existing=True,
+    # )
     scheduler.add_job(
         getbingimg,
         trigger_getbingimg,
@@ -166,13 +166,13 @@ def ontime_apscheduler():
         max_instances=1,
         replace_existing=True,
     )
-    scheduler.add_job(
-        combine_audio_video,
-        trigger_combine_audio_video,
-        id="combine_audio_video",
-        max_instances=1,
-        replace_existing=True,
-    )
+    # scheduler.add_job(
+    #     combine_audio_video,
+    #     trigger_combine_audio_video,
+    #     id="combine_audio_video",
+    #     max_instances=1,
+    #     replace_existing=True,
+    # )
     scheduler.start()
 
 def main():
