@@ -48,9 +48,9 @@
 ### 1.four git clone
 >cd /Users/zoujiu/Desktop
 
->`git clone TODOSO`
+>`git clone https://github.com/ZouJiu1/Personal_website_for_idea_blog_article.git`
 
->cp -rf TODOSO ./vue-project
+>cp -rf Personal_website_for_idea_blog_article/*  ./vue-project
 
 now, you have some directorys like these:
 
@@ -70,7 +70,9 @@ now, you have some directorys like these:
 > cd /Users/zoujiu/Desktop/vue-project
 
 >python3 -m venv ./venv
+
 >source ./venv/bin/activate
+
 >python3 -m pip install -r ./mysite/requirements.txt
 
 
@@ -83,6 +85,7 @@ now, you have some directorys like these:
 >source ./venv/bin/activate
 
 >cd mysite
+
 python3 manage.py runserver localhost:7009
 
 ## 3. release
@@ -118,6 +121,7 @@ after building src with `npm run build`、launching **django** and launching **n
 ## 4. administer
 ### 4.1 administer account and password
 >account: **homepage@gmail.com**
+
 >password: **01ab!+**
 
 ### 4.2 change administer password
@@ -146,13 +150,13 @@ will get genpassword file, which content is:
 ```
 
 ```text []
-edit file "vue-project/article/member.txt", change the password from **01ab!+** to **06hj@#**
+edit file "vue-project/article/member.txt", change the password from 01ab!+ to 06hj@#
 
-**modify**
+modify
 
 83e6936fb8d502de61ebab5f4b7babf007eacff9324cf59bcc03c1012510000b<》!=$)(=$@homepage@gmail.com<》!=$)(=$@邹九<》!=$)(=$@1000000
 
-**to**
+to
 
 34629c7dd225e65c1ba6e884ffde42edf6d253fd0df4eb6dd4c897959d89aeb1<》!=$)(=$@homepage@gmail.com<》!=$)(=$@邹九<》!=$)(=$@1000000
 ```
