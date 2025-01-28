@@ -1,6 +1,10 @@
 # the website of myself using below open source projects
 [http://zoujiu.com.cn](http://zoujiu.com.cn)
 
+support idea post, reading book post, personal introduction with images, traveler post and video upload
+
+support markdown article, including Math Latex, table, list and so on.
+
 ## 1. environment
 `element-plus + django + vue3`
 
