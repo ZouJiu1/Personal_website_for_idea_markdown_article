@@ -1,4 +1,4 @@
-# the website of myself using below technology
+# the website of myself using below open source projects
 [http://zoujiu.com.cn](http://zoujiu.com.cn)
 
 ## 1. environment
