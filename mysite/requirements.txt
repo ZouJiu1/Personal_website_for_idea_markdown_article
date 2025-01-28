@@ -1,0 +1,8 @@
+numpy
+django
+markdown2
+django-cors-headers
+apscheduler
+beautifulsoup4==4.12.2
+requests
+pillow
