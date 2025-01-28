@@ -9,7 +9,9 @@
 >**Ubuntu**: `sudo apt-get install nodejs npm -y`
 
 >**Macos**: `brew install node@22`
+
 [https://nodejs.org/zh-cn/download](https://nodejs.org/zh-cn/download)
+
 [install brew help---https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/](https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/)
 
 
