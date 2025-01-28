@@ -6,8 +6,6 @@
 
 ### 1.1 npm + nodejs
 
->**Ubuntu**: `sudo apt-get install nodejs npm -y`
-
 >**Macos**: `brew install node@22`
 
 [https://nodejs.org/zh-cn/download](https://nodejs.org/zh-cn/download)
