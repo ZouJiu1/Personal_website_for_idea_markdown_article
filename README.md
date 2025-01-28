@@ -23,26 +23,32 @@
 >cd /Users/zoujiu/Desktop
 
 >npm create vue@latest
+
 ---all default, don't change anything
 [https://cn.vuejs.org/guide/quick-start](https://cn.vuejs.org/guide/quick-start)
 
 >cd /Users/zoujiu/Desktop/vue-project
 
 >npm install element-plus --save
+
 [https://element-plus.org/zh-CN/guide/installation.html](https://element-plus.org/zh-CN/guide/installation.html)
 
 >npm install axios --save
 
 >npm install hls.js --save
+
 [https://github.com/video-dev/hls.js](https://github.com/video-dev/hls.js)
 
 >npm install js-cookie --save
+
 [https://github.com/js-cookie/js-cookie](https://github.com/js-cookie/js-cookie)
 
 >npm install katex --save
+
 [https://katex.org/docs/node](https://katex.org/docs/node)
 
 >npm install vue-router@4 --save
+
 [https://router.vuejs.org/zh/installation.html](https://router.vuejs.org/zh/installation.html)
 
 ### 1.four git clone
