@@ -53,7 +53,7 @@ support markdown article, including Math Latex, table, list and so on.
 ### 1.four git clone
 >cd /Users/zoujiu/Desktop
 
->`git clone https://github.com/ZouJiu1/Personal_website_for_idea_blog_article.git`
+>`git clone https://github.com/ZouJiu1/Personal_website_for_idea_markdown_article.git`
 
 >cp -rf Personal_website_for_idea_blog_article/*  ./vue-project
 
