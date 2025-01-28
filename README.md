@@ -12,17 +12,14 @@
 
 [install brew help---https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/](https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/)
 
-
 ### 1.2 set mirror
 >`npm config set registry https://registry.npmmirror.com`
-
 
 ### 1.3 download packages
 >cd /Users/zoujiu/Desktop
 
 >npm create vue@latest
-
----all default, don't change anything
+------all default, don't change anything
 [https://cn.vuejs.org/guide/quick-start](https://cn.vuejs.org/guide/quick-start)
 
 >cd /Users/zoujiu/Desktop/vue-project
