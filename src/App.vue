@@ -1262,9 +1262,12 @@ export default {
         if(img && gu.urlmail != 'homepage') { 
           img.hidden = true;
         }
-        if(gu.ret==2 && gu.mail!=gu.urlmail) {
+        // console.log(gu);
+        if(gu.ret > 0 && gu.mail!=gu.urlmail) {
+          // console.log(222222, gu);
           this.returnback = false;
           this.loginbutton = true;
+          this.logoutbutton = true;
           this.registerbutton = true;
         }
         if(
@@ -1293,6 +1296,9 @@ export default {
         ) {
           // this.$router.push({ path: '/zj'});
           // this.$router.push({ path: '/homepage'});
+          location.replace("/homepage");
+        }
+        else {
           location.replace("/homepage");
         }
       }
