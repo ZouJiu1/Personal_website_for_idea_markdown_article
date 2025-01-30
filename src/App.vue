@@ -1263,7 +1263,7 @@ export default {
           img.hidden = true;
         }
         // console.log(gu);
-        if(gu.ret > 0 && gu.mail!=gu.urlmail) {
+        if(gu.ret > 0 && gu.mail && gu.mail!=gu.urlmail) {
           // console.log(222222, gu);
           this.returnback = false;
           this.loginbutton = true;
