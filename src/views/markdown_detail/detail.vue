@@ -76,7 +76,7 @@
       确认放在最上面
     </el-button>
   </el-dialog>
-  <el-affix :offset="130">
+  <el-affix :offset="130"  style="height:0px;">
       <!-- <el-button type="primary">👍赞</el-button> -->
     <div class="zanzan" @click="upvoteclick" v-if="resultresult.click" 
       style="background-color:rgb(159.5, 206.5, 255);font-weight:600;
@@ -763,13 +763,15 @@ export default {
 }
 
 .detailarticle {
-  margin-left:10%; 
+  margin-top:3px;
+  margin-left:10%;
   margin-right:10%;
   background-color:#ffffff;
   padding-left:60px;
   padding-right: 60px;
   padding-top: 30px;
   padding-bottom: 30px;
+  margin-bottom: 3%;
 }
 :deep(h1) {
   display: block;
