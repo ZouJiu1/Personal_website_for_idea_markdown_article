@@ -241,6 +241,9 @@ export default {
           'click':this.resultresult['clickshoucang'], 'path':this.resultresult['path'], 'title':this.resultresult['title'],
         },
       }).then((response) => {
+        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        Cookies.remove("csdnReset");
+        Cookies.set("csdnReset", 1, { expires: expiresdate });
         // this.resetSearch();
         // alert(response);
         // console.log(response.data);
@@ -283,6 +286,9 @@ export default {
         let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
         Cookies.remove("csdndetail_reload");
         Cookies.set("csdndetail_reload", 1, { expires: expiresdate });
+
+        Cookies.remove("csdnReset");
+        Cookies.set("csdnReset", 1, { expires: expiresdate });
         // for(let i = 0; i < this.result.length; i++) {
         //   if(this.result[i]['path']==this.dire_path) {
         //     this.commentsigle = this.result[i]['comment'];
@@ -331,7 +337,7 @@ export default {
         ElMessage.error("没有登陆不能操作！");
         return
       }
-      let k1 = 0;
+      // let k1 = 0;
       // console.log(event, this.dire_path, first, k0, k1, path ,clicka);
       // console.log(this.kdianzanlength);
       if(this.resultresult['click']) {
@@ -367,7 +373,9 @@ export default {
         // console.log(response.statusText);
         // console.log(response.headers);
         // console.log(response.config);
-
+        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        Cookies.remove("csdnReset");
+        Cookies.set("csdnReset", 1, { expires: expiresdate });
       });
     },
     async handleTop() {

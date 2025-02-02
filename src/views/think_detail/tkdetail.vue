@@ -248,6 +248,9 @@ export default {
           'click':this.resultresult['clickshoucang'], 'path':this.resultresult['path'], 'title':this.resultresult['title'],
         },
       }).then((response) => {
+        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        Cookies.remove("thinkReset");
+        Cookies.set("thinkReset", 1, { expires: expiresdate });
         // this.resetSearch();
         // alert(response);
         // console.log(response.data);
@@ -290,6 +293,9 @@ export default {
         let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
         Cookies.remove("thinkdetail_reload");
         Cookies.set("thinkdetail_reload", 1, { expires: expiresdate });
+
+        Cookies.remove("thinkReset");
+        Cookies.set("thinkReset", 1, { expires: expiresdate });
         // for(let i = 0; i < this.result.length; i++) {
         //   if(this.result[i]['path']==this.dire_path) {
         //     this.commentsigle = this.result[i]['comment'];
@@ -374,7 +380,9 @@ export default {
         // console.log(response.statusText);
         // console.log(response.headers);
         // console.log(response.config);
-
+        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        Cookies.remove("thinkReset");
+        Cookies.set("thinkReset", 1, { expires: expiresdate });
       });
     },
     async handleTop() {
