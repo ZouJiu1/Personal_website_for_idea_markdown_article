@@ -1221,6 +1221,24 @@ export default {
         let lr = document.getElementById("linkicon");
         lr.href = '/article/logo.png';
       }
+      let premail = undefined;
+      premail = Cookies.get("premail");
+      if(gu && gu.urlmail) {
+        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        if(gu.urlmail!=premail) {
+          Cookies.remove("csdnReset");
+          Cookies.set("csdnReset", 1, { expires: expiresdate });
+          Cookies.remove("thinkReset");
+          Cookies.set("thinkReset", 1, { expires: expiresdate });
+          Cookies.remove("travelReset");
+          Cookies.set("travelReset", 1, { expires: expiresdate });
+          Cookies.remove("videoReset");
+          Cookies.set("videoReset", 1, { expires: expiresdate });
+          Cookies.remove("zhihuReset");
+          Cookies.set("zhihuReset", 1, { expires: expiresdate });
+        }
+        Cookies.set("premail", gu.urlmail, { expires: expiresdate });
+      }
       if(gu && gu.ret > 0) {
         this.nicknamestart = gu.username;
         let username = gu.username;
