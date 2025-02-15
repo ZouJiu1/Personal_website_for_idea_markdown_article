@@ -732,13 +732,15 @@ def postArticle(request):
                     replace("*","_").replace("|", "_").replace("？", "_问号_").replace("！", "_感叹号_").\
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
-                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_")
+                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
+                    replace("\"", "")
     old_title = old_title.replace(":", "_").replace("?", "_问号_"). \
                     replace("/","_").replace("\\","_").replace("\"", "_").\
                     replace("*","_").replace("|", "_").replace("？", "_问号_").replace("！", "_感叹号_").\
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
-                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_")
+                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
+                    replace("\"", "")
     if '_' in title:
         title = title.replace("_", "-")
     if os.path.exists(filepath) and old_title != title:
@@ -788,6 +790,10 @@ def postArticle(request):
         #     markdown = f"# {title}\n\n" + markdown 
         if len(markdown)==0:
             markdown = "# no content\n\n# no content\n\n# no content\n\n"
+        try:
+            nextline_index = markdown.index("\n")
+        except:
+            markdown = "-----------------------------\n\n" + markdown
         with open(savefile, 'w') as obj:
             obj.write(markdown)
         create = os.path.join(savepath, 'create.txt')
@@ -1043,13 +1049,15 @@ def uploadImg(request):
                     replace("*","_").replace("|", "_").replace("？", "_问号_").replace("！", "_感叹号_").\
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
-                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_")
+                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
+                    replace("\"", "")
     old_title = old_title.replace(":", "_").replace("?", "_问号_"). \
                     replace("/","_").replace("\\","_").replace("\"", "_").\
                     replace("*","_").replace("|", "_").replace("？", "_问号_").replace("！", "_感叹号_").\
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
-                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_")
+                    replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
+                    replace("\"", "")
     # assert 1==0, (old_title, title)
     if os.path.exists(mdpath) and old_title != title:
         new_Title = True
