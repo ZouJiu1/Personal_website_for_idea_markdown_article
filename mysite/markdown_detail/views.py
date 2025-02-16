@@ -739,7 +739,8 @@ def addSpan(precode):
     if not type:
         return precode[ind:]
     ft = firstline.replace("[]","")
-    ft = ft[0].upper() + ft[1:].lower()
+    if len(ft)!=0:
+        ft = ft[0].upper() + ft[1:].lower()
     precode = '<div style="background-color: #ffffff;"><span style="font-size: 26px;color:#000000;font-weight:600;">%s</span></div>'%ft + precode[ind:]
     dic0 = []
     # dic = []
