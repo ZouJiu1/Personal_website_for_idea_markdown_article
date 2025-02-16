@@ -733,14 +733,14 @@ def postArticle(request):
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
                     replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
-                    replace("\"", "")
+                    replace("\"", "").replace("`", "")
     old_title = old_title.replace(":", "_").replace("?", "_问号_"). \
                     replace("/","_").replace("\\","_").replace("\"", "_").\
                     replace("*","_").replace("|", "_").replace("？", "_问号_").replace("！", "_感叹号_").\
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
                     replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
-                    replace("\"", "")
+                    replace("\"", "").replace("`", "")
     if '_' in title:
         title = title.replace("_", "-")
     if os.path.exists(filepath) and old_title != title:
@@ -1050,14 +1050,14 @@ def uploadImg(request):
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
                     replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
-                    replace("\"", "")
+                    replace("\"", "").replace("`", "")
     old_title = old_title.replace(":", "_").replace("?", "_问号_"). \
                     replace("/","_").replace("\\","_").replace("\"", "_").\
                     replace("*","_").replace("|", "_").replace("？", "_问号_").replace("！", "_感叹号_").\
                     replace("<", "小于").replace(">", "大于").replace("(", "").\
                     replace(")", "").replace(",", "_逗号_").replace("，", "_逗号_").replace("   ", "_空格_").\
                     replace("  ", "_空格_").replace(" ", "_空格_").replace("：", "_冒号_").replace("\'", "").\
-                    replace("\"", "")
+                    replace("\"", "").replace("`", "")
     # assert 1==0, (old_title, title)
     if os.path.exists(mdpath) and old_title != title:
         new_Title = True
