@@ -376,7 +376,7 @@ def delete(request):
     # req = request.GET.dict()
     req = json.loads(request.body)
     currentpage = req["path"]
-
+    #print(currentpage)
     rz = renzheng(request)
     rzret = json.loads(rz.content)
     passed = False
@@ -409,10 +409,12 @@ def delete(request):
         if currentpage not in allmutex.keys():
                 allmutex[currentpage] = Semaphore(value=1)
         allmutex[currentpage].acquire()
-        shutil.rmtree(currentpage)
+        #print(currentpage)
+        shutil.rmtree(str(currentpage))
         allmutex[currentpage].release()
         return JsonResponse( { "done" : currentpage, 'ret': True} , safe = False)
-    except:
+    except Exception as e:
+        print(2222222, e)
         return JsonResponse( { "done" : currentpage, 'ret':0 } , safe = False)
 
 def post_think(request):

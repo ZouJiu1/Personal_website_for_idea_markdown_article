@@ -238,11 +238,12 @@ def mailsend(mail, modify=False, notify_guanliyuan=None):
     # smtplib.SMTP()
     smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
     # smpt.connect("smtp.qq.com", port=465)
-    smpt.login(user="1069679911@qq.com", password='qqaymrpfctvlbcif')
+    smpt.login(user="1069679911@qq.com", password='zzzzzzzzzzzzz')
     # smpt.sendmail()
     try:
         smpt.send_message(msg)
-    except:
+    except Exception as e:
+        print("register error ", e)
         return '------'
     # smpt.close()
     smpt.quit()
@@ -917,18 +918,24 @@ def notify_administer(dir, truemail, mail, urlmail, own=True, action='delete'):
                 for i in dir:
                     if i[-1]==os.sep:
                         i = i[:-1]
-                    os.system(f"cp -rf {i} {urlmaildir}")
+                    os.system(f"sudo cp -rf \"{i}\" \"{urlmaildir}\"")
                 dir = '\n'.join(dir)
             else:
                 if dir[-1]==os.sep:
                     dir = dir[:-1]
-                os.system(f"cp -rf {dir} {urlmaildir}")
-            mailsend('1069679911@qq.com', modify=False, \
+                os.system(f"sudo cp -rf \"{dir}\" \"{urlmaildir}\"")
+            #print(99999999999)
+            try:
+                mailsend('1069679911@qq.com', modify=False, \
                      notify_guanliyuan=['---delete', \
                      f'{mail} delete {urlmail}\n\ncontent: \n{dir}\n\nnowdir: \n{urlmaildir}'])
-            mailsend(truemail, modify=False, \
+            #print(999000009999)
+                mailsend(truemail, modify=False, \
                      notify_guanliyuan=['---delete', \
                      f'delete {urlmail}\n\ncontent: \n{dir}\n\n can not be recovered'])
+            except Exception as e:
+                print("delete notify error: ", e)
+                pass
 
 def delete_directory(request):
     global allfile
