@@ -1,9 +1,9 @@
 <template>
   <div id='everyday'>
-    <span class="spandesk" id='spandesk'>
+    <!-- <span class="spandesk" id='spandesk'>
       </span>
-    <br>
-    <el-image 
+    <br> -->
+    <!-- <el-image 
       style="width:100%;height:100%"
       src="/article/everydayimg.png"
       :zoom-rate="1.0"
@@ -15,8 +15,8 @@
       <template #placeholder>
         <div class="image-slot">Loading<span class="dot">...</span></div>
       </template>
-    </el-image>
-    <a href="https://cn.bing.com" style='margin-bottom: 3px;color:#ffffff;'>Source From: Microsoft bing web search engine</a>
+    </el-image> -->
+    <a href="https://dailybing.com" style='margin-top: 30px;color:#ffffff; font-size: 60px; color:blue;' target="_blank">Source From: Microsoft bing web search engine https://dailybing.com</a>
   </div>
 </template>
 
@@ -45,7 +45,7 @@ export default {
     },
     async getdata() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/commonuse/getbingimg',
+        baseURL: 'https://zoujiu.com.cn/commonuse/getbingimg',
         timeout: 20000,
       });
       

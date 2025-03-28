@@ -82,43 +82,49 @@ def combine_audio_video():
         os.remove(i)
 
 def getbingimg():
-    path = os.path.abspath(__file__ + "/../../")
-    path = os.path.join(path, 'article')
-    ret = requests.get(r'https://cn.bing.com', headers= \
-                       {"User-Agent": 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0', \
-                        "Sec-Ch-Ua-Platform":"macOS"})
-    con = ret.content
-    parser = fbsp(con, "html.parser")
-    meta = parser.find_all("meta")
-    description = ""
-    for i in meta:
-        if 'property' in i.attrs.keys():
-            property = i.attrs['property']
-            if 'description' in property:
-                description = i.attrs['content']
-                with open(os.path.join(path, "everydayimg.txt"), 'w', encoding='utf-8') as obj:
-                    obj.write(description + '\n')
-                break
+    # path = os.path.abspath(__file__ + "/../../")
+    # path = os.path.join(path, 'article')
+    # ret = requests.get(r'https://www.bing.com/?mkt=zh-CN', headers= \
+    #                    {"User-Agent": 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0', \
+    #                     "Sec-Ch-Ua-Platform":"macOS"})
+    # con = ret.content
+    # parser = fbsp(con, "html.parser")
+    # meta = parser.find_all("meta")
+    # description = ""
+    # for i in meta:
+    #     if 'property' in i.attrs.keys():
+    #         property = i.attrs['property']
+    #         if 'description' in property:
+    #             description = i.attrs['content']
+    #             with open(os.path.join(path, "everydayimg.txt"), 'w', encoding='utf-8') as obj:
+    #                 obj.write(description + '\n')
+    #             break
 
-    findall = parser.find_all("div")
-    for i in findall:
-        if 'class' in i.attrs.keys():
-            lan = i.attrs['class']
-            if 'hp_top_cover' in lan:
-                style = i.attrs['style']
-                imglink = regular.findall(r'url\(\"(.*)\"\)', style)
-                try:
-                    response = requests.get(imglink[0], timeout=30)
-                except:
-                    try:
-                        response = requests.get(imglink[0], timeout=30)
-                    except:
-                        break
-                if response.status_code==200:
-                    savepath = os.path.join(path, "everydayimg.png")
-                    with open(savepath, 'wb') as obj:
-                        obj.write(response.content)
-                return 
+    # parser = fbsp(con, "lxml")
+
+    # findall = parser.find_all("div")
+    # # i = parser.find("div", {"id":"hp_top_cover"})
+    # for i in findall:
+    # # if True:
+    #     if 'class' in i.attrs.keys():
+    #         if 'id' not in i.attrs.keys():
+    #             continue
+    #         lan = i.attrs['id']
+    #         if 'img_cont' in lan:
+    #             style = i.attrs['style']
+    #             imglink = regular.findall(r'url\(\"(.*)\"\)', style)
+    #             try:
+    #                 response = requests.get(imglink[0], timeout=30)
+    #             except:
+    #                 try:
+    #                     response = requests.get(imglink[0], timeout=30)
+    #                 except:
+    #                     break
+    #             if response.status_code==200:
+    #                 savepath = os.path.join(path, "everydayimg.png")
+    #                 with open(savepath, 'wb') as obj:
+    #                     obj.write(response.content)
+    #             return 
     return 
 
 def getdate():
@@ -152,27 +158,27 @@ def ontime_apscheduler():
     trigger_combine_audio_video = CronTrigger(hour=9, timezone='Asia/Chongqing')
     # trigger_combine_audio_video = IntervalTrigger(seconds=3)
     scheduler = BackgroundScheduler()
-    # scheduler.add_job(
-    #     write_password,
-    #     trigger_write_password,
-    #     id="write_password",
-    #     max_instances=1,
-    #     replace_existing=True,
-    # )
     scheduler.add_job(
-        getbingimg,
-        trigger_getbingimg,
-        id="getbingimg",
+        write_password,
+        trigger_write_password,
+        id="write_password",
         max_instances=1,
         replace_existing=True,
     )
     # scheduler.add_job(
-    #     combine_audio_video,
-    #     trigger_combine_audio_video,
-    #     id="combine_audio_video",
+    #     getbingimg,
+    #     trigger_getbingimg,
+    #     id="getbingimg",
     #     max_instances=1,
     #     replace_existing=True,
     # )
+    scheduler.add_job(
+        combine_audio_video,
+        trigger_combine_audio_video,
+        id="combine_audio_video",
+        max_instances=1,
+        replace_existing=True,
+    )
     scheduler.start()
 
 def main():
