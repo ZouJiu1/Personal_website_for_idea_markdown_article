@@ -1291,10 +1291,10 @@ export default {
         if(
           document.URL==("http://zoujiu.com.cn/" + gu.urlmail + "#/") || document.URL==("http://zoujiu.com.cn/#/" + gu.urlmail + "#/")
           || document.URL==("http://localhost/" + gu.urlmail + "#/") || document.URL==("http://localhost/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:9000/" + gu.urlmail + "#/") || document.URL==("http://localhost:7009/" + gu.urlmail + "#/")
+          || document.URL==("http://localhost:9000/" + gu.urlmail + "#/") || document.URL==("https://zoujiu.com.cn/" + gu.urlmail + "#/")
           || document.URL==("http://localhost:9000/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:7009/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:7009/" + gu.urlmail + "#/") || document.URL==("http://localhost:7009/#/" + gu.urlmail + "#/")
+          || document.URL==("https://zoujiu.com.cn/#/" + gu.urlmail + "#/")
+          || document.URL==("https://zoujiu.com.cn/" + gu.urlmail + "#/") || document.URL==("https://zoujiu.com.cn/#/" + gu.urlmail + "#/")
         ) {
           this.$router.push({ path: '/' + gu.urlmail});
         }
@@ -1307,10 +1307,10 @@ export default {
         if(
           document.URL=="http://zoujiu.com.cn/" || document.URL=="http://zoujiu.com.cn/#/"
           || document.URL=="http://localhost/" || document.URL=="http://localhost/#/"
-          || document.URL=="http://localhost:9000/" || document.URL=="http://localhost:7009/"
+          || document.URL=="http://localhost:9000/" || document.URL=="https://zoujiu.com.cn/"
           || document.URL=="http://localhost:9000/#/"
-          || document.URL=="http://localhost:7009/#/"
-          || document.URL=="http://localhost:7009/"|| document.URL=="http://localhost:7009/#/"
+          || document.URL=="https://zoujiu.com.cn/#/"
+          || document.URL=="https://zoujiu.com.cn/"|| document.URL=="https://zoujiu.com.cn/#/"
         ) {
           // this.$router.push({ path: '/zj'});
           // this.$router.push({ path: '/homepage'});

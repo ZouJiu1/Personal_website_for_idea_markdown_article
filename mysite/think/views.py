@@ -511,13 +511,16 @@ def uploadImg(request):
     # https://docs.djangoproject.com/zh-hans/5.1/ref/files/uploads/#django.core.files.uploadedfile.UploadedFile
     # uploadType = request.FILES['file'].content_type
     # assert 1==0, (time.time(), postdate)
-    postdate = postdate[:-3] + "." + postdate[-3:]
-    postDa = datetime.fromtimestamp(float(postdate) + timezone).isoformat()[:19]
-    postDate = postDa.replace("T", " ").replace(":", "_")
-    savepath = os.path.join(basepath, postDate)
-
-    if not os.path.exists(savepath):
-        os.mkdir(savepath)
+    savepath = ""
+    if 'detail' in req.keys():
+        savepath = req['path']
+    else:
+        postdate = postdate[:-3] + "." + postdate[-3:]
+        postDa = datetime.fromtimestamp(float(postdate) + timezone).isoformat()[:19]
+        postDate = postDa.replace("T", " ").replace(":", "_")
+        savepath = os.path.join(basepath, postDate)
+        if not os.path.exists(savepath):
+            os.mkdir(savepath)
 
     for i in os.listdir(savepath):
         if uploadImageName==i:

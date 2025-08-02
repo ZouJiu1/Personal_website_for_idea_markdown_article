@@ -123,7 +123,7 @@
     >
       <div style="overflow:auto; font-size: 18px; color: #ff9900;" id='audioplayback'>
         <span style="margin-left:0px;color:chocolate;font-weight:600;">
-          音频</span>
+          音频直播回放</span>
         <el-cascader
           v-model="valueCascader"
           :options="options"
@@ -237,8 +237,8 @@ export default {
       result: [],
       dire_path: "",
       textarea1: "",
-      notrelease: notrelease,
       postkey: "",
+      notrelease: notrelease,
       options: [],
       valueCascader: "",
       props: {'expandTrigger':'hover'},

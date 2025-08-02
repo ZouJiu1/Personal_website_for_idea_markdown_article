@@ -77,6 +77,23 @@
       placeholder="修改一个片段"
     />
     <br>
+    <br>
+    <el-upload
+        v-model:file-list="fileList"
+        action="https://zoujiu.com.cn/think/uploadImg"
+        list-type="picture-card"
+        :on-preview="handlePictureCardPreview"
+        :on-remove="handleRemove"
+        :before-upload="handlebefore_Upload"
+        id="elupload"
+        :data="data"
+        :limit="30"
+        multiple
+        :on-success="handleUpLoadSuccess"
+      >
+        <el-icon><Plus /></el-icon>
+    </el-upload>
+    <br>
     <el-button @click="modify_content" style="margin-top:3px;">
       提交
     </el-button>
@@ -189,6 +206,9 @@ export default {
       dialogFormVisible_top: false,
       postkey: "",
       postkey_top: "",
+      data: {
+        "postdate": -10,
+      },
     }
   },
   mounted(){
@@ -199,7 +219,7 @@ export default {
   methods: {
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: 'https://zoujiu.com.cn/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -234,7 +254,7 @@ export default {
       }
       // console.log(this.resultresult);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/kshoucang',
+        baseURL: 'https://zoujiu.com.cn/think/kshoucang',
         timeout: 20000,
       });
       
@@ -272,7 +292,7 @@ export default {
         return
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/comment_add',
+        baseURL: 'https://zoujiu.com.cn/think/comment_add',
         timeout: 20000,
       });
       
@@ -335,6 +355,46 @@ export default {
       // console.log(event, this.dire_path, this.commentsigle);
       this.commentvisible = true;
     },
+    handlePictureCardPreview(uploadFile) {
+    },
+    handlebefore_Upload(rawFile) {
+      if (rawFile.type !== 'image/jpeg' && rawFile.type !== "image/png"
+          && rawFile.type !== "image/gif" && rawFile.type !== "image/bmp"
+          && rawFile.type !== "image/jpg") {
+        ElMessage.error('不是图片格式!');
+        return false;
+      } else if (rawFile.size / 1024 / 1024 > 13) {
+        ElMessage.error('图片占用磁盘大小不能 > 13MB!');
+        return false;
+      }
+      this.data.mail = Cookies.get("mail");
+      this.data.password = Cookies.get("password");
+      this.data.url = document.URL;
+      this.data.detail = "think_detail";
+      this.data.path = this.path;
+      return true;
+    },
+    handleUpLoadSuccess(response, uploadFile, uploadFiles) {
+      // console.log("success");
+      // console.log(response);
+      if(response.ret < 0) {
+        // console.log(uploadFile, uploadFiles);
+        while(uploadFiles.length > 0) {
+          uploadFiles.pop();
+        }
+        uploadFile = undefined;
+        // console.log(uploadFile, uploadFiles);
+        // ElMessage.error('输入的密钥不对, 自动取消上传!');
+        ElMessage.error('没有登陆不能修改!');
+        return false;
+      }
+      // console.log("success");
+      // console.log(response);
+      this.imgUpPath = response.path;
+    },
+    handleRemove(uploadFile, uploadFiles) {
+      // console.log(uploadFile, uploadFiles);
+    },
     async upvoteclick(event) {
       let id = document.URL;
       id = id.substring(0, 50);
@@ -359,7 +419,7 @@ export default {
       
       // console.log(this.kdianzanlength);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/upvote_change',
+        baseURL: 'https://zoujiu.com.cn/think/upvote_change',
         timeout: 20000,
       });
       
@@ -387,7 +447,7 @@ export default {
     },
     async handleTop() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/placeTop',
+        baseURL: 'https://zoujiu.com.cn/think/placeTop',
         timeout: 20000,
       });
           
@@ -414,7 +474,7 @@ export default {
     async modify_content() {
       this.path = this.$router.currentRoute._value.query.plan;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/modify',
+        baseURL: 'https://zoujiu.com.cn/think/modify',
        timeout: 20000,
       });
       
@@ -441,7 +501,7 @@ export default {
       this.path = this.$router.currentRoute._value.query.plan;
       // console.log(this.path);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/detail',
+        baseURL: 'https://zoujiu.com.cn/think/detail',
        timeout: 20000,
       });
       
@@ -572,7 +632,7 @@ export default {
       this.dialogFormVisible = false;
       ElMessage.info("正在删除的请等待！");
       const instanc = axios.create({
-        baseURL: 'http://localhost:7009/think/delete',
+        baseURL: 'https://zoujiu.com.cn/think/delete',
         timeout: 20000,
       });
             
@@ -606,7 +666,7 @@ export default {
       // this.sha(this.postkey).then((r)=>{
       //   if(sharet == r) {
       //     const instance = axios.create({
-      //       baseURL: 'http://localhost:7009/think/delete',
+      //       baseURL: 'https://zoujiu.com.cn/think/delete',
       //       timeout: 20000,
       //     });
             
