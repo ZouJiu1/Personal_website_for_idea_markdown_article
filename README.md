@@ -176,6 +176,30 @@ because you have no access to modify the "vue-project/article/member.txt"
 
 only the repo owner have access to it
 
+## email setting
+File `vue-project/mysite/csdn/views.py`
+
+Function `def mailsend(mail, modify=False, notify_guanliyuan=None):`
+
+change the password `smpt.login(user="1069679911@qq.com", password='zzzzzzzzzzzzz')`, open the service **POP3/IMAP/SMTP/Exchange/CardDAV**
+
+```python []
+    msg['From'] = '1069679911@qq.com'
+    msg['To'] = mail
+    # smtplib.SMTP()
+    smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
+    # smpt.connect("smtp.qq.com", port=465)
+    smpt.login(user="1069679911@qq.com", password='zzzzzzzzzzzzz')
+```
+
+Function `def notify_administer(dir, truemail, mail, urlmail, own=True, action='delete'):`
+
+```python []
+try:
+    mailsend('1069679911@qq.com', modify=False, \
+            notify_guanliyuan=['---delete', \
+            f'{mail} delete {urlmail}\n\ncontent: \n{dir}\n\nnowdir: \n{urlmaildir}'])
+```
 
 ## my blogs
 
