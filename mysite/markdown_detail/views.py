@@ -801,7 +801,8 @@ def rep(i):
     return i.replace(":", "_").replace("_问号_", "？").replace("_感叹号_", "！").replace("-感叹号-", "！").\
               replace("小于", "<").replace("大于", ">").replace("_逗号_", "，").replace("-逗号-", "，").\
               replace("_空格_", " ").replace("-空格-", " ").replace("_冒号_", "：").replace("-冒号-", "：").\
-              replace("_顿号_", "、").replace("-顿号-", "、")
+              replace("_顿号_", "、").replace("-顿号-", "、").replace("https_", "https:").\
+              replace("http_", "http:")
 
 def findlatest(pth):
     col = {}
