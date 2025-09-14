@@ -1291,10 +1291,10 @@ export default {
         if(
           document.URL==("http://zoujiu.com.cn/" + gu.urlmail + "#/") || document.URL==("http://zoujiu.com.cn/#/" + gu.urlmail + "#/")
           || document.URL==("http://localhost/" + gu.urlmail + "#/") || document.URL==("http://localhost/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:9000/" + gu.urlmail + "#/") || document.URL==("https://zoujiu.com.cn/" + gu.urlmail + "#/")
+          || document.URL==("http://localhost:9000/" + gu.urlmail + "#/") || document.URL==("http://localhost:7009/" + gu.urlmail + "#/")
           || document.URL==("http://localhost:9000/#/" + gu.urlmail + "#/")
-          || document.URL==("https://zoujiu.com.cn/#/" + gu.urlmail + "#/")
-          || document.URL==("https://zoujiu.com.cn/" + gu.urlmail + "#/") || document.URL==("https://zoujiu.com.cn/#/" + gu.urlmail + "#/")
+          || document.URL==("http://localhost:7009/#/" + gu.urlmail + "#/")
+          || document.URL==("http://localhost:7009/" + gu.urlmail + "#/") || document.URL==("http://localhost:7009/#/" + gu.urlmail + "#/")
         ) {
           this.$router.push({ path: '/' + gu.urlmail});
         }
@@ -1307,10 +1307,10 @@ export default {
         if(
           document.URL=="http://zoujiu.com.cn/" || document.URL=="http://zoujiu.com.cn/#/"
           || document.URL=="http://localhost/" || document.URL=="http://localhost/#/"
-          || document.URL=="http://localhost:9000/" || document.URL=="https://zoujiu.com.cn/"
+          || document.URL=="http://localhost:9000/" || document.URL=="http://localhost:7009/"
           || document.URL=="http://localhost:9000/#/"
-          || document.URL=="https://zoujiu.com.cn/#/"
-          || document.URL=="https://zoujiu.com.cn/"|| document.URL=="https://zoujiu.com.cn/#/"
+          || document.URL=="http://localhost:7009/#/"
+          || document.URL=="http://localhost:7009/"|| document.URL=="http://localhost:7009/#/"
         ) {
           // this.$router.push({ path: '/zj'});
           // this.$router.push({ path: '/homepage'});
@@ -1651,7 +1651,7 @@ export default {
       // }
       if(gu && gu.ret > 0) {
         // this.$router.push({ path: '/csdn/'+gu.urlmail}); // query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/zhihu/'+gu.urlmail, query:{"currentpage": 1, "pagesize":6}})
+        this.$router.push({ path: '/zhihu/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}})
       } else {
         // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
         this.$router.push({ path: '/zhihu/homepage'}); //, query:{"currentpage": 1, "pagesize":20}
@@ -1709,7 +1709,7 @@ export default {
       // }
       if(gu && gu.ret > 0) {
         // this.$router.push({ path: '/csdn/'+gu.urlmail}); // query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/csdn/'+gu.urlmail, query:{"currentpage": 1, "pagesize":6}})
+        this.$router.push({ path: '/csdn/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}})
       } else {
         // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
         this.$router.push({ path: '/csdn/homepage'}); //, query:{"currentpage": 1, "pagesize":20}
@@ -1728,7 +1728,7 @@ export default {
       //   this.$router.push({ path: '/think/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/think/'+gu.urlmail, query:{"currentpage": 1, "pagesize":6}});
+        this.$router.push({ path: '/think/'+gu.urlmail, query:{"currentpage": 1, "pagesize":9}});
       } else {
         // this.$router.push({ path: '/think/zj'});
         this.$router.push({ path: '/think/homepage'});
@@ -1766,7 +1766,7 @@ export default {
       //   this.$router.push({ path: '/travel/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/travel/'+gu.urlmail, query:{"currentpage": 1, "pagesize":6}});
+        this.$router.push({ path: '/travel/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}});
       } else {
         // this.$router.push({ path: '/travel/zj'});
         this.$router.push({ path: '/travel/homepage'});
