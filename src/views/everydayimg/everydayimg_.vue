@@ -45,7 +45,7 @@ export default {
     },
     async getdata() {
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/commonuse/getbingimg',
+        baseURL: 'http://localhost:7009/commonuse/getbingimg',
         timeout: 20000,
       });
       

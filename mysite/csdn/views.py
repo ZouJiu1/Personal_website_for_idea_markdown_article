@@ -124,6 +124,12 @@ def index(request):
             
         markdown = "# no content\n# no content\n# no content\n"
         markdownpth = findlatest(nth)
+        createFile = os.path.join(nth, "create.txt")
+        if os.path.exists(createFile) and os.path.getsize(createFile) > 60 and "20" == i[:2] and int(i[:4]) > 2024 and int(i[4+1:4+3]) > 4:
+            modifyTime = os.path.getmtime(markdownpth)
+            modifyTime = datetime.fromtimestamp(modifyTime).isoformat()[:19].replace("T", " ")                
+        else:
+            modifyTime = date
         upvotecomment = os.path.join(nth, 'upvote_comment.json')
         if not os.path.exists(upvotecomment):
             os.system(f"touch \"{upvotecomment}\"")
@@ -195,15 +201,24 @@ def index(request):
             if j in markdown or j in i or j.replace(":", "_") in i:
                 collect.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
                                 "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
-                                'clickshoucang':clickshoucang, 'kshoucang':kshoucang})
+                                'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime})
                 # find = True
                 break
         if len(search)==0:
             collect.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
                             "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
-                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang})
+                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime})
 
-    collect = sorted(collect.__iter__(), key = lambda x:x['date'], reverse=True)
+    collect = sorted(collect.__iter__(), key = lambda x:x['modifyTime'], reverse=True)
+    tmp = ['a', 'c']
+    for i, _ in enumerate(collect):
+        if "文篇编辑功能展示" in collect[i]['title']:
+            tmp[0] = deepcopy(collect[i])
+        if "父母的体检报告出来了，身体毛病挺多的" in collect[i]['title']:
+            tmp[1] = deepcopy(collect[i])
+    for i in tmp:
+        collect.remove(i)
+    collect = tmp + collect
     if allfile==None:
         allfile = collect
     ret = collect[(currentpage-1) * pagesize : currentpage * pagesize]
@@ -238,7 +253,7 @@ def mailsend(mail, modify=False, notify_guanliyuan=None):
     # smtplib.SMTP()
     smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
     # smpt.connect("smtp.qq.com", port=465)
-    smpt.login(user="1069679911@qq.com", password='zzzzzzzzzzzzz')
+    smpt.login(user="1069679911@qq.com", password='tuftmtivszzgbfcb')
     # smpt.sendmail()
     try:
         smpt.send_message(msg)

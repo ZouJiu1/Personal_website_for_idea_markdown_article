@@ -80,7 +80,7 @@
     <br>
     <el-upload
         v-model:file-list="fileList"
-        action="https://zoujiu.com.cn/think/uploadImg"
+        action="http://localhost:7009/think/uploadImg"
         list-type="picture-card"
         :on-preview="handlePictureCardPreview"
         :on-remove="handleRemove"
@@ -219,7 +219,7 @@ export default {
   methods: {
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/csdn/clickpage',
+        baseURL: 'http://localhost:7009/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -254,7 +254,7 @@ export default {
       }
       // console.log(this.resultresult);
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/think/kshoucang',
+        baseURL: 'http://localhost:7009/think/kshoucang',
         timeout: 20000,
       });
       
@@ -292,7 +292,7 @@ export default {
         return
       }
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/think/comment_add',
+        baseURL: 'http://localhost:7009/think/comment_add',
         timeout: 20000,
       });
       
@@ -419,7 +419,7 @@ export default {
       
       // console.log(this.kdianzanlength);
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/think/upvote_change',
+        baseURL: 'http://localhost:7009/think/upvote_change',
         timeout: 20000,
       });
       
@@ -447,7 +447,7 @@ export default {
     },
     async handleTop() {
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/think/placeTop',
+        baseURL: 'http://localhost:7009/think/placeTop',
         timeout: 20000,
       });
           
@@ -474,7 +474,7 @@ export default {
     async modify_content() {
       this.path = this.$router.currentRoute._value.query.plan;
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/think/modify',
+        baseURL: 'http://localhost:7009/think/modify',
        timeout: 20000,
       });
       
@@ -501,7 +501,7 @@ export default {
       this.path = this.$router.currentRoute._value.query.plan;
       // console.log(this.path);
       const instance = axios.create({
-        baseURL: 'https://zoujiu.com.cn/think/detail',
+        baseURL: 'http://localhost:7009/think/detail',
        timeout: 20000,
       });
       
@@ -632,7 +632,7 @@ export default {
       this.dialogFormVisible = false;
       ElMessage.info("正在删除的请等待！");
       const instanc = axios.create({
-        baseURL: 'https://zoujiu.com.cn/think/delete',
+        baseURL: 'http://localhost:7009/think/delete',
         timeout: 20000,
       });
             
@@ -666,7 +666,7 @@ export default {
       // this.sha(this.postkey).then((r)=>{
       //   if(sharet == r) {
       //     const instance = axios.create({
-      //       baseURL: 'https://zoujiu.com.cn/think/delete',
+      //       baseURL: 'http://localhost:7009/think/delete',
       //       timeout: 20000,
       //     });
             
