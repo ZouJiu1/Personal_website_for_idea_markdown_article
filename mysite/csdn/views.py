@@ -2042,8 +2042,38 @@ def themeChange(request):
             obj.write( "2===" + color1 + '===' + color2 + '===' + color3 + '\n' )
     return JsonResponse( { "ret" : True } , safe = False)
 
+allTraveler = {}
+thememutex = Semaphore(value=1)
 def getThemeColor(request):
-    global path #, thememutex
+    global path, thememutex, allTraveler
+    ip_address = None
+    fileTraveler = os.path.abspath(__file__ + "/../../../")
+    fileTravelerPath = os.path.join(fileTraveler, 'article', "TravelerStatistics.txt")
+    with open(fileTravelerPath, 'r', encoding='utf-8') as obj:
+        try:
+            TravelerStatistics = int(obj.read().strip())
+        except:
+            TravelerStatistics = 100
+    if 'X-Real-Ip' in request.headers.keys():
+        ip_address = request.headers['X-Real-Ip']
+    else:
+        if 'X-Forwarded-For' in request.headers.keys():
+            ip_address = request.headers['X-Forwarded-For']
+    if ip_address:
+        postDa = time.time() + timezone
+        updated = False
+        if ip_address not in allTraveler.keys():
+            updated = True
+        else:
+            if postDa - allTraveler[ip_address] > 3600:
+                updated = True
+        if updated:
+            allTraveler[ip_address] = postDa
+            TravelerStatistics += 1
+            thememutex.acquire()
+            with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
+                obj.write(str(TravelerStatistics))
+            thememutex.release()
     # body = request.body
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
     # req = json.loads(body)
@@ -2074,9 +2104,9 @@ def getThemeColor(request):
                 rl = True
             else:
                 rl = False
-            return JsonResponse( { "checked1" : rl,  "Themecolor":ij[2], 'type':'1'} , safe = False)
+            return JsonResponse( { "checked1" : rl,  "Themecolor":ij[2], 'type':'1', "TravelerStatistics":TravelerStatistics} , safe = False)
         else:
-            return JsonResponse( { "color1" : ij[1],  "color2":ij[2], "color3":ij[3], 'type':'2'} , safe = False)
+            return JsonResponse( { "color1" : ij[1],  "color2":ij[2], "color3":ij[3], 'type':'2', "TravelerStatistics":TravelerStatistics} , safe = False)
 
 kshoucangmutex = Semaphore(value=1)
 def kshoucang(request):

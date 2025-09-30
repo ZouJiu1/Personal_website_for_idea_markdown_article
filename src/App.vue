@@ -309,8 +309,9 @@
             <!-- </router-link> -->
           </el-menu-item>
         </el-menu>
+        <el-text class="mx-1" type="success" style="color:#ffffff;">{{ TravelerStatistics }}</el-text>
         <el-button
-          style="text-align:center;margin-top:33vh;"
+          style="text-align:center;margin-top:23vh;"
           @click="themeChangevisible = true"
           type='primary'
         >
@@ -511,6 +512,7 @@ export default {
       input2: "",
       input3: "",
       returnback: true,
+      TravelerStatistics:100,
       predefineColors: [
         'rgb(136, 187, 250)',
         '#ff4500',
@@ -1062,6 +1064,7 @@ export default {
           this.color3 = response.data.color3;
           this.changeSelectSecond();
         }
+        this.TravelerStatistics = response.data.TravelerStatistics;
       });
     },
     async submitColorFormSecond() {
