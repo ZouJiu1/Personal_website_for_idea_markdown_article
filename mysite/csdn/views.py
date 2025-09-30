@@ -2074,6 +2074,12 @@ def getThemeColor(request):
             with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
                 obj.write(str(TravelerStatistics))
             thememutex.release()
+        delete = []
+        for key, value in allTraveler.items():
+            if postDa - value > 3600 * 10:
+                delete.append(key)
+        for key in delete:
+            allTraveler.pop(key)
     # body = request.body
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
     # req = json.loads(body)
