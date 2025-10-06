@@ -2060,7 +2060,7 @@ def getThemeColor(request):
         if 'X-Forwarded-For' in request.headers.keys():
             ip_address = request.headers['X-Forwarded-For']
     if ip_address:
-        postDa = time.time() + timezone
+        postDa = str(int(time.time() + timezone))
         updated = False
         if ip_address not in allTraveler.keys():
             updated = True
