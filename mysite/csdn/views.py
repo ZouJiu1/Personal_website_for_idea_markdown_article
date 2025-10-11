@@ -198,7 +198,7 @@ def index(request):
             #         comment.append(i)
             #     marked += 1
         for j in search:
-            if j in markdown or j in i or j.replace(":", "_") in i:
+            if j in markdown or j in i or j.replace(":", "_") in i or  "文篇编辑功能展示" in title or "父母的体检报告出来了，身体毛病挺多的" in title:
                 collect.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
                                 "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
                                 'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime})
@@ -217,7 +217,8 @@ def index(request):
         if "父母的体检报告出来了，身体毛病挺多的" in collect[i]['title']:
             tmp[1] = deepcopy(collect[i])
     for i in tmp:
-        collect.remove(i)
+        if i in collect:
+            collect.remove(i)
     collect = tmp + collect
     if allfile==None:
         allfile = collect
