@@ -192,33 +192,36 @@ export default {
         pagesize: Number(this.$router.currentRoute._value.query.pagesize),
         search: "",
         reset: 0,
-        checke: false,
+        checke: 0,
       },
     }
   },
   mounted(){
-    // this.clickpage();
+    this.clickpage();
     this.axiosget();
   },
   watch: {
     // $router.path,
   },
   methods: {
-    async clickpage() {
-      const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
-        timeout: 20000,
-      });
+    clickpage() {
+      if(Cookies.get("checke")) {
+        this.checke = parseInt(Cookies.get("checke"));
+      }
+      // const instance = axios.create({
+      //   baseURL: 'http://localhost:7009/csdn/clickpage',
+      //   timeout: 20000,
+      // });
       
-      // console.log(this.search_param);
-      await instance({
-        method: 'GET',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        params: {'type' : 'csdn'},
-      }).then((response) => {
-      });
+      // // console.log(this.search_param);
+      // await instance({
+      //   method: 'GET',
+      //   headers: {
+      //     'X-Requested-With': 'XMLHttpRequest'
+      //   },
+      //   params: {'type' : 'csdn'},
+      // }).then((response) => {
+      // });
     },
     async shoucang(event) {
       let id = document.URL;
@@ -456,7 +459,11 @@ export default {
       // console.log(Cookies.get("csdnsearch"));
       // this.search_param.currentpage = this.$router.currentRoute._value.query.currentpage;
       // this.$router.currentRoute._value.query.currentpage = this.search_param.currentpage;
-      this.search_param.checke = this.checke;
+      if(Cookies.get("checke")) {
+        this.search_param.checke = parseInt(Cookies.get("checke"));
+      } else {
+        this.search_param.checke = this.checke;
+      }
       this.search_param.mail = Cookies.get("mail");
       this.search_param.password = Cookies.get("password");
       this.search_param.url = document.URL
@@ -530,6 +537,9 @@ export default {
       });
     },
     handleCheckbox() {
+      Cookies.remove("checke");
+      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      Cookies.set("checke", this.checke, { expires: expiresdate });
       this.search_param.reset = 1;
       this.search_param.currentpage = 1;
       // this.search_param.currentpage = this.$router.currentRoute._value.query.currentpage;

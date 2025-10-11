@@ -98,7 +98,17 @@ def index(request):
     while '' in search:
         search.remove("")
     if allfile!=None:
-        ret = allfile[(currentpage-1) * pagesize : currentpage * pagesize]
+        result_ret = allfile[(currentpage-1) * pagesize : currentpage * pagesize]
+        if checke==False:
+            ret = []
+            for i in range(len(result_ret)):
+                if 'leetcode' in result_ret[i]['title'].lower() or \
+                    'pat' in result_ret[i]['title'].lower() or 'DP' in result_ret[i]['title']:
+                    continue
+                else:
+                    ret.append(result_ret[i])
+        else:
+            ret = result_ret
         return JsonResponse({"collect":ret, "length":len(allfile)}, safe = False)
 
     # jsonfile = os.path.join(addpath, 'article', 'idtranslate.json')
