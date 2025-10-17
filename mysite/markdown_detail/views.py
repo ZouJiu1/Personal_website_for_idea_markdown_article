@@ -834,7 +834,7 @@ def index(request):
     postDate = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19]
     postDate = postDate.replace("T", " ")
 
-    if '20'==dirname[:2]:
+    if '20'==dirname[:2] or '21' == dirname[:2]:
         date = rep(dirname[:22]).replace("_", ":")
         title = rep(dirname[23:])
     else:
