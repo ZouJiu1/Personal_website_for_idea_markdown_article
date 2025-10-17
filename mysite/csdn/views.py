@@ -1996,7 +1996,7 @@ def placeTopTop(request):
     if 'zhihu' in pathkkk:
         postDate = postDa.replace("T", "_").replace(":", "_")[:-2]
 
-    if '20'==dirname[:2]:
+    if '20'==dirname[:2] or '21' == dirname[:2]:
         date = dirname[:22]
     else:
         date = postDate
