@@ -1011,7 +1011,7 @@ def editArticle(request):
     dirname = currentpage.split(os.sep)[-2]
     postDate = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19].replace(":", "_")
     postDate = postDate.replace("T", " ")
-    if '20'==dirname[:2]:
+    if '20'==dirname[:2] or '21' == dirname[:2]:
         date = rep(dirname[:22]).replace("_", ":")
         title = rep(dirname[23:])
     else:
