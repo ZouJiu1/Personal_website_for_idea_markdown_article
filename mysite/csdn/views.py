@@ -119,7 +119,7 @@ def index(request):
         nth = os.path.join(basepath, i)
         if not os.path.isdir(nth):
             continue
-        if '20'==i[:2]:
+        if '20'==i[:2] or '21' == i[:2]:
             date = rep(i[:22]).replace("_", ":")
             title = rep(i[23:])
         else:
@@ -136,10 +136,10 @@ def index(request):
         markdownpth = findlatest(nth)
         createFile = os.path.join(nth, "create.txt")
         if os.path.exists(createFile) and os.path.getsize(createFile) > 60 and "20" == i[:2] and int(i[:4]) > 2024 and int(i[4+1:4+3]) > 4:
-            modifyTime = os.path.getmtime(markdownpth)
-            modifyTime = datetime.fromtimestamp(modifyTime).isoformat()[:19].replace("T", " ")                
+            modifyTime = int(os.path.basename(markdownpth).replace("_markdown.md", "").replace(" ", "").replace("_", "").replace("-", "").replace(":", ""))
+            # modifyTime = int(datetime.fromtimestamp(modifyTime).isoformat()[:19].replace("T", " ").replace(" ", "").replace(":", "").replace("-", ""))
         else:
-            modifyTime = date
+            modifyTime = int(date.replace(" ", "").replace(":", "").replace("-", ""))
         upvotecomment = os.path.join(nth, 'upvote_comment.json')
         if not os.path.exists(upvotecomment):
             os.system(f"touch \"{upvotecomment}\"")
@@ -208,7 +208,7 @@ def index(request):
             #         comment.append(i)
             #     marked += 1
         for j in search:
-            if j in markdown or j in i or j.replace(":", "_") in i or  "文篇编辑功能展示" in title or "父母的体检报告出来了，身体毛病挺多的" in title:
+            if j in markdown or j in i or j.replace(":", "_") in i or  "文篇编辑功能展示" in title or "父母的体检报告出来了，身体毛病挺多的" in title or "生活规范以及指导家规" in title:
                 collect.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
                                 "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
                                 'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime})
@@ -220,12 +220,14 @@ def index(request):
                             'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime})
 
     collect = sorted(collect.__iter__(), key = lambda x:x['modifyTime'], reverse=True)
-    tmp = ['a', 'c']
+    tmp = ['a', 'c', 'h']
     for i, _ in enumerate(collect):
-        if "文篇编辑功能展示" in collect[i]['title']:
+        if "生活规范以及指导家规" in collect[i]['title']:
             tmp[0] = deepcopy(collect[i])
-        if "父母的体检报告出来了，身体毛病挺多的" in collect[i]['title']:
+        if "文篇编辑功能展示" in collect[i]['title']:
             tmp[1] = deepcopy(collect[i])
+        if "父母的体检报告出来了，身体毛病挺多的" in collect[i]['title']:
+            tmp[2] = deepcopy(collect[i])
     for i in tmp:
         if i in collect:
             collect.remove(i)
