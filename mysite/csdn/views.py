@@ -2078,7 +2078,7 @@ def getThemeColor(request):
         if ip_address not in allTraveler.keys():
             updated = True
         else:
-            if postDa - allTraveler[ip_address] > 3600:
+            if postDa - allTraveler[ip_address] > 60 * 19:
                 updated = True
         if updated:
             allTraveler[ip_address] = postDa
@@ -2089,7 +2089,7 @@ def getThemeColor(request):
             thememutex.release()
         delete = []
         for key, value in allTraveler.items():
-            if postDa - value > 3600 * 10:
+            if postDa - value > 3600:
                 delete.append(key)
         for key in delete:
             allTraveler.pop(key)
