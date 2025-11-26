@@ -2078,7 +2078,7 @@ def getThemeColor(request):
         if ip_address not in allTraveler.keys():
             updated = True
         else:
-            if postDa - allTraveler[ip_address] > 60 * 19:
+            if postDa - allTraveler[ip_address] > 60 * 10:
                 updated = True
         if updated:
             allTraveler[ip_address] = postDa
