@@ -266,7 +266,10 @@ def mailsend(mail, modify=False, notify_guanliyuan=None):
     # smtplib.SMTP()
     smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
     # smpt.connect("smtp.qq.com", port=465)
-    smpt.login(user="1069679911@qq.com", password='tuftmtivszzgbfcb')
+    try:
+        smpt.login(user="1069679911@qq.com", password='abcdefghijklmnopqrstuvwxyz')
+    except:
+        return "999999"
     # smpt.sendmail()
     try:
         smpt.send_message(msg)
@@ -291,15 +294,17 @@ def sendverify(request):
             return JsonResponse({"number":2}, safe = False)
 
     number = mailsend(mail, 'modify' in req.keys())
-    if number[0]=='-':
-        return JsonResponse({"number":False})
+    if number=='999999':
+        return JsonResponse({"number":3})
+    elif number[0]=='-':
+        return JsonResponse({"number":0})
     addpa = os.path.abspath(__file__ + "/../../")
     yonghu = os.path.join(addpa, "..", "article", 'register.txt')
     sendmutex.acquire()
     with open(yonghu, 'a+', encoding='utf-8') as obj:
         obj.write(str(time.time() + timezone) + f'<》!=$)(=$@{mail}<》!=$)(=$@{number}\n')
     sendmutex.release()
-    return JsonResponse({"number":True}, safe = False)
+    return JsonResponse({"number":1}, safe = False)
 
     # https://docs.python.org/3.12/library/smtplib.html#module-smtplib
     # https://docs.python.org/3.12/library/email.examples.html#email-examples

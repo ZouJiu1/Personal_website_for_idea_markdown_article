@@ -131,7 +131,7 @@
                         @change="mailChange"
                         @blur="mailChange"
                         style="width:60%"/>
-                        <el-button type="primary" style="margin-left:10px;" @click="SendVerifyRevisePassword">
+                        <el-button type="primary" style="margin-left:10px;" @click="SendVerifyRevisePassword" >
                           点击发送邮箱验证
                         </el-button>
                   </el-form-item>
@@ -189,7 +189,7 @@
                 @change="mailChange"
                 @blur="mailChange"
                 style="width:60%"/>
-                <el-button type="primary" style="margin-left:10px;" @click="SendVerify">
+                <el-button type="primary" style="margin-left:10px;" @click="SendVerify" id="mailconfirmbutton">
                   点击发送邮箱验证
                 </el-button>
             </el-form-item>
@@ -1208,6 +1208,7 @@ export default {
       }
     },
     async loading() {
+      Cookies.remove("mailsend");
       let gu, index = -1;
       await getusername(document.URL).then((response) => {
         gu = response;
@@ -1370,11 +1371,44 @@ export default {
         }
       });
     },
+    sleep(delay) { 
+      let num = Cookies.get("mailsendNum");
+      if(!num || num <= 0) {
+        Cookies.remove("mailsend");
+        let mailconfirmbutton = document.getElementById("mailconfirmbutton");
+        let mailsend = mailconfirmbutton.getElementsByTagName("span")[0];
+        mailsend.innerHTML = "<span> 点击发送邮箱验证 </span>";
+        return;
+      }
+      // console.log(delay, num);
+      setTimeout(()=>{
+        let mailconfirmbutton = document.getElementById("mailconfirmbutton");
+        let mailsend = mailconfirmbutton.getElementsByTagName("span")[0];
+        // console.log(1, mailsend, mailsend.innerText);
+        let remain = parseInt( (num * delay) / 1000 );
+        mailsend.innerHTML = "<span> 点击发送邮箱验证 " + remain.toString() + " </span>";
+        // console.log(2, mailsend, mailsend.innerText.toString(), remain.toString());
+        num = num - 1;
+        let expiresdate = new Date(new Date().getTime() + num * 1000);
+        Cookies.set("mailsendNum", num, { expires: expiresdate });
+        this.sleep(delay);
+      }, delay); 
+    },
     async SendVerify() {
-      if(!this.mailChange() && this.pFirstChange() && this.pSecondChange()) {
+      if( !this.mailChange() ) {
         ElMessage("邮箱格式不对不能发送！");
         return;
       }
+      if( !this.pFirstChange() || !this.pSecondChange() || !this.nicknameChange() ) {
+        return;
+      }
+      if(Cookies.get("mailsendNum") && Cookies.get("mailsendNum")>=0) {
+        let n = parseInt(Cookies.get("mailsendNum"));
+        ElMessage(n.toString() + "s后可以再次发送!");
+        return;
+      }
+      let expiresdate = new Date(new Date().getTime() + 63 * 1000);
+      Cookies.set("mailsendNum", 60, { expires: expiresdate });
       const instance = axios.create({
         baseURL: 'http://localhost:7009/csdn/sendverify',
         timeout: 20000,
@@ -1395,12 +1429,16 @@ export default {
           this.dialogRegisterVisible = false;
           this.resetForm();
         }
-        else if(!this.sendret){
+        else if(this.sendret==3){
+          ElMessage("login administer's email address 1069679911@qq.com failed! please connect administer with 1069679911@qq.com");
+        }
+        else if(this.sendret==0){
           ElMessage("send mail failed, please check email address！");
         } else {
           ElMessage("已经发送到邮箱了，有效期1天！");
         }
       });
+      this.sleep(1000, 0); //ms
     },
     pFirstChange() {
       if(this.ruleForm.pass.length < 6 || this.ruleForm.pass.length > 26) {
@@ -1414,23 +1452,28 @@ export default {
         if((pass[i] <='Z' && pass[i]>='A') || (pass[i] <='z' && pass[i]>='a')) {
           alpha = true;
         }
-        if(pass[i]>=0 && pass[i]<='9') {
+        if(pass[i]>='0' && pass[i]<='9') {
           digit = true;
         }
-        if(sl.indexOf(pass[i]) > 0 || (sl.indexOf(pass[i])==0 && pass[i]==".")) {
-          // console.log(pass, pass[i]);
-          special = true;
-        }
+        // if(sl.indexOf(pass[i]) > 0 || (sl.indexOf(pass[i])==0 && pass[i]==".")) {
+        //   // console.log(pass, pass[i]);
+        //   special = true;
+        // }
       }
-      if(alpha && digit && special) {
+      if(alpha && digit) {
+      // && special) {
         return true;
       } else {
-        ElMessage("需要同时包含数字和英文字母和特殊字符！");
+        ElMessage("需要同时包含数字和英文字母！");
         return false;
       }
     }, 
     nicknameChange() {
-
+      if(this.ruleForm.nickname.length==0) {
+        ElMessage("昵称至少包含一个字符，当前昵称是空的！");
+        return false;
+      }
+      return true;
     },
     pSecondChange() {
       if(this.ruleForm.pass!=this.ruleForm.checkPass){
@@ -1455,7 +1498,9 @@ export default {
       return true;
     },
     async submitForm() {
-      if(this.mailChange() && this.pFirstChange() && this.pSecondChange() && this.sendret){
+      if(this.mailChange() && this.pFirstChange() && 
+        this.pSecondChange() && this.nicknameChange() 
+        && this.sendret){
         ElMessage("passed!");
         const instance = axios.create({
           baseURL: 'http://localhost:7009/csdn/register',

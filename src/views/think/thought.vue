@@ -1062,6 +1062,10 @@ export default {
     },
 
     search(ele) {
+      if(ele.nodeName=="#text" || ele.nodeName=="LI") {
+        // console.log("textli", ele);
+        return;
+      }
       // console.log(ele);
       if(ele.className=="hiddenp") {
         // console.log(ele);
@@ -1075,8 +1079,8 @@ export default {
       for(let i = 0; i < ele.childNodes.length; i++) {
         this.search(ele.childNodes[i]);
       }
-      if(ele.childNodes.length<=1 && ele.nextSibling) {
-        this.search(ele.nextSibling);
+      if(ele.nextElementSibling) {
+        this.search(ele.nextElementSibling);
       }
     },
     async cardClick(event) {

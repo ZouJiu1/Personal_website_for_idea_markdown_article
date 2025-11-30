@@ -16,6 +16,20 @@ support markdown article, including Math Latex, table, list and so on.
 
 [install brew help---https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/](https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/)
 
+according to homebrew's tips at tail, add to environment variables
+
+`echo 'export PATH="/usr/local/opt/node@22/bin:$PATH"' >> ~/.zshrc`
+
+`export PATH="/usr/local/opt/node@22/bin:$PATH"`
+
+compile setting
+```
+  export LDFLAGS="-L/usr/local/opt/node@22/lib"
+  export CPPFLAGS="-I/usr/local/opt/node@22/include"
+```
+
+**reboot your macos system computer to make effect**
+
 ### 1.2 set mirror
 >`npm config set registry https://registry.npmmirror.com`
 
@@ -106,7 +120,7 @@ python3 manage.py runserver localhost:7009
 
 or
 
->./auto/configure --sbin-path=/Users/zoujiu/software/nginx/bin --conf-path=/Users/zoujiu/software/nginx/conf/nginx.conf --pid-path=/Users/zoujiu/software/nginx/nginx.pid --with-http_ssl_module --with-pcre=/Users/zoujiu/software/nginx/pcre2-10.44 --with-openssl=/Users/zoujiu/software/nginx/openssl-3.3.2  --user=zoujiu  --error-log-path=/Users/zoujiu/software/nginx/error.log
+>./configure --sbin-path=/home/admin/vue-project/nginx/nginx-1.26.2/bin --conf-path=/home/admin/vue-project/nginx/nginx-1.26.2/conf/nginx.conf --pid-path=/home/admin/vue-project/nginx/nginx-1.26.2/nginx.pid --with-http_ssl_module --add-module=/home/admin/vue-project/nginx/nginx-1.26.2/nginx-rtmp-module-master  --with-pcre=/home/admin/vue-project/nginx/nginx-1.26.2/pcre2-10.44 --with-openssl=/home/admin/vue-project/nginx/nginx-1.26.2/openssl-3.3.2  --user=root  --error-log-path=/home/admin/vue-project/nginx/nginx-1.26.2/error.log
 
 **nginx.conf configuration**
 

@@ -164,7 +164,7 @@ font-size: 1.1em;\">', markdown)
         markdown = "<p @click=\"cardClick\">" + markdown + \
             f"<span hidden><p hidden @click=\"cardClick\" class=\"hiddenp\">{nth}</p>" + \
             "</p></span>"
-        if abs(modifytime - createtime) > 1600:
+        if abs(modifytime - createtime) > 3600:
             postDate = datetime.fromtimestamp(modifytime).isoformat()[:19][:-3].replace("T", " ")
             markdown = markdown + f"<span @click=\"cardClick\">------修改时间日期：{postDate}</span>" +\
             f"<span hidden><p hidden @click=\"cardClick\" class=\"hiddenp\">{nth}</p>" + \
