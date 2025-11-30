@@ -887,7 +887,7 @@ def index(request):
         
     markdown = re.sub(r' *[\w\d\-\_]*\_[\w\d\-\_]* *', remove_downline, markdown)
 
-    markdown = markdown2.markdown(markdown, extras=["tables", ])
+    markdown = markdown2.markdown(markdown, extras=["tables", "admonitions", "breaks"])
 
     markdown = markdown.replace('''<img src=\"''',\
         '''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"img_blank_class\"''' + \

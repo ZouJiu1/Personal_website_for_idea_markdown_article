@@ -58,7 +58,7 @@
             :data="ImgbookUpload"
             :before-upload="handlebefore_Upload"
           >
-            <el-button type="success" style="margin-left:20px; margin-top:2px;" @click="clickimage">传图片</el-button>
+            <el-button type="success" style="margin-left:20px; margin-top:2px;" @click="clickimage">上传书籍封面的图片</el-button>
             <template #tip>
               <div class="el-upload__tip">
                 jpg/png/jpeg/bmp/gif files with a size less than 13Mb.

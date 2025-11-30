@@ -66,6 +66,8 @@ stackoverflow===https://stackoverflow.com
 shiyanlou===https://www.shiyanlou.com/
 动手学RL===https://hrl.boyuai.com/chapter/ending
 LLM===https://www.nvidia.com/en-us/learn/learning-path/generative-ai-llm/?deeplink=courses--4#courses-item-7757ba5d77
+生成式人工智能（AIGC）之备案要求===https://mp.weixin.qq.com/s?__biz=MzkxMjYwMzMxMA==&mid=2247490590&idx=1&sn=6c7903c4fe11c6b3ee72fd4f6c5f5330&chksm=c0bb5752aefec38a64c30f9de1336dbff9760453d3b3735fcc63181cb11542f126a841843f67&mpshare=1&scene=23&srcid=1225RTXuAFdlUFvs7iGar1b4&sharer_shareinfo=9846e8a96b02f30dab883da3cf6ed782&sharer_shareinfo_first=9846e8a96b02f30dab883da3cf6ed782#rd
+音视频开发中文===https://avmedia.0voice.com/?id=311
 
 AI智能
 pytorch===https://pytorch.org/
@@ -87,13 +89,21 @@ tensorflow-github===https://github.com/tensorflow/tensorflow
 当当图书===https://www.dangdang.com
 阿里1688===https://www.1688.com/
 
-本科生研究生
+在线书籍
+鸟哥的Linux私房菜===https://vbird.org.cn/
+动手学Reinforce Learning===https://hrl.boyuai.com/
+
+高中本科生研究生
+隆回县第二中学===http://www.lhez.net/index.asp
 学信网===http://www.chsi.com.cn
 中国研究生招生信息网===https://yz.chsi.com.cn
 N诺计算机===https://noobdream.com
 爱启航===https://www.iqihang.com/ark/exam25?code=10
 浙江大学研究生招生网===grs.zju.edu.cn/yjszs/redir.php?catalog_id=139436&object_id=145597
 考研400分到底有多难?-知乎===https://www.zhihu.com/question/294241400
+
+法律
+知恒===http://www.zhihenglawyer.com
 
 社保或公积金
 长沙住房公积金管理中心===http://gjjzx.changsha.gov.cn/
@@ -108,13 +118,26 @@ tsinghua===https://mirrors.tuna.tsinghua.edu.cn
 iMyShare-Google国内镜像网站===https://imyshare.com/site/551/
 
 软件
+今日水印相机APP===https://www.jinrishuiyinxiangji.com/
+Git===https://git-scm.com
 QQ===https://im.qq.com
+向日葵===https://sunlogin.oray.com/
 vscode===https://code.visualstudio.com
 win10===https://www.microsoft.com/zh-cn/software-download/windows10ISO
 Microsoft帐户===https://account.microsoft.com/?ref=MeControl
 faststonecapture===https://www.faststonecapture.cn
 filezilla===https://filezilla-project.org
 ffmpeg===https://ffmpeg.org/documentation.html
+CMakeDocument===https://cmake.org/cmake/help/git-stage
+CMake===https://cmake.org
+Docker===https://docs.docker.com/desktop/setup/install
+qemu===https://www.qemu.org/documentation
+COCO_Dataset===https://cocodataset.org/#download
+pascal_VOC_Dataset===http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html#data
+raspberrypi===https://www.raspberrypi.com/software
+GNU-Make===https://www.gnu.org/software/make/
+Clang===https://clang.llvm.org/docs/CrossCompilation.html
+llvm===https://llvm.org/docs/HowToCrossCompileLLVM.html
 阿里云盘===https://www.aliyundrive.com
 panbaidu===https://pan.baidu.com
 钉钉===https://www.dingtalk.com
@@ -131,6 +154,18 @@ weixin===https://weixin.qq.com/
 360===https://www.360.cn/
 VMware-FusionDoc===https://docs.vmware.com/cn/VMware-Fusion/13/com.vmware.fusion.using.doc/GUID-F2874B79-A32A-4B83-914F-9838372D47CD.html
 VMware-Fusion===https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware+Fusion
+Vmware-workstation===https://www.vmware.com/products/desktop-hypervisor/workstation-and-fusion
+tightvnc===https://www.tightvnc.com/
+ultravnc===https://uvnc.com/downloads/ultravnc.html
+obs-studio===https://obsproject.com/
+VLC-Video===https://get.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.exe
+7z===https://www.7-zip.org/download.html
+virtualbox===https://www.virtualbox.org/wiki/Downloads
+Linux常用命令的===https://gnu-linux.readthedocs.io/zh/latest/Chapter01/00_systemctl.html
+todesk===https://www.todesk.com/
+anydesk===https://anydesk.com/zhs
+tensorrt===https://developer.nvidia.com/tensorrt-getting-started
+wireshark===https://www.wireshark.org
 
 邮箱
 QQ邮箱===https://mail.qq.com
@@ -147,6 +182,7 @@ tieba===https://tieba.baidu.com/index.html
 QQ空间===http://qzone.qq.com/
 
 企业
+国家知识产权局===https://www.cnipa.gov.cn/
 天眼查===https://www.tianyancha.com/
 企查查===https://www.qcc.com/
 国家企业信用信息公示系统===http://www.gsxt.gov.cn/index.html
@@ -225,6 +261,9 @@ CCTV5===http://sports.cntv.cn/
 血液
 长沙血液中心===https://www.csxyzx.org
 上海市血液中心===https://www.sbc.org.cn
+无偿献血注意事项===https://www.17donor.com/changsha/wechat/micro/detail?aid=6042
+献血须知===https://www.17donor.com/changsha/wechat/micro/detail?aid=6041
+献血前应做哪些准备？===https://www.17donor.com/changsha/wechat/micro/detail?aid=6044
 夏季献血应注意的事项===https://www.csxyzx.org/index.php/site/page/index/3325/category_id/10858/news_id/18339/ct_id/276/okcode/be0f94dcaff7be04ade79f87b0a33cbc0023d02e6a4f7aff3d2b27ac3ff74678
 献血的人须知===https://www.sbc.org.cn/portal/article/index/id/9380/cid/25.html
 献血注意事项及流程===https://www.sbc.org.cn/portal/article/index/id/9381/cid/25.html
@@ -241,6 +280,7 @@ MacbookPro13===https://support.apple.com/zh-cn/111339
 mac重装===https://support.apple.com/zh-cn/guide/mac-help/mchlp1599/10.15/mac/10.15
 tuxera===https://ntfsformac.tuxera.com/
 西数paragon_ntfsmac===https://support-eu.wd.com/app/answers/detailweb/a_id/34871/~/external-drive%3A-paragon-ntfs-driver-for-mac
+homebrew===https://docs.brew.sh/
 
 dictionary
 欧路===https://www.eudic.net/
@@ -331,9 +371,11 @@ def getfiledata(request):
     if not os.path.exists(file):
         with open(file, 'w', encoding='utf-8') as obj:
             obj.write(textarea_content_predefined + '\n')
-            result = parseTxt(textarea_content_predefined)
+            app = '\n收藏\n'
+            apppianduan = '\n片段\n'
+            result, modify = parseTxt(textarea_content_predefined + app + apppianduan)
             return JsonResponse( { "ret": True, 'textarea_content': textarea_content_predefined, \
-                                  'result':result}, safe = False)
+                                  'result':result[:-2], 'result2':result[-2:] }, safe = False)
 
     filepath = os.path.join(basepath, 'kshoucang.json')
     kshoucangmutex.acquire()

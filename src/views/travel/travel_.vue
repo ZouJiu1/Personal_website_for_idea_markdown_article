@@ -42,12 +42,16 @@
         style="width: 100%;overflow:auto;height:100%"
         type="textarea"
         :autosize="{ minRows: 3, maxRows: 10 }"
+        @change="editPlaceChange"
+        @blur="editPlaceChange"
         placeholder="编辑区，字数应 >= 10"
       />
       <span style="margin-top:16px;color:#000000;margin-left:6px;">*姓名：</span>
       <el-input
         v-model="travelname"
         style="width: 20%;margin-top:3px;"
+        @change="nameChange"
+        @blur="nameChange"
         placeholder="name"
         :prefix-icon="Name"
       />
@@ -64,6 +68,8 @@
       <el-input
         v-model="travelcontact"
         style="width: 20%;margin-top:3px;"
+        @change="contactChange"
+        @blur="contactChange"
         placeholder=""
         :prefix-icon="Contact"
       />
@@ -210,6 +216,27 @@ export default {
   },
   watch: {},
   methods: {
+    editPlaceChange() {
+      if(this.textarea1.length < 10) {
+        ElMessage("编辑区字数应该 >= 10");
+        return false;
+      }
+      return true;
+    },
+    nameChange() {
+      if(this.travelname.length == 0) {
+        ElMessage("姓名字数应该 > 0");
+        return false;
+      }
+      return true;
+    },
+    contactChange() {
+      if(this.travelcontact.length < 6) {
+        ElMessage("联系方式字数应该 >= 6");
+        return false;
+      }
+      return true;
+    },
     mailChange() {
       // console.log(this.ruleForm.email);
       if(this.travelemail.length < 7) {
@@ -288,6 +315,9 @@ export default {
       this.postkey = "";
     },
     postTravel() {
+      if(!this.mailChange() || !this.contactChange() || !this.nameChange() || !this.editPlaceChange()) {
+        return;
+      }
       // console.log(this.textarea1);
       // let sharet = "45c144247124160a29e93a160e62bc7128bd33a9da552c1b9441d562240754637b38e5a25fa151044e902b99ff22ec91ffa9e9e0e2edde67317cc04adf329b78";
       // this.sha(this.postkey).then((r)=>{
@@ -614,6 +644,10 @@ export default {
     },
 
     search(ele) {
+      if(ele.nodeName=="#text" || ele.nodeName=="LI") {
+        // console.log("textli", ele);
+        return;
+      }
       // console.log(ele);
       if(ele.className=="hiddenp") {
         // console.log(ele);
@@ -627,8 +661,8 @@ export default {
       for(let i = 0; i < ele.childNodes.length; i++) {
         this.search(ele.childNodes[i]);
       }
-      if(ele.childNodes.length<=1 && ele.nextSibling) {
-        this.search(ele.nextSibling);
+      if(ele.nextElementSibling) {
+        this.search(ele.nextElementSibling);
       }
     },
     cardClick(event) {

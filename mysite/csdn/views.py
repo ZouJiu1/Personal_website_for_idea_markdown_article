@@ -232,6 +232,16 @@ def index(request):
         if i in collect:
             collect.remove(i)
     collect = tmp + collect
+    delete = []
+    if collect[0]=='a':
+        delete.append('a')
+    if collect[1]=='c':
+        delete.append('c')
+    if collect[2]=='h':
+        delete.append('h')
+    for i in delete:
+        collect.remove(i)
+
     if allfile==None:
         allfile = collect
     ret = collect[(currentpage-1) * pagesize : currentpage * pagesize]
@@ -865,13 +875,14 @@ def postArticle(request):
         return rand
         
     markdown = regular.sub(r' *[\w\d\-\_]*\_[\w\d\-\_]* *', remove_downline, markdown)
+
+    markdown = markdown2.markdown(markdown, extras=["tables", "admonitions", "breaks"])
     
     if len(filepath) > 0:
         markdown = markdown.replace('''<img src=\"''',\
             '''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"preview_img\"''' + \
             '''src=\"''' + filepath[index:k] + os.sep)
 
-    markdown = markdown2.markdown(markdown, extras=["tables", "admonitions", "breaks"])
     # markdown = postDate + '\n\n' + markdown
     if 'zhihu' in filepath:
         index = cpy_title.index("_IP_属地")
@@ -2066,7 +2077,13 @@ def getThemeColor(request):
     global path, thememutex, allTraveler
     ip_address = None
     fileTraveler = os.path.abspath(__file__ + "/../../../")
-    fileTravelerPath = os.path.join(fileTraveler, 'article', "TravelerStatistics.txt")
+
+    get = json.loads(getusername(request).content)
+    fileTravelerPath = os.path.join(fileTraveler, 'people', get['urlmail'], "TravelerStatistics.txt")
+    if not os.path.exists(fileTravelerPath):
+        os.makedirs(os.path.join(fileTraveler, 'people', get['urlmail']), exist_ok=True)
+        with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
+            obj.write("100")
     with open(fileTravelerPath, 'r', encoding='utf-8') as obj:
         try:
             TravelerStatistics = int(obj.read().strip())
