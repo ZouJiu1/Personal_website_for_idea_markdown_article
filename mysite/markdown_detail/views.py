@@ -982,8 +982,13 @@ def index(request):
     kseamutex[tails].release()
     kseamutex.pop(tails)
 
-    return JsonResponse( { "markdown" : markdown, 'path': pathkkk, "upvote":upvote, 'comment':comment, 'click':click, \
-                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'title':title} , safe = False)
+    topPath = os.path.join(predir, "TOP.txt")
+    if os.path.exists(topPath):
+        return JsonResponse( { "markdown" : markdown, 'path': pathkkk, "upvote":upvote, 'comment':comment, 'click':click, \
+                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'title':title, 'isTop':True} , safe = False)
+    else:
+        return JsonResponse( { "markdown" : markdown, 'path': pathkkk, "upvote":upvote, 'comment':comment, 'click':click, \
+                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'title':title, 'isTop':False} , safe = False)
 
 def replaceNextLine_br(md):
     start = -1

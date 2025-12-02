@@ -115,6 +115,7 @@ def index(request):
     # with open(jsonfile, 'r', encoding='utf-8') as obj:
     #     jsonfp = json.loads(obj)
     # alldate = []
+    TOPTOP = []
     for i in os.listdir(basepath):
         nth = os.path.join(basepath, i)
         if not os.path.isdir(nth):
@@ -158,8 +159,6 @@ def index(request):
             markdownpth = os.path.join(nth, 'markdown.md')
             with open(markdownpth, 'w', encoding = 'utf-8') as obj:
                 obj.write(markdown)
-        find = False
-        marked = -1
         # with open(file, 'w', encoding='utf-8') as obj:upvote_comment
         #     json.dump(Setting_Formel, obj, indent=2, ensure_ascii=False)
         tails = markdownpth.split(os.sep)[-1]
@@ -207,40 +206,43 @@ def index(request):
             #     else:
             #         comment.append(i)
             #     marked += 1
-        for j in search:
-            if j in markdown or j in i or j.replace(":", "_") in i or  "文篇编辑功能展示" in title or "父母的体检报告出来了，身体毛病挺多的" in title or "生活规范以及指导家规" in title:
-                collect.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
-                                "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
-                                'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime})
-                # find = True
-                break
+        inlist = False
         if len(search)==0:
             collect.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
                             "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
-                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime})
+                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime, 'isTop':False})
+            inlist = True
+        else:
+            for j in search:
+                if j in markdown or j in i or j.replace(":", "_") in i:
+                    collect.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
+                                    "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
+                                    'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime, 'isTop':False})
+                    inlist = True
+                    break
+
+        if inlist == True:
+            topPath = os.path.join(nth, "TOP.txt")
+            if os.path.exists(topPath):
+                topTime = os.path.getmtime(topPath)
+                collect.pop()
+                inserted = False
+                for itop in range(len(TOPTOP)):
+                    if TOPTOP[itop]['topTime'] < topTime:
+                        TOPTOP.insert(itop, {"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
+                                "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
+                                'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime,
+                                'isTop':True, "topTime":os.path.getmtime(topPath)})
+                        inserted = True
+                        break
+                if inserted==False:
+                    TOPTOP.append({"date":date.replace("_", ":"), "title": title, "markdown": markdown[:200], \
+                                "path":markdownpth, "upvote":upvote, 'comment':comment, 'click':click, \
+                                'clickshoucang':clickshoucang, 'kshoucang':kshoucang, "modifyTime":modifyTime,
+                                'isTop':True, "topTime":os.path.getmtime(topPath)})
 
     collect = sorted(collect.__iter__(), key = lambda x:x['modifyTime'], reverse=True)
-    tmp = ['a', 'c', 'h']
-    for i, _ in enumerate(collect):
-        if "生活规范以及指导家规" in collect[i]['title']:
-            tmp[0] = deepcopy(collect[i])
-        if "文篇编辑功能展示" in collect[i]['title']:
-            tmp[1] = deepcopy(collect[i])
-        if "父母的体检报告出来了，身体毛病挺多的" in collect[i]['title']:
-            tmp[2] = deepcopy(collect[i])
-    for i in tmp:
-        if i in collect:
-            collect.remove(i)
-    collect = tmp + collect
-    delete = []
-    if collect[0]=='a':
-        delete.append('a')
-    if collect[1]=='c':
-        delete.append('c')
-    if collect[2]=='h':
-        delete.append('h')
-    for i in delete:
-        collect.remove(i)
+    collect = TOPTOP + collect
 
     if allfile==None:
         allfile = collect
@@ -277,7 +279,7 @@ def mailsend(mail, modify=False, notify_guanliyuan=None):
     smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
     # smpt.connect("smtp.qq.com", port=465)
     try:
-        smpt.login(user="1069679911@qq.com", password='abcdefghijklmnopqrstuvwxyz')
+        smpt.login(user="1069679911@qq.com", password='abcdefghijklmnopqrst')
     except:
         return "999999"
     # smpt.sendmail()
@@ -1981,8 +1983,8 @@ def placeTopTop(request):
     req = json.loads(request.body)
     pathkkk = req["path"]
     
-    if '文篇编辑功能展示' in pathkkk:
-        return JsonResponse( { "ret" : -100} , safe = False)
+    # if '文篇编辑功能展示' in pathkkk:
+    #     return JsonResponse( { "ret" : -100} , safe = False)
         # return JsonResponse( { "path" : pathkkk} , safe = False)
 
     rz = renzheng(request)
@@ -2004,26 +2006,61 @@ def placeTopTop(request):
     #     if get['ret'] > 0:
     #         basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
 
-    dirname = pathkkk.split(os.sep)[-2]
+    # dirname = pathkkk.split(os.sep)[-2]
     filename = pathkkk.split(os.sep)[-1]
 
-    postDa = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19].replace(":", "_")
-    postDate = postDa.replace("T", "_空格_").replace(":", "_")
-    if 'zhihu' in pathkkk:
-        postDate = postDa.replace("T", "_").replace(":", "_")[:-2]
-
-    if '20'==dirname[:2] or '21' == dirname[:2]:
-        date = dirname[:22]
-    else:
-        date = postDate
-    if 'zhihu_' in pathkkk:
-        date = dirname[:16]
-        date = date[:10] + " " + date[11:]
-        
-    dirpath = pathkkk.replace(filename, "")
+    # postDa = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19].replace(":", "_")
+    # postDate = postDa.replace("T", "_空格_").replace(":", "_")
     
-    os.rename(dirpath, dirpath.replace(date, postDate))
-    return JsonResponse( { "path" : dirpath.replace(date, postDate + "_") } , safe = False)
+    pathkkkTmp = pathkkk.replace(filename, "TOP.txt")
+    with open(pathkkkTmp, 'w', encoding="utf-8") as obj:
+        obj.write("")
+    
+    # if 'zhihu' in pathkkk:
+    #     postDate = postDa.replace("T", "_").replace(":", "_")[:-2]
+
+    # if '20'==dirname[:2] or '21' == dirname[:2]:
+    #     date = dirname[:22]
+    # else:
+    #     date = postDate
+    # if 'zhihu_' in pathkkk:
+    #     date = dirname[:16]
+    #     date = date[:10] + " " + date[11:]
+
+    # dirpath = pathkkk.replace(filename, "")
+    
+    # os.rename(dirpath, dirpath.replace(date, postDate))
+    # return JsonResponse( { "path" : dirpath.replace(date, postDate + "_") } , safe = False)
+    return JsonResponse( { "path" : "" } , safe = False)
+
+
+def cancelPlaceTopTop(request):
+    global allfile
+    allfile = None
+    # req = request.GET.dict()
+    req = json.loads(request.body)
+    pathkkk = req["path"]
+    
+    rz = renzheng(request)
+    rzret = json.loads(rz.content)
+    passed = False
+    if "mail" in req.keys():
+        get = json.loads(getusername(request).content)
+        if not rzret['ret'] and 'password' in req.keys() and check_logined(req['mail'], req['password']):
+            # basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
+            passed = True
+            if f"/people/{get['mail']}/" not in pathkkk or '.md' not in pathkkk:
+                return JsonResponse( { "ret" : -100} , safe = False)
+        elif get['ret']==2:
+            return JsonResponse( { "ret" : -100} , safe = False)
+    if not passed and not rzret['ret']:
+        return JsonResponse( { "ret" : -100} , safe = False)
+    filename = pathkkk.split(os.sep)[-1]
+    
+    pathkkkTmp = pathkkk.replace(filename, "TOP.txt")
+    if os.path.exists(pathkkkTmp):
+        os.remove(pathkkkTmp)
+    return JsonResponse( { "path" : "" } , safe = False)
 
 # thememutex = Semaphore(value=1)
 def themeChange(request):

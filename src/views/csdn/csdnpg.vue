@@ -49,7 +49,12 @@
       style="overflow:auto;"
     >
       <template #header>
-        <div class="card-header" style="font-size: 20px; color: #00ff00; overflow:auto;" @click="cardClick">
+        <div class="card-header" style="font-size: 20px; font-weight: 600; color: #000000; background-color: #FF00FF; overflow:auto;" @click="cardClick" v-if="o.isTop">
+          <span @click="cardClick"> {{ o["title"] }}</span>
+          <span @click="cardClick" style="margin-left: 10vh; background-color: #1989fa;color:#ffffff; font-weight: 900;">TOP</span>
+          <span hidden><p :hidden="true" @click="cardClick" class="hiddenp"> {{ o["path"] }} </p></span>
+        </div>
+        <div class="card-header" style="font-size: 20px; color: #000000; background-color: #ffffff; overflow:auto;" @click="cardClick" v-if="!o.isTop">
           <span @click="cardClick"> {{ o["title"] }} </span>
           <span hidden><p :hidden="true" @click="cardClick" class="hiddenp"> {{ o["path"] }} </p></span>
         </div>

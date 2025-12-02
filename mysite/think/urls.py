@@ -9,6 +9,7 @@ urlpatterns = [
     path("uploadImg", views.uploadImg, name="uploadImg"),
     path("delete", views.delete, name="delete"),
     path("placeTop", views.placeTop, name="placeTop"),
+    path("cancelPlaceTop", views.cancelPlaceTop, name="cancelPlaceTop"),
     path("upvote_change", views.upvote_change, name="upvote_change"),
     path("comment_add", views.comment_add, name="comment_add"),
     path("kshoucang", views.kshoucang, name="kshoucang"),

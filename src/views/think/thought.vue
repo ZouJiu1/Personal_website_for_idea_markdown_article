@@ -168,9 +168,16 @@
           <span hidden><p hidden @click="cardClick" class="hiddenp"> {{ o["path"] }} </p></span>
         </div>
       </template> -->
-      <span style="width:60%; font-size: 16px; color: #000000;" class="cardspan1" @click="cardClick">
-        <div v-html="o.markdown">
+      <span style="width:60%; font-size: 16px; color: #000000;" @click="cardClick" v-if="!o.isTop">
+        <div v-html="o.markdown" style="background-color: #ffffff;color: #000000;">
         </div>
+        <!-- {{ o["markdown"] }} -->
+        <!-- <span class="imageplot"></span> -->
+      </span>
+      <span style="width:60%; font-size: 16px; color: #000000; background-color: #FF00FF;" @click="cardClick" v-if="o.isTop">
+        <div v-html="o.markdown" style="background-color: #FF00FF;color: aquamarine;">
+        </div>
+        <p style="background-color: #1989fa;color:#ffffff;margin-left: 90vh;padding-left: 3vh;margin-top: 2px;font-weight: 900;">TOP</p>
         <!-- {{ o["markdown"] }} -->
         <!-- <span class="imageplot"></span> -->
       </span>

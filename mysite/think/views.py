@@ -71,6 +71,7 @@ def index(request):
         ret = allfile[(currentpage-1) * pagesize : currentpage * pagesize]
         return JsonResponse({"collect":ret, "length":len(allfile)}, safe = False)
     keep = '素 家 黄色 7元 方便面 骚扰 耳塞 APP 广告 短信 色情 献 血 卡片 书'.split(" ")
+    TOPTOP = []
     for i in os.listdir(basepath):
         nth = os.path.join(basepath, i)
         if not os.path.isdir(nth):
@@ -160,7 +161,6 @@ font-size: 1.1em;\">', markdown)
                 imgimg += '<img class=\"el-image__inner el-image__preview think_image\" style=\"object-fit: scale-down;\" @click=\"cardClick\" ' + f' src=\"{kk}\" loading=\"lazy\">' + \
                     f"<span hidden><p hidden @click=\"cardClick\" class=\"hiddenp\">{nth}</p></span>" + \
                             '</img>'
-        # find = False
         markdown = "<p @click=\"cardClick\">" + markdown + \
             f"<span hidden><p hidden @click=\"cardClick\" class=\"hiddenp\">{nth}</p>" + \
             "</p></span>"
@@ -169,20 +169,43 @@ font-size: 1.1em;\">', markdown)
             markdown = markdown + f"<span @click=\"cardClick\">------修改时间日期：{postDate}</span>" +\
             f"<span hidden><p hidden @click=\"cardClick\" class=\"hiddenp\">{nth}</p>" + \
             "</p></span>"
-        for j in search:
-            if j in markdown or j in i or j.replace(":", "_") in i:
-                collect.append({"date":date, "markdown": (markdown + "<br>" + imgimg), "imgimg" : imgimg, 'path' : nth, \
-                                "upvote":upvote, 'comment':comment, 'click':click, \
-                                'clickshoucang':clickshoucang, 'kshoucang':kshoucang})
-                find = True
-                break
         # if len(markdown) + len(imgimg) < 200:
         #     show = markdown + imgimg
+        inlist = False
         if len(search)==0:
+            inlist = True
             collect.append({"date":date, "markdown": (markdown + "<br>" + imgimg), "imgimg" : imgimg, 'path' : nth, \
                             "upvote":upvote, 'comment':comment, 'click':click, \
-                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang})
+                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'isTop':False})
+        else:
+            for j in search:
+                if j in markdown or j in i or j.replace(":", "_") in i:
+                    collect.append({"date":date, "markdown": (markdown + "<br>" + imgimg), "imgimg" : imgimg, 'path' : nth, \
+                                    "upvote":upvote, 'comment':comment, 'click':click, \
+                                    'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'isTop':False})
+                    inlist = True
+                    break
+        if inlist == True:
+            topPath = os.path.join(nth, "TOP.text")
+            if os.path.exists(topPath):
+                topTime = os.path.getmtime(topPath)
+                collect.pop()
+                inserted = False
+                for itop in range(len(TOPTOP)):
+                    if TOPTOP[itop]['topTime'] < topTime:
+                        TOPTOP.insert(itop, {"date":date, "markdown": (markdown + "<br>" + imgimg), "imgimg" : imgimg, 'path' : nth, \
+                                    "upvote":upvote, 'comment':comment, 'click':click, \
+                                    'clickshoucang':clickshoucang, 'kshoucang':kshoucang,
+                                    'isTop':True, "topTime":os.path.getmtime(topPath)})
+                        inserted = True
+                        break
+                if inserted==False:
+                    TOPTOP.append({"date":date, "markdown": (markdown + "<br>" + imgimg), "imgimg" : imgimg, 'path' : nth, \
+                                    "upvote":upvote, 'comment':comment, 'click':click, \
+                                    'clickshoucang':clickshoucang, 'kshoucang':kshoucang,
+                                    'isTop':True, "topTime":os.path.getmtime(topPath)})
     collect = sorted(collect.__iter__(), key = lambda x:x['date'], reverse=True)
+    collect = TOPTOP + collect
     if allfile==None:
         allfile = collect
     ret = collect[(currentpage-1) * pagesize : currentpage * pagesize]
@@ -223,7 +246,7 @@ def detail(request):
     lasttail = tailpath.split(os.sep)[-1].replace("_", ":")
     allpath = sorted(allpath.__iter__(), key=lambda x:os.path.getmtime(os.path.join(tailpath, x)))
     dirname = tailpath.split(os.sep)[-1]
-    header = dirname.replace("_", ":")
+    header = dirname.replace("_", ":")[:-3]
     txtfile = ""
     original = ""
     modifytime = 0
@@ -299,8 +322,15 @@ def detail(request):
     kseamutexpiaduan[tails].release()
     kseamutexpiaduan.pop(tails)
 
-    return JsonResponse({"markdown" : markdown, 'path': pathkkk, "upvote":upvote, 'comment':comment, 'click':click, \
-                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'title':dirname, "original":original}, safe = False)
+    topPath = os.path.join(tailpath, "TOP.text")
+    if os.path.exists(topPath):
+        return JsonResponse({"markdown" : markdown, 'path': pathkkk, "upvote":upvote, 'comment':comment, 'click':click, \
+                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'title':dirname, "original":original, 'isTop':True}, \
+                                safe = False)
+    else:
+        return JsonResponse({"markdown" : markdown, 'path': pathkkk, "upvote":upvote, 'comment':comment, 'click':click, \
+                            'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'title':dirname, "original":original, 'isTop':False}, \
+                                safe = False)
 
 def modify(request):
     global allfile, kseamutexpiaduan, path, allmutex
@@ -562,14 +592,46 @@ def placeTop(request):
         # if get['ret'] > 0:
             # placepath = placepath.replace("/article/", f"/people/{get['urlmail']}/")
 
-    dirname = placepath.split(os.sep)[-1]
-
-    postDa = datetime.fromtimestamp(time.time() + timezone).isoformat()[:19]
-    postDate = postDa.replace("T", " ").replace(":", "_")
+    # dirname = placepath.split(os.sep)[-1]
     
-    os.rename(placepath, placepath.replace(dirname, postDate))
-    return JsonResponse( { "path" : placepath.replace(dirname, postDate) , 'ret':True} , safe = False)
+    pathkkkTmp = os.path.join(placepath, "TOP.text")
+    with open(pathkkkTmp, 'w', encoding="utf-8") as obj:
+        obj.write("")
 
+    # postDa = datetime.fromtimestamp(time.time() + timezone).isoformat()[:19]
+    # postDate = postDa.replace("T", " ").replace(":", "_")
+    
+    # os.rename(placepath, placepath.replace(dirname, postDate))
+    # return JsonResponse( { "path" : placepath.replace(dirname, postDate) , 'ret':True} , safe = False)
+    return JsonResponse( { "path" : "" , 'ret':True} , safe = False)
+
+
+def cancelPlaceTop(request):
+    global allfile
+    allfile = None
+    # req = request.GET.dict()
+    req = json.loads(request.body)
+    placepath = req["path"]
+
+    rz = renzheng(request)
+    rzret = json.loads(rz.content)
+    passed = False
+    if "mail" in req.keys():
+        get = json.loads(getusername(request).content)
+        if not rzret['ret'] and 'password' in req.keys() and check_logined(req['mail'], req['password']):
+            # placepath = placepath.replace("/article/", f"/people/{get['mail']}/")
+            passed = True
+            if f"/people/{get['mail']}/" not in placepath or '20'!=placepath.split(os.sep)[-1][:2]:
+                return JsonResponse( { "ret" : -100} , safe = False)
+        elif get['ret']==2:
+            return JsonResponse( { "ret" : -100} , safe = False)
+    if not passed and not rzret['ret']:
+        return JsonResponse( { "ret" : -100} , safe = False)
+
+    pathkkkTmp = os.path.join(placepath, "TOP.text")
+    if os.path.exists(pathkkkTmp):
+        os.remove(pathkkkTmp)
+    return JsonResponse( { "path" : "" , 'ret':True} , safe = False)
 
 kseamutexpiaduan = {}
 kshoucangmutexpianduan = Semaphore(value=1)

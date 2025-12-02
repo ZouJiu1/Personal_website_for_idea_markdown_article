@@ -38,8 +38,20 @@
     type="warning"
     @click="dialogFormVisible_top = true"
     style="text-align:center; margin-left:1%;"
+    id="placetop"
+    v-if="nottop"
     >
-    最上面
+    放在最上面
+  </el-button>
+  <el-button
+    class="filter-item"
+    type="warning"
+    @click="cancel_dialogFormVisible_top = true"
+    style="text-align:center; margin-left:1%;"
+    id="placetop"
+    v-if="toptop"
+    >
+    取消放在最上面
   </el-button>
   <el-button
     class="filter-item"
@@ -66,6 +78,24 @@
       style="text-align:center; margin-left:3px;margin-top:6px;"
       >
       确认放在最上面
+    </el-button>
+  </el-dialog>
+  <el-dialog v-model="cancel_dialogFormVisible_top" title="取消放在最上面的" width="500">
+    <span hidden>
+      <el-input
+        v-model="postkey"
+        style="width: 100%;overflow:auto;height:100%"
+        placeholder="密钥"
+        type="password"
+      />
+    </span>
+    <el-button
+      class="filter-item"
+      type="warning"
+      @click="cancelhandleTop"
+      style="text-align:center; margin-left:3px;margin-top:6px;"
+      >
+      确认取消放在最上面
     </el-button>
   </el-dialog>
   <el-dialog v-model="modifyvisible" title="修改" width="90%" style="height:60%;margin-top:6px;">
@@ -197,6 +227,7 @@ export default {
       resultresult: {'path': "", "upvote":[], 'comment':[], 'click':false,
                      'clickshoucang':false, 'kshoucang':[], 'title':""},
       dialogFormVisible: false,
+      cancel_dialogFormVisible_top: false,
       textarea_content: "",
       modifyvisible: false,
       kshoucanglength:0,
@@ -209,6 +240,8 @@ export default {
       data: {
         "postdate": -10,
       },
+      toptop:false,
+      nottop:true,
     }
   },
   mounted(){
@@ -471,6 +504,32 @@ export default {
         ElMessage("已经放在最上面");
       })
     },
+    async cancelhandleTop() {
+      const instance = axios.create({
+        baseURL: 'http://localhost:7009/think/cancelPlaceTop',
+        timeout: 20000,
+      });
+          
+      // console.log(this.search_param);
+      instance({
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        data: {"path":this.path, 'mail':Cookies.get("mail"), 'password':Cookies.get("password"), 
+              'postkey':this.postkey, 'url':document.URL,
+        },
+      }).then((response) => {
+        if(response.data.ret < 0) {
+          // ElMessage.error('输入的密钥不对！');
+          ElMessage.error('没有登陆不能修改!');
+          return false;
+        }
+        this.path = response.data.path;
+        this.$router.go(-1);
+        ElMessage("已经取消放在最上面");
+      })
+    },
     async modify_content() {
       this.path = this.$router.currentRoute._value.query.plan;
       const instance = axios.create({
@@ -523,6 +582,15 @@ export default {
         this.result = response.data.markdown;
         this.editcontent = response.data.original;
         let detailvue = document.getElementById("detailvue");
+
+        let isTop = response.data.isTop;
+        if(isTop==true) {
+          this.nottop = false;
+          this.toptop = true;
+        } else {
+          this.nottop = true;
+          this.toptop = false;
+        }
 
         this.resultresult = response.data;
 

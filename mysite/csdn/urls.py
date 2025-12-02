@@ -20,6 +20,7 @@ urlpatterns = [
     path("FormsubmitSetting", views.FormsubmitSetting, name="FormsubmitSetting"),
     path("GetSetting", views.GetSetting, name="GetSetting"),
     path("placeTopTop", views.placeTopTop, name="placeTopTop"),
+    path("cancelPlaceTopTop", views.cancelPlaceTopTop, name="cancelPlaceTopTop"),
     path("NicknameSetting", views.NicknameSetting, name="NicknameSetting"),
     path("themeChange", views.themeChange, name="themeChange"),
     path("getThemeColor", views.getThemeColor, name="getThemeColor"),
