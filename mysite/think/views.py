@@ -269,7 +269,7 @@ def detail(request):
                 kk = '/article' + tailpath.split("article")[-1] + os.sep + j
             imgimg += '<img ' + f'src=\"{kk}\" style=\"width = 30%;margin-top:6px;margin-bottom:6px;\"" />\n'
     markdown = markdown2.markdown(markdown)
-    if abs(modifytime - createtime) > 1600:
+    if abs(modifytime - createtime) > 3600:
         postDate = datetime.fromtimestamp(modifytime).isoformat()[:19][:-3].replace("T", " ")
         markdown = markdown + f"<span @click=\"cardClick\">------修改时间日期：{postDate}</span>"
     markdown = "<h3>" + markdown + "</h3>\n<p>" + header + "</p><br>" + imgimg
