@@ -941,7 +941,7 @@ export default {
             else if(value=='除夕' && pe[0]=='elheader') {
               // let kk = ele.style.backgroundImage
               // console.log(this.checked1, kk, ele, pe[1]);
-              let ran = Math.floor(Math.random() * 116);
+              let ran = Math.floor(Math.random() * 124);
               ele.style.setProperty("background-color", "rgb(197,78,73)");
               if(notrelease) {
                 ele.style.backgroundImage = pe[1] + ran + ".png)";
