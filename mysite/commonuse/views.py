@@ -261,9 +261,7 @@ CCTV5===http://sports.cntv.cn/
 血液
 长沙血液中心===https://www.csxyzx.org
 上海市血液中心===https://www.sbc.org.cn
-无偿献血注意事项===https://www.17donor.com/changsha/wechat/micro/detail?aid=6042
-献血须知===https://www.17donor.com/changsha/wechat/micro/detail?aid=6041
-献血前应做哪些准备？===https://www.17donor.com/changsha/wechat/micro/detail?aid=6044
+无偿献血科普知识===https://www.bjredcross.org.cn/contents/gxbgzdwywjs/2023112918560.html
 夏季献血应注意的事项===https://www.csxyzx.org/index.php/site/page/index/3325/category_id/10858/news_id/18339/ct_id/276/okcode/be0f94dcaff7be04ade79f87b0a33cbc0023d02e6a4f7aff3d2b27ac3ff74678
 献血的人须知===https://www.sbc.org.cn/portal/article/index/id/9380/cid/25.html
 献血注意事项及流程===https://www.sbc.org.cn/portal/article/index/id/9381/cid/25.html
@@ -271,6 +269,9 @@ CCTV5===http://sports.cntv.cn/
 二十四节气之寒露：献血前应该喝糖水还是盐水？===https://www.sbc.org.cn/portal/article/index/id/10002/cid/25.html
 二十四节气之秋分：X医生谈血液丨献血后补充哪种食物才能快速恢复元气？===https://www.sbc.org.cn/portal/article/index/id/10001/cid/25.html
 献血常识 上海市血液中心===https://www.sbc.org.cn/portal/list/index/id/25.html?fuid=19&page=2
+献血前后应注意些什么？===https://www.sbc.org.cn/portal/article/index/id/6969/cid/25.html
+献血丢失的血液需要多久能恢复?需要“静养”、“进补”吗？===https://www.sbc.org.cn/portal/article/index/id/6968/cid/25.html
+二十四节气之秋分：X医生谈血液丨献血后补充哪种食物才能快速恢复元气？===https://www.sbc.org.cn/portal/article/index/id/10001/cid/25.html
 瘦子要如何健康地增重？|丁香医生===https://dxy.com/article/6262
 苦恼，怎么吃都长不胖？！瘦子如何成功增重20斤？|丁香医生===https://dxy.com/article/79507
 想增肌增重？瘦子们看过来|丁香医生===https://dxy.com/article/3426
