@@ -279,7 +279,7 @@ def mailsend(mail, modify=False, notify_guanliyuan=None):
     smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
     # smpt.connect("smtp.qq.com", port=465)
     try:
-        smpt.login(user="1069679911@qq.com", password='abcdefghijklmnopqrst')
+        smpt.login(user="1069679911@qq.com", password='abcdefg')
     except:
         return "999999"
     # smpt.sendmail()
@@ -883,7 +883,23 @@ def postArticle(request):
     if len(filepath) > 0:
         markdown = markdown.replace('''<img src=\"''',\
             '''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"preview_img\"''' + \
-            '''src=\"''' + filepath[index:k] + os.sep)
+            '''src=\"''' + filepath[index : k] + os.sep)
+        
+        def keepLeetcodeImage(text):
+            inp = text[0]
+            if "https" in inp and "leetcode" in inp:
+                return inp.replace('''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"preview_img\"''' + \
+            '''src=\"''' + filepath[index : k] + os.sep, '''<img src=\"''')
+            else:
+                return inp
+        
+        markdown = regular.sub(r'<img crossorigin=.*/?>', keepLeetcodeImage, markdown)
+        
+    def keepLeetcodeImagePreview(text):
+        inp = text[0]
+        return inp.replace('''<img ''', '''<img width=\"100%\"''')
+        
+    markdown = regular.sub(r'<img .*/?>', keepLeetcodeImagePreview, markdown)
 
     # markdown = postDate + '\n\n' + markdown
     if 'zhihu' in filepath:

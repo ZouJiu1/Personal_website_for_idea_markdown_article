@@ -893,6 +893,22 @@ def index(request):
         '''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"img_blank_class\"''' + \
         '''src=\"''' + pathkkk[index : k] + os.sep)
     
+    def keepLeetcodeImage(text):
+        inp = text[0]
+        if "https" in inp and "leetcode" in inp:
+            return inp.replace('''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"img_blank_class\"''' + \
+        '''src=\"''' + pathkkk[index : k] + os.sep, '''<img src=\"''')
+        else:
+            return inp
+    
+    markdown = re.sub(r'<img crossorigin=.*/?>', keepLeetcodeImage, markdown)
+    
+    def keepLeetcodeImagePreview(text):
+        inp = text[0]
+        return inp.replace('''<img ''', '''<img width=\"100%\"''')
+        
+    markdown = re.sub(r'<img .*/?>', keepLeetcodeImagePreview, markdown)
+    
     markdown = addback_code(markdown, collect)
     markdown = addback_katex(markdown, collect_katex)
     
