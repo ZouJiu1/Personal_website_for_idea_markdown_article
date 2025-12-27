@@ -252,7 +252,7 @@ def detail(request):
     modifytime = 0
     createtime = 0
     for j in allpath:
-        if '.txt' in j:
+        if '.txt' in j and '.txt.swp' not in j:
             txtfile = j
             markdownpth = os.path.join(tailpath, j)
             with open(markdownpth, 'r', encoding = 'utf-8') as obj:
@@ -381,7 +381,7 @@ def modify(request):
     # writeable = editcontent + f"：{postDate}" + "\n---------------第一版：" + keep
     modified = False
     for j in allpath:
-        if '.txt' in j:
+        if '.txt' in j and '.txt.swp' not in j:
             markdownpth = os.path.join(tailpath, j)
             if tailpath not in allmutex.keys():
                 allmutex[tailpath] = Semaphore(value=1)
