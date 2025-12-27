@@ -132,7 +132,7 @@ def index(request):
         modifytime = 0
         createtime = 0
         for j in allpath:
-            if '.txt' in j:
+            if '.txt' in j and '.txt.swp' not in j:
                 markdownpth = os.path.join(nth, j)
                 # at = os.path.getatime(markdownpth)
                 # ct = os.path.getctime(markdownpth)
