@@ -1,5 +1,6 @@
 import os
 import re
+import requests
 from django.http import HttpResponse
 # from rest_framework.response import Response
 # from rest_framework import status
@@ -858,8 +859,10 @@ def index(request):
                     lastline = lastline[:10] + " " + lastline[11:]
 
     markdown = r''
+    original = ""
     with open(pathkkk, 'r', encoding='utf-8') as obj:
         markdown = obj.read().strip()
+        original = deepcopy(markdown)
     # assert 1==0, markdown
     index = pathkkk.index("vue-project")
     k = len(pathkkk) - 1
@@ -902,6 +905,21 @@ def index(request):
             return inp
     
     markdown = re.sub(r'<img crossorigin=.*/?>', keepLeetcodeImage, markdown)
+    imglink = re.findall(r'<img src=\"(.*)\"\s', markdown)
+    if len(imglink) > 0:
+        imglink = imglink[0].split('\"')
+        if len(imglink) > 0:
+            imglink = imglink[0]
+    
+            imgname = imglink.split("/")[-1]
+            if 'https' in imglink:
+                response = requests.get(imglink, timeout=30)
+                if response.status_code==200 and "leetcode" in imglink:
+                    original = original.replace(imglink, imgname);
+                    with open(os.path.join(predir, imgname), 'wb') as obj:
+                        obj.write(response.content)
+                    with open(pathkkk, 'w', encoding='utf-8') as obj:
+                        obj.write(original)
     
     def keepLeetcodeImagePreview(text):
         inp = text[0]

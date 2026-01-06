@@ -3,6 +3,7 @@ from django.http import HttpResponse
 # from rest_framework import status
 from django.http import JsonResponse
 import os
+import requests
 from datetime import datetime
 import markdown2
 import time
@@ -760,6 +761,8 @@ def postArticle(request):
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
     req = json.loads(request.body)
     markdown = req["textarea"]
+    # original = deepcopy(markdown)
+
     title = req["title"]
     save = bool(req["save"])
     old_title = req["old_title"]
@@ -797,6 +800,8 @@ def postArticle(request):
             newtitle = title
             title = old_title
         savename = postDa.replace("T", "_") + "_markdown.md"
+        if "%" in savename:
+            savename = savename.replace("%", "")
 
         # if "mail" in req.keys():
         #     if check_logined(req['mail'], req['password']):
@@ -840,6 +845,22 @@ def postArticle(request):
             nextline_index = markdown.index("\n")
         except:
             markdown = "-----------------------------\n\n" + markdown
+            
+        imglink = regular.findall(r'\!\[image.png\]\((.*)\)', markdown)
+        if len(imglink) > 0:
+            img = imglink[0]
+            imglink = imglink[0].split('\"')
+            if len(imglink) > 0:
+                imglink = imglink[0]
+        
+                imgname = imglink.split("/")[-1]
+                if 'https' in imglink:
+                    response = requests.get(imglink, timeout=30)
+                    if response.status_code==200 and "leetcode" in imglink:
+                        markdown = markdown.replace(img, imgname);
+                        with open(os.path.join(savepath, imgname), 'wb') as obj:
+                            obj.write(response.content)
+
         with open(savefile, 'w') as obj:
             obj.write(markdown)
         create = os.path.join(savepath, 'create.txt')
