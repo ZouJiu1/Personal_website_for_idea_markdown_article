@@ -280,7 +280,7 @@ def mailsend(mail, modify=False, notify_guanliyuan=None):
     smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
     # smpt.connect("smtp.qq.com", port=465)
     try:
-        smpt.login(user="1069679911@qq.com", password='abcdefg')
+        smpt.login(user="1069679911@qq.com", password='1234567890')
     except:
         return "999999"
     # smpt.sendmail()
@@ -689,6 +689,7 @@ def getusername(request):
     urlmail = findurlmail(req['url'])
     # if urlmail=='zj' or len(urlmail)<=6:
     if urlmail=='zj' or len(urlmail)<=6:
+        getStatisticTravelerCount(request, urlmail)
         return JsonResponse({"ret":0, 'mail':None, 'username':None, 'urlmail':urlmail, 'quanxian':-1, 'truemail':-1}, safe = False)
     quanxian = -1
     nickname = ""
@@ -708,6 +709,7 @@ def getusername(request):
                 usern = i[2]
                 findmember = True
                 if ml in req['url']:
+                    getStatisticTravelerCount(request, urlmail)
                     return JsonResponse({"ret":1, 'mail':mailaddr, 'username':usern, \
                                          'urlmail':urlmail, 'quanxian':quanxian, 'truemail':mail, 'nickname':nickname}, \
                                         safe = False)
@@ -733,6 +735,7 @@ def getusername(request):
                         if find1 and find2:
                             break
                     if findone:
+                        getStatisticTravelerCount(request, urlmail)
                         return JsonResponse({"ret":2, 'mail':mailaddr, 'username':usern, \
                                              'urlmail':urlmail, 'quanxian':quanxian, 'truemail':mail, 'nickname':nickname},\
                                             safe = False)
@@ -746,9 +749,11 @@ def getusername(request):
                 if urlmail==ml:
                     quanxian = int(i[-1])
                     nickname = i[2]
+                    getStatisticTravelerCount(request, urlmail)
                     return JsonResponse({"ret":3, 'mail':mailaddr, 'username':nickname, \
                                              'urlmail':urlmail, 'quanxian':-1, 'truemail':None, 'nickname':nickname},\
                                             safe = False)
+    getStatisticTravelerCount(request, urlmail)
     return JsonResponse({"ret":0, 'mail':None, 'username':None, \
                          'urlmail':urlmail, 'quanxian':-1, 'truemail':-1, 'nickname':nickname}, safe = False)
 
@@ -2146,16 +2151,16 @@ def themeChange(request):
     return JsonResponse( { "ret" : True } , safe = False)
 
 allTraveler = {}
+StatisticTravelerCount = 0
 thememutex = Semaphore(value=1)
-def getThemeColor(request):
-    global path, thememutex, allTraveler
-    ip_address = None
+def getStatisticTravelerCount(request, urlmail):
+    global path, thememutex, allTraveler, StatisticTravelerCount
     fileTraveler = os.path.abspath(__file__ + "/../../../")
-
-    get = json.loads(getusername(request).content)
-    fileTravelerPath = os.path.join(fileTraveler, 'people', get['urlmail'], "TravelerStatistics.txt")
+    ip_address = None
+    # get = json.loads(getusername(request).content)
+    fileTravelerPath = os.path.join(fileTraveler, 'people', urlmail, "TravelerStatistics.txt")
     if not os.path.exists(fileTravelerPath):
-        os.makedirs(os.path.join(fileTraveler, 'people', get['urlmail']), exist_ok=True)
+        os.makedirs(os.path.join(fileTraveler, 'people', urlmail), exist_ok=True)
         with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
             obj.write("100")
     with open(fileTravelerPath, 'r', encoding='utf-8') as obj:
@@ -2168,6 +2173,9 @@ def getThemeColor(request):
     else:
         if 'X-Forwarded-For' in request.headers.keys():
             ip_address = request.headers['X-Forwarded-For']
+    # print(ip_address)
+    # print("\n\n")
+    # print(allTraveler)
     if ip_address:
         postDa = int(time.time() + timezone)
         updated = False
@@ -2189,12 +2197,25 @@ def getThemeColor(request):
                 delete.append(key)
         for key in delete:
             allTraveler.pop(key)
+    else:
+        allTraveler = {}
+        TravelerStatistics += 1
+        thememutex.acquire()
+        with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
+            obj.write(str(TravelerStatistics))
+        thememutex.release()
+    StatisticTravelerCount = TravelerStatistics
+
+def getThemeColor(request):
+    global path, StatisticTravelerCount
+    get = json.loads(getusername(request).content)
     # body = request.body
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
     # req = json.loads(body)
 
     # req = request.POST.dict()
     get = json.loads(getusername(request).content)
+    TravelerStatistics = StatisticTravelerCount
     # kk = deepcopy(path).split(get['urlmail'])
     basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
     # basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
