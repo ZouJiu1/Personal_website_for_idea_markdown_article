@@ -2167,7 +2167,7 @@ def getStatisticTravelerCount(request, urlmail):
         try:
             TravelerStatistics = int(obj.read().strip())
         except:
-            TravelerStatistics = 100
+            TravelerStatistics = max(StatisticTravelerCount + 1, 100)
     if 'X-Real-Ip' in request.headers.keys():
         ip_address = request.headers['X-Real-Ip']
     else:
