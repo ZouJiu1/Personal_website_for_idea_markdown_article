@@ -512,7 +512,7 @@ export default {
       input2: "",
       input3: "",
       returnback: true,
-      TravelerStatistics:100,
+      TravelerStatistics:3900,
       predefineColors: [
         'rgb(136, 187, 250)',
         '#ff4500',
@@ -1687,6 +1687,7 @@ export default {
     },
     async clickzhihu() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1707,6 +1708,7 @@ export default {
     },
     async clickhome() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1726,6 +1728,7 @@ export default {
     },
     async clickbook() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1744,6 +1747,7 @@ export default {
       }
     },
     async clickcsdn() {
+      this.getColor();
       let gu, index;
       await getusername(document.URL).then((response) => {
         gu = response;
@@ -1765,6 +1769,7 @@ export default {
     },
     async clickthink() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1784,6 +1789,7 @@ export default {
     },
     async clickvideo() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1803,6 +1809,7 @@ export default {
     },
     async clicktravel() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1822,6 +1829,7 @@ export default {
     },
     async clickcommon() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1841,6 +1849,7 @@ export default {
     },
     async clickeverydayimg() {
       let gu, index;
+      this.getColor();
       await getusername(document.URL).then((response) => {
         gu = response;
       });

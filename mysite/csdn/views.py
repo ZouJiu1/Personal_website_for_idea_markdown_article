@@ -192,8 +192,9 @@ def index(request):
                     if len(maillogin)!=1 and maillogin == ij:
                         clickshoucang = True
                         break
-        kseamutex[tails].release()
-        kseamutex.pop(tails)
+        if tails in kseamutex.keys():
+            kseamutex[tails].release()
+            kseamutex.pop(tails)
             # for i in obj.readlines():
             #     i = i.strip()
             #     if len(i)==0:
@@ -667,7 +668,10 @@ def findurlmail(urlrul:str):
         return mail
 
 # @csrf_exempt
+allTraveler_number_cp = 3600
+StatisticTravelerCount = 3600
 def getusername(request):
+    global allTraveler_number_cp, StatisticTravelerCount
     if isinstance(request.POST.dict(), dict) and len(request.POST.dict())!=0:
         req = request.POST.dict()
     else:
@@ -688,6 +692,7 @@ def getusername(request):
         os.system("touch \"%s\""%member)
     urlmail = findurlmail(req['url'])
     # if urlmail=='zj' or len(urlmail)<=6:
+    allTraveler_number_cp = StatisticTravelerCount
     if urlmail=='zj' or len(urlmail)<=6:
         getStatisticTravelerCount(request, urlmail)
         return JsonResponse({"ret":0, 'mail':None, 'username':None, 'urlmail':urlmail, 'quanxian':-1, 'truemail':-1}, safe = False)
@@ -2151,10 +2156,9 @@ def themeChange(request):
     return JsonResponse( { "ret" : True } , safe = False)
 
 allTraveler = {}
-StatisticTravelerCount = 0
 thememutex = Semaphore(value=1)
 def getStatisticTravelerCount(request, urlmail):
-    global path, thememutex, allTraveler, StatisticTravelerCount
+    global path, thememutex, allTraveler, StatisticTravelerCount, allTraveler_number_cp
     fileTraveler = os.path.abspath(__file__ + "/../../../")
     ip_address = None
     # get = json.loads(getusername(request).content)
@@ -2168,6 +2172,8 @@ def getStatisticTravelerCount(request, urlmail):
             TravelerStatistics = int(obj.read().strip())
         except:
             TravelerStatistics = max(StatisticTravelerCount + 1, 100)
+    cp = max(StatisticTravelerCount, TravelerStatistics)
+    cp = max(cp, allTraveler_number_cp)
     if 'X-Real-Ip' in request.headers.keys():
         ip_address = request.headers['X-Real-Ip']
     else:
@@ -2189,6 +2195,8 @@ def getStatisticTravelerCount(request, urlmail):
             TravelerStatistics += 1
             thememutex.acquire()
             with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
+                if abs(TravelerStatistics - cp) > 100:
+                    TravelerStatistics = StatisticTravelerCount = cp
                 obj.write(str(TravelerStatistics))
             thememutex.release()
         delete = []
@@ -2202,6 +2210,8 @@ def getStatisticTravelerCount(request, urlmail):
         TravelerStatistics += 1
         thememutex.acquire()
         with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
+            if abs(TravelerStatistics - cp) > 100:
+                TravelerStatistics = StatisticTravelerCount = cp
             obj.write(str(TravelerStatistics))
         thememutex.release()
     StatisticTravelerCount = TravelerStatistics
@@ -2215,7 +2225,15 @@ def getThemeColor(request):
 
     # req = request.POST.dict()
     get = json.loads(getusername(request).content)
-    TravelerStatistics = StatisticTravelerCount
+    number = StatisticTravelerCount
+    if str(66 + 9) in str(number):
+        kk = str(number)
+        kk = kk.replace(str(66 +9), "76")
+        number = int(kk)
+    if str(30 + 27) in str(number):
+        kk = str(number)
+        kk = kk.replace(str(30 + 27), "58")
+        number = int(kk)
     # kk = deepcopy(path).split(get['urlmail'])
     basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
     # basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
@@ -2240,9 +2258,9 @@ def getThemeColor(request):
                 rl = True
             else:
                 rl = False
-            return JsonResponse( { "checked1" : rl,  "Themecolor":ij[2], 'type':'1', "TravelerStatistics":TravelerStatistics} , safe = False)
+            return JsonResponse( { "checked1" : rl,  "Themecolor":ij[2], 'type':'1', "TravelerStatistics":number} , safe = False)
         else:
-            return JsonResponse( { "color1" : ij[1],  "color2":ij[2], "color3":ij[3], 'type':'2', "TravelerStatistics":TravelerStatistics} , safe = False)
+            return JsonResponse( { "color1" : ij[1],  "color2":ij[2], "color3":ij[3], 'type':'2', "TravelerStatistics":number} , safe = False)
 
 kshoucangmutex = Semaphore(value=1)
 def kshoucang(request):
