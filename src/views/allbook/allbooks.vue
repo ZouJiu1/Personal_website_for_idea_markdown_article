@@ -1,18 +1,19 @@
 <template>
-  <p>
-    <span style="font-size:4.4vh; font-weight:390;margin-left:39%; color:#000000; background-color: #ffffff;">图书以及在线课程</span>
-    <span style="font-size:1vh; font-weight:390;margin-left:39%; color:#000000; background-color: #ffffff;margin-left: 6px;">
-      个人信任保证
+  <p class="book-topbar">
+    <span class="book-topbar-text">
+      <span class="page-title" style="font-size:4.4vh; font-weight:390; color:#000000; background-color: #ffffff;">图书以及在线课程</span>
+      <span style="font-size:1vh; font-weight:390; color:#000000; background-color: #ffffff; margin-left: 6px;">
+        个人信任保证
+      </span>
     </span>
   <!-- <div
   v-for="o in allbook"
-  :key="o" 
+  :key="o"
   > -->
-    <el-button style="margin-left:20%; text-align:center;"
-      @click="SettingVisible = true">
+    <el-button class="book-add-btn" @click="SettingVisible = true">
       添加
     </el-button>
-    <el-dialog v-model="SettingVisible" title="添加" width="60%" height="90%">
+    <el-dialog v-model="SettingVisible" title="添加" width="min(600px, 92%)" height="90%">
       <span hidden>
         <el-input
           v-model="postkey"
@@ -47,7 +48,7 @@
           <el-input v-model="onebook.github" autocomplete="off" placeholder="网址" style="margin-bottom:2px;" />
           <el-upload
             class="upload-demo"
-            action="http://localhost:7009/csdn/mainpageuploadImg"
+            action="/csdn/mainpageuploadImg"
             multiple
             :on-preview="handleUpPreview"
             :on-remove="handleRemove"
@@ -75,7 +76,7 @@
       @click="ModifyVisible = true">
       修改
     </el-button> -->
-    <el-dialog v-model="modifyvisible" title="修改" width="60%" height="90%">
+    <el-dialog v-model="modifyvisible" title="修改" width="min(600px, 92%)" height="90%">
       <span hidden>
         <el-input
           v-model="postkey"
@@ -110,7 +111,7 @@
           <el-input v-model="clickcard.github" autocomplete="off" placeholder="网址" style="margin-bottom:2px;" />
           <el-upload
             class="upload-demo"
-            action="http://localhost:7009/csdn/mainpageuploadImg"
+            action="/csdn/mainpageuploadImg"
             multiple
             :on-preview="handleUpPreview"
             :on-remove="handleRemove"
@@ -139,7 +140,8 @@
     v-model="search_param"
     placeholder="书名或者进度或者网址或者时间，用空格分隔开"
     style="width: 26%; margin-left: 6px;"
-    class="filter-item"
+    class="filter-item search-input"
+    @keyup.enter="handleSearch"
   />
   <el-button
     class="filter-item"
@@ -171,7 +173,7 @@
     border
     style="text-align:center;margin-left:0px;" @Change="handleCheckbox"
   />
-  <el-dialog v-model="deletevisible" title="删除" width="60%" height="90%">
+  <el-dialog v-model="deletevisible" title="删除" width="min(600px, 92%)" height="90%">
     <span hidden>
       <el-input
         v-model="postkey"
@@ -186,52 +188,53 @@
       确认删除
     </el-button>
   </el-dialog>
-  <el-card v-for="o in allbook" :key="o" class="el-card-detail" 
-          shadow="always" style="overflow:auto;width:93%;margin-left:7vh;">
-    <!-- <template #header> style="height:6vh;"
-      <div class="card-header" style="height:16px; font-size: 20px; color: #00ff00;" >
-        <span > {{ o["name"] }} </span>
+  <div v-if="allbook.length==0" class="book-empty">
+    书架空空如也，点击上方【添加】录入图书
+  </div>
+  <el-card v-for="o in allbook" :key="'bk' + (o.n !== undefined ? o.n : o.name)" class="el-card-detail book-card"
+          shadow="hover">
+    <div class="book-main">
+      <div class="book-title-row">
+        <el-link type="primary" :href="o.website" class="book-title-link" target="_blank" :underline="false">
+          <span class="book-title">{{ o["name"] }}</span>
+        </el-link>
+        <span v-if="o.finished" class="book-badge-finished">已看完</span>
       </div>
-    </template> -->
-    <el-link type="primary" :href="o.website" style="margin-left:1px;" target="_blank">
-      <span style="color:#000000;font-size:20px;font-weight:390;">
-        {{ o["name"] }}
-      </span>
-    </el-link>
-    <span style="width:60%; font-size: 16px; color: #000000;margin-left:6px;">
-      {{ o["markdown"] }}
-    </span>
-    <el-image style="width:10%;" :src="o.img" lazy :zoom-rate="1.0" :max-scale="10" :min-scale="0.1"
+      <span v-if="o.markdown" class="book-desc">{{ o["markdown"] }}</span>
+      <el-link v-if="o.github" type="primary" :href="o.github" class="book-github" target="_blank" :underline="false">
+        {{ o["github"] }}
+      </el-link>
+      <div class="book-meta-row">
+        <span v-if="o.ratio" class="book-ratio">{{ o["ratio"] }}</span>
+        <template v-if="o.author">
+          <span class="book-author-label">作者:</span>
+          <span class="book-author">{{ o["author"] }}</span>
+        </template>
+        <span class="book-number">{{ o["number"] }}</span>
+        <span @click="cardClick(o)" class="book-op book-op-edit">修改</span>
+        <span @click="delcardClick(o)" class="book-op book-op-del">删除</span>
+      </div>
+    </div>
+    <el-image class="book-cover" :src="o.img" lazy :zoom-rate="1.0" :max-scale="10" :min-scale="0.1"
       :preview-src-list="o.imglist" :initial-index="4" fit="cover">
       <template #placeholder>
         <div class="image-slot">Loading<span class="dot">...</span></div>
       </template>
     </el-image>
-    <!-- <img :src="o.img" style="width:10%;"/> -->
-    <!-- <br> -->
-    <span style="margin-left:6px;color: #00e000;"> {{ o["ratio"] }} </span>
-    <el-link type="primary" :href="o.github" style="margin-left:6px;" target="_blank">
-      {{ o["github"] }}
-    </el-link>
-    <span v-if="o.author" style="color:#000000;font-size:16px;font-weight:600;margin-left:6px;">
-      作者:
-    </span>
-    <span v-if="o.author" style="color:#ff00ff;font-size:16px;font-weight:600;margin-left:0px;"> {{ o["author"] }} </span>
-    <span style="color:#f0f0f0;font-size:10px;font-weight:600;margin-left:6%;">
-        {{ o["number"] }}
-    </span>
-    <span v-if="o.finished" style="color: #ff00ff;font-size:20px;font-weight:600;margin-left:6px;">
-      已看完
-    </span>
-    <span @click="cardClick(o)" style="color:#f0f0f0;font-size:10px;font-weight:600;margin-left:20px;">修改</span>
-    <span @click="delcardClick(o)" style="color:#f0f0f0;font-size:10px;font-weight:600;margin-left:6px;">删除</span>
-    <!-- <template #footer>
-      <div class="card-footer" style="height:16px; font-size: 16px; color: #0000ee;" >
-        <span > {{ o["website"] }} </span>
-      </div>
-    </template> -->
   </el-card>
   <!-- </div> -->
+  <el-pagination
+    layout="total, sizes, prev, pager, next, jumper"
+    class="book-pagination"
+    :page-sizes="[20, 50, 100]"
+    background
+    v-model:page-size="pagesize"
+    v-model:current-page="currentpage"
+    :total="total"
+    @size-change="handleSizeChange"
+    @update:current-page="handlePageChange"
+    style="margin-left:20%; margin-top:20px; margin-bottom: 20px;"
+  />
   <br>
   <el-backtop :bottom="100">
     <div
@@ -708,6 +711,9 @@ export default {
       search_param:"",
       checkboxval:1,
       checkpartialval:1,
+      currentpage:1,
+      pagesize:20,
+      total:0,
     }
   },
   mounted() {
@@ -723,35 +729,6 @@ export default {
       this.checkpartialval = 1;
       this.handleSearch();
     },
-    async handleSearch() {
-      const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/mainpagedataget',
-        timeout: 20000,
-      });
-      
-      // console.log(this.search_param);
-      let mail = "";
-      mail = Cookies.get("mail");
-      await instance({
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        data: {'url' : document.URL, "mail":mail, "password":".", 'imgbook':true, 
-               'search':this.search_param, 'checkboxval':this.getcheck()},
-      }).then((response) => {
-        if(response.data.jfile.length!=0) {
-          this.allbook = response.data.jfile;
-        } else if(this.search_param.length==0) {
-        }
-        else {
-          this.allbook = [{'name':'Not Found'}];
-        }
-        this.postkey = ""
-        // this.search_param = ""
-        // console.log(this.allbook);
-      });
-    },
     getcheck() {
       let check = 2;
       if((this.checkboxval==1 && this.checkpartialval==1)||
@@ -766,31 +743,74 @@ export default {
       }
       return check;
     },
-    async handleCheckbox() {
+    // 统一加载入口：搜索/筛选/翻页/增删改后的刷新都走这里。
+    // 书架扩容到 30000 本后前端必须分页拉取，后端带 currentpage/pagesize 只返回当前页
+    async loadBooks(errmsg) {
+      // 请求进行中直接忽略重复触发（防连点/翻页连击导致的请求风暴）
+      if(this._loadBusy) {
+        return;
+      }
+      this._loadBusy = true;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/mainpagedataget',
+        baseURL: '/csdn/mainpagedataget',
         timeout: 20000,
       });
-      
-      // console.log(this.search_param);
       let mail = "";
       mail = Cookies.get("mail");
-
       await instance({
         method: 'POST',
         headers: {
           'X-Requested-With': 'XMLHttpRequest'
         },
-        data: {'url' : document.URL, "mail":mail, "password":".", 
-               'imgbook':true, 'checkboxval':this.getcheck()},
+        data: {'url' : document.URL, "mail":mail, "password":".", 'imgbook':true,
+               'search':this.search_param, 'checkboxval':this.getcheck(),
+               'currentpage':this.currentpage, 'pagesize':this.pagesize},
       }).then((response) => {
-        if(response.data.jfile.length!=0) {
-          this.allbook = response.data.jfile;
+        let rd = (response.data && typeof response.data === 'object') ? response.data : {};
+        // jfile 结构守卫，接口异常/返回非数组时不再抛 TypeError
+        let jf = Array.isArray(rd.jfile) ? rd.jfile : [];
+        this.total = Number(rd.length) || 0;
+        // 后端页码钳制回填（当前页被删空/超界时自动回落到有效页），不触发二次请求
+        let pg = Number(rd.page);
+        if(pg >= 1 && pg !== this.currentpage) {
+          this.currentpage = pg;
+        }
+        if(jf.length!=0) {
+          this.allbook = jf;
+        } else if(this.search_param.length>0) {
+          this.allbook = [{'name':'Not Found'}];
+          this.total = 0;
+        } else {
+          // 空书架清空列表，避免残留上一页旧数据
+          this.allbook = [];
         }
         this.postkey = ""
-        // this.search_param = ""
-        // console.log(this.allbook);
+      }).catch(() => {
+        ElMessage.error(errmsg || "网络错误，加载书架失败！");
+      }).finally(() => {
+        this._loadBusy = false;
       });
+    },
+    async handleSearch() {
+      // 搜索/重置总是回到第一页，避免旧页码超出新结果范围
+      this.currentpage = 1;
+      await this.loadBooks("网络错误，搜索失败！");
+    },
+    async handleCheckbox() {
+      // 筛选条件变化后结果集变化，回第一页
+      this.currentpage = 1;
+      await this.loadBooks("网络错误，筛选失败！");
+    },
+    async getdata() {
+      await this.loadBooks("网络错误，加载书架失败！");
+    },
+    async handlePageChange() {
+      await this.loadBooks("网络错误，加载书架失败！");
+    },
+    async handleSizeChange() {
+      // 每页条数变化后页码含义改变，回第一页
+      this.currentpage = 1;
+      await this.loadBooks("网络错误，加载书架失败！");
     },
     async submitAddbook() {
       let ok = true;
@@ -822,11 +842,15 @@ export default {
       if(!ok) {
         return false;
       }
+      if(this._submitBusy) {
+        return;
+      }
+      this._submitBusy = true;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/FormsubmitSetting',
+        baseURL: '/csdn/FormsubmitSetting',
         timeout: 20000,
       });
-      
+
       await instance({
         method: 'POST',
         headers: {
@@ -836,17 +860,28 @@ export default {
               "password":Cookies.get("password"), 'addbook':this.onebook, 'SettingForm':"."},
       }).then((response) => {
         if(response.data.ret < 0) {
-          // ElMessage.error('输入的密钥不对!');
-          ElMessage.error('没有登陆不能修改!');
+          // 业务失败（未登录/-107 书架已满等）时优先展示后端 msg
+          ElMessage.error(response.data && response.data.msg ? String(response.data.msg) : '没有登陆不能修改!');
           return false;
         }
+        // 新书追加在书架末尾：跳到估算的最后一页再刷新（页码越界由后端钳制兜底）
+        this.currentpage = Math.floor(this.total / this.pagesize) + 1;
         this.getdata();
         this.postkey = "";
         this.SettingVisible = false;
-        this.onebook.finished = 1;
+        this.targetn = "";
+        this.onebook.name = "";
+        this.onebook.ratio = "";
+        this.onebook.readdate = "";
+        this.onebook.github = "";
         this.onebook.author = "";
+        this.onebook.finished = 1;
+        ElMessage.success('添加成功');
+      }).catch(() => {
+        ElMessage.error("网络错误，添加失败！");
+      }).finally(() => {
+        this._submitBusy = false;
       });
-      this.targetn = "";
     },
     async submitModifybook() {
       let ok = true;
@@ -874,15 +909,19 @@ export default {
       if(!ok) {
         return false;
       }
+      if(this._submitBusy) {
+        return;
+      }
+      this._submitBusy = true;
       // if(this.targetn.length==0) {
       //   ElMessage.warning('没有上传书本封面!');
       //   return false;
       // }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/FormsubmitSetting',
+        baseURL: '/csdn/FormsubmitSetting',
         timeout: 20000,
       });
-      
+
       await instance({
         method: 'POST',
         headers: {
@@ -892,43 +931,25 @@ export default {
               "password":Cookies.get("password"), 'SettingForm':".",
               'clickcard':'.', 'github':this.clickcard.github, 'name':this.clickcard.name,
               'n':this.clickcard.n, 'readdate':this.clickcard.readdate,
-              'ratio':this.clickcard.ratio, 'finished':this.clickcard.finished, 
+              'ratio':this.clickcard.ratio, 'finished':this.clickcard.finished,
               'author':this.clickcard.author},
       }).then((response) => {
         if(response.data.ret < 0) {
-          // ElMessage.error('输入的密钥不对!');
-          ElMessage.error('没有登陆不能修改!');
+          // 业务失败（未登录/超限等）时优先展示后端 msg
+          ElMessage.error(response.data && response.data.msg ? String(response.data.msg) : '没有登陆不能修改!');
           return false;
         }
         this.getdata();
         this.postkey = "";
         this.modifyvisible = false;
+        this.targetn = "";
         this.clickcard.finished = 1;
         this.clickcard.author = "";
-      });
-      this.targetn = "";
-    },
-    async getdata() {
-      const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/mainpagedataget',
-        timeout: 20000,
-      });
-      
-      // console.log(this.search_param);
-      let mail = "";
-      mail = Cookies.get("mail");
-      await instance({
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        data: {'url' : document.URL, "mail":mail, "password":".", 'imgbook':true, 'checkboxval':this.getcheck()},
-      }).then((response) => {
-        if(response.data.jfile.length!=0) {
-          this.allbook = response.data.jfile;
-        }
-        this.postkey = ""
-        // console.log(this.allbook);
+        ElMessage.success('修改成功');
+      }).catch(() => {
+        ElMessage.error("网络错误，修改失败！");
+      }).finally(() => {
+        this._submitBusy = false;
       });
     },
     clickimage(event) {
@@ -949,7 +970,7 @@ export default {
     },
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
 
@@ -961,6 +982,7 @@ export default {
         },
         params: { 'type': 'book' },
       }).then((response) => {
+      }).catch(() => {
       });
     },
     handleRemove(file, uploadFiles) {
@@ -1062,44 +1084,50 @@ export default {
     },
     cardClick(event) {
       // console.log(event, k);
-      let rt = event.ratio
+      // 伪卡片（如搜索无结果的 {'name':'Not Found'}）无 n，先拦截再处理 ratio，避免 TypeError
+      if(!event || event.n === undefined || event.n === null || Number(event.n) < 0) {
+        ElMessage.warning('还没有属于您自己看过的图书，需要先【添加】才行!');
+        return false;
+      }
+      let rt = event.ratio ? String(event.ratio) : ""
       let id = rt.indexOf(",");
       if(id > 0) {
         event.ratio = rt.substring(id + 2);
       }
       this.clickcard = event;
-      if(this.clickcard.n < 0) {
-        ElMessage.warning('还没有属于您自己看过的图书，需要先【添加】才行!');
-        return false;
-      }
       this.modifyvisible = true;
     },
     delcardClick(event) {
       // console.log(event);
-      let rt = event.ratio
+      // 伪卡片（如搜索无结果的 {'name':'Not Found'}）无 n，先拦截再处理 ratio，避免 TypeError
+      if(!event || event.n === undefined || event.n === null || Number(event.n) < 0) {
+        ElMessage.warning('还没有属于您自己看过的图书，需要先【添加】才行!');
+        return false;
+      }
+      let rt = event.ratio ? String(event.ratio) : ""
       let id = rt.indexOf(",");
       if(id > 0) {
         event.ratio = rt.substring(id + 2);
       }
       this.clickcard = event;
-      if(this.clickcard.n < 0) {
-        ElMessage.warning('还没有属于您自己看过的图书，需要先【添加】才行!');
-        return false;
-      }
       this.deletevisible = true;
     },
     async carddelete() {
-      if(this.clickcard.n < 0) {
+      if(!this.clickcard || this.clickcard.n === undefined || this.clickcard.n === null || Number(this.clickcard.n) < 0) {
         ElMessage.warning('还没有属于您自己看过的图书，需要先【添加】才行!');
         return false;
       }
+      if(this._submitBusy) {
+        return;
+      }
+      this._submitBusy = true;
       let rt = this.clickcard.ratio
-      let id = rt.indexOf(",");
+      let id = rt ? String(rt).indexOf(",") : -1;
       if(id > 0) {
-        this.clickcard.ratio = rt.substring(id + 2);
+        this.clickcard.ratio = String(rt).substring(id + 2);
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/FormsubmitSetting',
+        baseURL: '/csdn/FormsubmitSetting',
         timeout: 20000,
       });
 
@@ -1113,15 +1141,21 @@ export default {
               "password":Cookies.get("password"), 'n':this.clickcard.n, 'delete':true },
       }).then((response) => {
         if(response.data.ret < 0) {
-          // ElMessage.error('输入的密钥不对!');
-          ElMessage.error('没有登陆不能修改!');
+          // 业务失败（未登录/超限等）时优先展示后端 msg
+          ElMessage.error(response.data && response.data.msg ? String(response.data.msg) : '没有登陆不能修改!');
           this.deletevisible = false;
           return false;
         }
-        location.reload();
+        // 删除成功仅刷新列表数据，不再整页 reload（避免 SPA 状态被整页刷新打断）
         this.getdata();
         this.postkey = "";
         this.deletevisible = false;
+        this.clickcard = "";
+        ElMessage.success('删除成功');
+      }).catch(() => {
+        ElMessage.error("网络错误，删除失败！");
+      }).finally(() => {
+        this._submitBusy = false;
       });
     },
     handleUpLoadSuccess(response, uploadFile, uploadFiles) {
@@ -1158,21 +1192,17 @@ export default {
 
 .el-card-detail {
   width: 80%;
-  color: #00ff00;
+  color: #303133;
   margin-top: 3px;
   margin-left: 10%;
   margin-right: 10%;
 }
 
+/* 卡片悬浮：轻提升 + 阴影加深（克制，不做整卡变色） */
 .el-card-detail:hover {
-  outline: 1 !important;
-  color: #6681fa !important;
-  background: #79bbff !important;
-}
-
-.el-card-detail:active {
-  color: #eeffee !important;
-  background: #eeaaee !important;
+  color: #303133 !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .10);
 }
 .image-slot {
   display: flex;
@@ -1184,9 +1214,190 @@ export default {
   color: var(--el-text-color-secondary);
   font-size: 20px;
 }
+.book-empty {
+  width: 93%;
+  margin-left: 7vh;
+  padding: 6vh 0;
+  text-align: center;
+  color: #909399;
+  font-size: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+.book-pagination {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ===== 顶部标题行：flex 布局，标题居中、添加按钮固定在行尾右侧，
+   不再被 39% 边距的大标题挤到第二行 ===== */
+.book-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 20px 0;
+  margin: 0;
+}
+.book-topbar-text {
+  flex: 1;
+  text-align: center;
+}
+@media (max-width: 768px) {
+  .book-topbar {
+    flex-wrap: wrap;
+    padding: 4px 10px 0;
+  }
+  .book-topbar-text {
+    flex: 1 1 100%;
+  }
+  /* 窄屏时标题独占一行、按钮换行靠右 */
+  .book-add-btn {
+    margin-left: auto;
+  }
+}
+
+/* ===== 书卡内部布局：左主区（标题/简介/链接/元信息）+ 右封面两栏结构，
+   内容全部约束在卡片内，不再散排漂到右侧导致贴边被截 ===== */
+.book-card {
+  border-radius: 12px;
+  transition: box-shadow .25s ease, transform .25s ease;
+}
+.book-card:hover {
+  transform: translateY(-2px);
+}
+.book-card :deep(.el-card__body) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+/* 左主区：纵向堆叠，min-width:0 保证内部截断生效、不把封面挤出卡片 */
+.book-main {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* 书名行：书名 + 已看完徽标同行，书名超长截断 */
+.book-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.book-title-link {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.book-title {
+  color: #303133;
+  font-size: 19px;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+}
+.book-title-link:hover .book-title {
+  color: var(--el-color-primary);
+}
+/* 简介两行截断，浅灰次要色 */
+.book-desc {
+  min-width: 0;
+  font-size: 14px;
+  color: #909399;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+}
+/* 封面固定尺寸 + 圆角，hover 轻缩放 */
+.book-cover {
+  width: 110px;
+  height: 130px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: transform .25s ease;
+}
+.book-cover:hover {
+  transform: scale(1.03);
+}
+.book-ratio {
+  font-size: 13px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+.book-github {
+  align-self: flex-start;
+  max-width: 100%;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.book-author-label {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 600;
+}
+.book-author {
+  font-size: 14px;
+  color: #c24ed4;
+  font-weight: 600;
+}
+/* 元信息行：进度/作者/序号/操作，允许换行防止溢出 */
+.book-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+.book-number {
+  margin-left: auto;
+  font-size: 11px;
+  color: #c0c4cc;
+}
+/* 「已看完」徽标：绿色系浅底，替代刺眼的大号洋红 */
+.book-badge-finished {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-color-success);
+  background: var(--el-color-success-light-9);
+  border: 1px solid var(--el-color-success-light-7);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+/* 修改/删除操作：可见的浅色文字，hover 明确反馈 */
+.book-op {
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 8px;
+  transition: color .2s ease, background-color .2s ease;
+}
+.book-op-edit {
+  color: #909399;
+}
+.book-op-edit:hover {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+.book-op-del {
+  color: #909399;
+}
+.book-op-del:hover {
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+}
 .el-card-detail.is-active {
-  color: #337ecc !important;
-  background: #ffeeee !important;
+  color: #303133 !important;
+  background: #ffffff !important;
 }
 
 h1 {
@@ -1210,6 +1421,63 @@ h3 {
   .greetings h1,
   .greetings h3 {
     text-align: left;
+  }
+}
+
+/* 手机端适配：标题边距缩小、搜索框与卡片占满可用宽度 */
+@media (max-width: 768px) {
+  .page-title {
+    margin-left: 8px !important;
+    font-size: 20px !important;
+  }
+
+  .book-add-btn {
+    margin-left: 8px !important;
+  }
+
+  .search-input {
+    width: calc(100% - 16px) !important;
+    margin-left: 8px !important;
+  }
+
+  .el-card-detail {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .book-cover {
+    width: 30% !important;
+    max-width: 100%;
+  }
+
+  .book-empty {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .book-pagination {
+    margin-left: 8px !important;
+    margin-right: 8px !important;
+  }
+
+  /* 窄屏书卡：整体上下两栏（主区在上、封面在下居左缩小） */
+  .book-card :deep(.el-card__body) {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .book-cover {
+    width: 84px;
+    height: 100px;
+    align-self: flex-end;
+  }
+  .book-github {
+    max-width: 100%;
+  }
+  .book-number {
+    margin-left: 0;
   }
 }
 </style>

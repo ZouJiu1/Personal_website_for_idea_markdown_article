@@ -49,7 +49,7 @@
     <span v-for="rtf in rt[1]"
       :key="rtf"
     >
-      <el-link type="primary" :href="rtf[1]" class="el-link" target="_blank" >
+      <el-link type="primary" :href="safeHref(rtf[1])" class="el-link" target="_blank" rel="noopener noreferrer" >
         {{rtf[0]}}
       </el-link>
     </span>
@@ -70,7 +70,7 @@
     <span v-for="rtf in rt[1]"
       :key="rtf"
     >
-      <el-link type="primary" :href="rtf[1]" class="el-linksecond" target="_blank" >
+      <el-link type="primary" :href="safeHref(rtf[1])" class="el-linksecond" target="_blank" rel="noopener noreferrer" >
         {{rtf[0]}}
       </el-link>
     </span>
@@ -89,8 +89,8 @@ export default {
   data() {
     return {
       postkey: "",
-      result: '',
-      result2: "",
+      result: [],
+      result2: [],
       textarea_content: 
 `
 在线课堂
@@ -357,54 +357,81 @@ hao123===https://www.hao123.com/?from=offline_host
     this.getdata();
   },
   methods: {
+    // 站点链接只放行 http(s)，防止 javascript: 等伪协议注入
+    safeHref(u) {
+      return /^https?:\/\//i.test(typeof u === 'string' ? u : "") ? u : "#";
+    },
     async submitAddwebsite() {
+      // 防连点：上一次请求未完成时忽略本次点击
+      if (this._busy) {
+        return;
+      }
+      // 全空内容会直接清空整个清单，先本地拦截
+      if (!(this.textarea_content || "").trim()) {
+        ElMessage.error("内容不能为空");
+        return;
+      }
+      this._busy = true;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/commonuse/submitAddwebsite',
+        baseURL: '/commonuse/submitAddwebsite',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
-      await instance({
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        data: {"url":document.URL, "mail":Cookies.get("mail"),
-               "password":Cookies.get("password"), 'postkey':this.postkey,
-              'textarea_content':this.textarea_content},
-      }).then((response) => {
+      try {
+        const response = await instance({
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          data: {"url":document.URL, "mail":Cookies.get("mail"),
+                 "password":Cookies.get("password"), 'postkey':this.postkey,
+                'textarea_content':this.textarea_content},
+        });
         if(response.data.ret < 0) {
           // ElMessage.error('输入的密钥不对!');
-          ElMessage.error('没有登陆不能修改!');
+          ElMessage.error(response.data.msg || '没有登陆不能修改!');
           this.weblinkaddvisible = false;
           this.textarea_content = this.textarea_content_origin;
           return false;
         }
         this.textarea_content_origin = this.textarea_content;
-        this.result = response.data.result;
+        this.result = response.data.result || [];
         this.weblinkaddvisible = false;
-      });
+      } catch (e) {
+        ElMessage.error("保存失败，请重试");
+      } finally {
+        this._busy = false;
+      }
     },
     async getdata() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/commonuse/getfiledata',
+        baseURL: '/commonuse/getfiledata',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
-      await instance({
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        data: {"url":document.URL, "mail":Cookies.get("mail"),
-               "password":Cookies.get("password"), 'postkey':this.postkey}
-      }).then((response) => {
-        this.textarea_content = response.data.textarea_content;
-        this.textarea_content_origin = response.data.textarea_content;
-        this.result = response.data.result;
-        this.result2 = response.data.result2;
-      });
+      try {
+        const response = await instance({
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          data: {"url":document.URL, "mail":Cookies.get("mail"),
+                 "password":Cookies.get("password"), 'postkey':this.postkey}
+        });
+        if (!response.data || !Array.isArray(response.data.result)) {
+          ElMessage.error("数据加载失败");
+          return;
+        }
+        // 各字段兜底默认值，防止后端缺字段时模板 v-for / 编辑框报错
+        this.textarea_content = response.data.textarea_content || "";
+        this.textarea_content_origin = this.textarea_content;
+        this.result = response.data.result || [];
+        this.result2 = Array.isArray(response.data.result2) ? response.data.result2 : [];
+      } catch (e) {
+        ElMessage.error("数据加载失败");
+      }
     },
   },
 }
@@ -475,5 +502,18 @@ a:visited {
 a:hover {
   /* 用户鼠标悬停 */
   background: #00ff00;
+}
+
+/* 手机端适配：弹窗内编辑器高度收敛，链接间距缩小便于换行 */
+@media (max-width: 768px) {
+  .lefteditor {
+    height: 60vh;
+  }
+  .el-link {
+    margin-left: 4px;
+  }
+  .el-linksecond {
+    margin-left: 4px;
+  }
 }
 </style>

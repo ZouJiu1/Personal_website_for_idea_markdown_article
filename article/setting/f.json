@@ -1,0 +1,82 @@
+[
+  {
+    "introduction": "姓名",
+    "link": "",
+    "link_describe": "邹九",
+    "other_describe": "",
+    "button": "",
+    "n": 1
+  },
+  {
+    "introduction": "邮箱",
+    "link": "",
+    "link_describe": "1069679911@qq.com",
+    "other_describe": "",
+    "button": "",
+    "n": 2
+  },
+  {
+    "introduction": "攀拓PAT",
+    "link": "https://github.com/ZouJiu1/PAT",
+    "link_describe": "github.com/ZouJiu1/PAT",
+    "other_describe": "甲级/乙级基本都刷完了",
+    "button": "PAT证书",
+    "n": 3
+  },
+  {
+    "introduction": "Leetcode主页",
+    "link": "https://leetcode.cn/u/shiheyingzhe/",
+    "link_describe": "leetcode.cn/u/shiheyingzhe/",
+    "other_describe": "刷完了406道题目",
+    "button": "",
+    "n": 4
+  },
+  {
+    "introduction": "Kaggle主页",
+    "link": "https://www.kaggle.com/shiheyingzhe",
+    "link_describe": "www.kaggle.com/shiheyingzhe",
+    "other_describe": "",
+    "button": "",
+    "n": 5
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "link_describe": "",
+    "other_describe": "",
+    "button": "",
+    "n": 6
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "link_describe": "",
+    "other_describe": "",
+    "button": "",
+    "n": 7
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "link_describe": "",
+    "other_describe": "",
+    "button": "",
+    "n": 8
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "link_describe": "",
+    "other_describe": "",
+    "button": "",
+    "n": 9
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "link_describe": "",
+    "other_describe": "",
+    "button": "",
+    "n": 10
+  }
+]

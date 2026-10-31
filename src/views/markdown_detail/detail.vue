@@ -6,12 +6,12 @@
     </span>
   </div> -->
     <!--
-      http://121.40.168.141:7000
-      http://localhost:7009
-      http://localhost:7009
+      
+      
+      
       http://localhost/hls/live.m3u8
-      http://localhost:7009/hls/live.m3u8
-      [kalman推导](http://localhost:7009/#/csdn/markdown_detail?plan=/home/admin/vue-project/article/zhihu_spider_selenium/article/2023-08-22_14_00_%E5%8D%A1%E5%B0%94%E6%9B%BC%E6%BB%A4%E6%B3%A2%E6%8E%A8%E5%AF%BC%E5%92%8C%E5%BA%94%E7%94%A8Kalman_%E7%A9%BA%E6%A0%BC_filter_IP_%E5%B1%9E%E5%9C%B0%E4%B8%8A%E6%B5%B7/%E5%8D%A1%E5%B0%94%E6%9B%BC_.md#csdn/markdown_detail): 
+      /hls/live.m3u8
+      [kalman推导](/#/csdn/markdown_detail?plan=/home/admin/vue-project/article/zhihu_spider_selenium/article/2023-08-22_14_00_%E5%8D%A1%E5%B0%94%E6%9B%BC%E6%BB%A4%E6%B3%A2%E6%8E%A8%E5%AF%BC%E5%92%8C%E5%BA%94%E7%94%A8Kalman_%E7%A9%BA%E6%A0%BC_filter_IP_%E5%B1%9E%E5%9C%B0%E4%B8%8A%E6%B5%B7/%E5%8D%A1%E5%B0%94%E6%9B%BC_.md#csdn/markdown_detail): 
     -->
   <el-button type="primary" plain @click="PrePage" class="PrePage_class">上一页</el-button>
   <el-button
@@ -19,6 +19,7 @@
     type="success"
     @click="handleEdit"
     style="text-align:center; margin-left:70%;"
+    v-if="canManage"
     >
     编辑
   </el-button>
@@ -27,11 +28,12 @@
     type="warning"
     @click="dialogFormVisible = true"
     style="text-align:center; margin-left:2%;"
+    v-if="canManage"
     >
     删除
   </el-button>
   <!-- <el-dialog v-model="dialogFormVisible" title="输入密钥删除" width="500"> -->
-  <el-dialog v-model="dialogFormVisible" title="删除" width="500">
+  <el-dialog v-model="dialogFormVisible" title="删除" width="min(500px, 92%)">
     <span hidden>
       <el-input
         v-model="postkey"
@@ -54,7 +56,7 @@
     type="warning"
     @click="dialogFormVisible_top = true"
     style="text-align:center; margin-left:2%;"
-    v-if="nottop"
+    v-if="nottop && canManage"
     >
     放在最上面
   </el-button>
@@ -63,12 +65,12 @@
     type="warning"
     @click="cancel_dialogFormVisible_top = true"
     style="text-align:center; margin-left:2%;"
-    v-if="toptop"
+    v-if="toptop && canManage"
     >
     取消放在最上面
   </el-button>
   <!-- <el-dialog v-model="dialogFormVisible_top" title="输入密钥放在最上面" width="500"> -->
-  <el-dialog v-model="dialogFormVisible_top" title="放在最上面的" width="500">
+  <el-dialog v-model="dialogFormVisible_top" title="放在最上面的" width="min(500px, 92%)">
     <span hidden>
       <el-input
         v-model="postkey"
@@ -86,7 +88,7 @@
       确认放在最上面
     </el-button>
   </el-dialog>
-  <el-dialog v-model="cancel_dialogFormVisible_top" title="取消放在最上面的" width="500">
+  <el-dialog v-model="cancel_dialogFormVisible_top" title="取消放在最上面的" width="min(500px, 92%)">
     <span hidden>
       <el-input
         v-model="postkey"
@@ -159,7 +161,7 @@
       id="commentsigleid"
     >
       <span style="font-weight:600;color:rgb(121.3, 187.1, 255);">
-        <a :href="oh[0]" target="_blank">
+        <a :href="safeCommentUrl(oh[0])" target="_blank" rel="noopener noreferrer">
           <span>{{ oh[4] }}---</span>{{ oh[3] }}
         </a>
         ：
@@ -192,7 +194,7 @@ import katex from "katex"
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import Cookies from "js-cookie";
-import getusername from '/src/common.js'
+import getusername, { isAdminQuanxian, getCookieDays } from '/src/common.js'
 // import imgURL from '/home/zj/zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/2024-09-16_空格_13_43_28_临时发布的文篇_感叹号_/1寸_1__.jpg'
 export default {
   name: 'markdown_detail',
@@ -212,6 +214,7 @@ export default {
       dialogFormVisible_top: false,
       toptop:false,
       nottop:true,
+      canManage:false,
     }
   },
   mounted(){
@@ -220,9 +223,13 @@ export default {
   },
   watch: {},
   methods: {
+    // 评论者主页链接只放行 http(s)，防止 javascript: 伪协议 XSS
+    safeCommentUrl(u) {
+      return /^https?:\/\//i.test(typeof u === 'string' ? u : "") ? u : "#";
+    },
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -237,6 +244,19 @@ export default {
       });
       // console.log(window);
     },
+    // 管理/编辑类按钮只对内容归属者或管理员可见（后端仍有守卫，这里只是前端隐藏）
+    computeCanManage() {
+      let owner = "";
+      const m = (this.path || "").match(/\/people\/([^/]+)/);
+      if (m && m[1]) {
+        owner = m[1];
+      }
+      if (!owner && this.$route.params.id) {
+        owner = this.$route.params.id;
+      }
+      const my = Cookies.get("mail");
+      this.canManage = (owner && my === owner) || isAdminQuanxian(Cookies.get("quanxian"));
+    },
     async shoucang(event) {
       let id = document.URL;
       id = id.substring(0, 50);
@@ -246,22 +266,34 @@ export default {
         ElMessage.error("没有登陆不能操作！");
         return
       }
+      // 防连点：上一次请求未完成时忽略本次点击
+      if (this._scBusy) {
+        return;
+      }
+      this._scBusy = true;
+      // 记录点击前状态，请求失败时回滚 UI，避免界面与后端状态不一致
+      const prevClick = this.resultresult['clickshoucang'];
+      const prevLen = this.kshoucanglength;
       // console.log(event, this.dire_path, first, k0, k1, path ,clicka);
       if(this.resultresult['clickshoucang']) {
         this.resultresult['clickshoucang'] = false;
         this.kshoucanglength = Math.max(0, this.kshoucanglength - 1);
-        event.srcElement.innerHTML = `${this.kshoucanglength.toString()}收藏<span hidden><p :hidden="true" class="hiddenp">false</p></span>`;
+        if (event && event.srcElement) {
+          event.srcElement.innerHTML = `${this.kshoucanglength.toString()}收藏<span hidden><p :hidden="true" class="hiddenp">false</p></span>`;
+        }
       } else {
         this.resultresult['clickshoucang'] = true;
         this.kshoucanglength = Math.max(0, this.kshoucanglength + 1);
-        event.srcElement.innerHTML = `${this.kshoucanglength.toString()}收藏<span hidden><p :hidden="true" class="hiddenp">true</p></span>`;
+        if (event && event.srcElement) {
+          event.srcElement.innerHTML = `${this.kshoucanglength.toString()}收藏<span hidden><p :hidden="true" class="hiddenp">true</p></span>`;
+        }
       }
       // console.log(this.resultresult);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/kshoucang',
+        baseURL: '/csdn/kshoucang',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
       await instance({
         method: 'POST',
@@ -272,7 +304,13 @@ export default {
           'click':this.resultresult['clickshoucang'], 'path':this.resultresult['path'], 'title':this.resultresult['title'],
         },
       }).then((response) => {
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        if (response.data && response.data.ret < 0) {
+          this.resultresult['clickshoucang'] = prevClick;
+          this.kshoucanglength = prevLen;
+          ElMessage.error("没有登陆不能操作！");
+          return;
+        }
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("csdnReset");
         Cookies.set("csdnReset", 1, { expires: expiresdate });
         // this.resetSearch();
@@ -284,6 +322,12 @@ export default {
         // console.log(response.headers);
         // console.log(response.config);
 
+      }).catch(() => {
+        this.resultresult['clickshoucang'] = prevClick;
+        this.kshoucanglength = prevLen;
+        ElMessage.error("收藏操作失败，请重试");
+      }).finally(() => {
+        this._scBusy = false;
       });
     },
     async uploadComment() {
@@ -295,11 +339,21 @@ export default {
         ElMessage.error("没有登陆不能操作！");
         return
       }
+      // 与后端 comment_add 的约定一致：空评论拒绝、最长 2000 字，先在本地拦截
+      const cmt = (this.textarea_content || "").trim();
+      if (cmt.length === 0) {
+        ElMessage.error("评论内容不能为空");
+        return;
+      }
+      if (cmt.length > 2000) {
+        ElMessage.error("评论过长（最多2000字）");
+        return;
+      }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/comment_add',
+        baseURL: '/csdn/comment_add',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
       await instance({
         method: 'POST',
@@ -307,14 +361,18 @@ export default {
           'X-Requested-With': 'XMLHttpRequest'
         },
         data: {'mail': Cookies.get("mail"), 'password':Cookies.get("password"), 'url':document.URL,
-          'path':this.resultresult['path'], 'comment':this.textarea_content,
+          'path':this.resultresult['path'], 'comment':cmt,
         },
       }).then((response) => {
+        if (response.data && response.data.ret < 0) {
+          ElMessage.error(response.data.msg || "评论提交失败");
+          return;
+        }
         this.commentvisible = false;
         this.textarea_content = "";
         location.reload();
 
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("csdndetail_reload");
         Cookies.set("csdndetail_reload", 1, { expires: expiresdate });
 
@@ -368,25 +426,29 @@ export default {
         ElMessage.error("没有登陆不能操作！");
         return
       }
-      // let k1 = 0;
-      // console.log(event, this.dire_path, first, k0, k1, path ,clicka);
+      // 防连点：上一次请求未完成时忽略本次点击
+      if (this._upBusy) {
+        return;
+      }
+      this._upBusy = true;
+      // 记录点击前状态，请求失败时回滚 UI，避免界面与后端状态不一致
+      const prevClick = this.resultresult['click'];
+      const prevLen = this.kdianzanlength;
       // console.log(this.kdianzanlength);
       if(this.resultresult['click']) {
         this.resultresult['click'] = false;
         this.kdianzanlength = Math.max(0, this.kdianzanlength - 1);
-        // event.srcElement.innerHTML = `${this.kdianzanlength.toString()}👍赞<span hidden><p :hidden="true" class="hiddenp">false</p></span>`;
       } else {
         this.resultresult['click'] = true;
         this.kdianzanlength = Math.max(0, this.kdianzanlength + 1);
-        // event.srcElement.innerHTML = `${this.kdianzanlength.toString()}👍赞<span hidden><p :hidden="true" class="hiddenp">true</p></span>`;
       }
-      
+
       // console.log(this.kdianzanlength);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/upvote_change',
+        baseURL: '/csdn/upvote_change',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
       await instance({
         method: 'POST',
@@ -397,6 +459,12 @@ export default {
           'click':this.resultresult['click'], 'path':this.resultresult['path'],
         },
       }).then((response) => {
+        if (response.data && response.data.ret < 0) {
+          this.resultresult['click'] = prevClick;
+          this.kdianzanlength = prevLen;
+          ElMessage.error("没有登陆不能操作！");
+          return;
+        }
         // alert(response);
         // console.log(response.data);
         // console.log(response.type);
@@ -404,14 +472,21 @@ export default {
         // console.log(response.statusText);
         // console.log(response.headers);
         // console.log(response.config);
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("csdnReset");
         Cookies.set("csdnReset", 1, { expires: expiresdate });
+      }).catch(() => {
+        this.resultresult['click'] = prevClick;
+        this.kdianzanlength = prevLen;
+        ElMessage.error("点赞操作失败，请重试");
+      }).finally(() => {
+        this._upBusy = false;
       });
     },
     async handleTop() {
+      this.dialogFormVisible_top = false;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/placeTopTop',
+        baseURL: '/csdn/placeTopTop',
         timeout: 20000,
       });
           
@@ -437,8 +512,9 @@ export default {
       this.postkey = "";
     },
     async cancelhandleTop() {
+      this.cancel_dialogFormVisible_top = false;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/cancelPlaceTopTop',
+        baseURL: '/csdn/cancelPlaceTopTop',
         timeout: 20000,
       });
           
@@ -466,9 +542,15 @@ export default {
     async detailget() {
       // console.log(this.$router);
       this.path = this.$router.currentRoute._value.query.plan;
+      // URL 上没有 plan 参数时直接提示，避免把 undefined 传给后端报错
+      if (!this.path) {
+        ElMessage.error("缺少文章参数，无法加载");
+        return;
+      }
+      this.computeCanManage();
       
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/markdown_detail/index',
+        baseURL: '/markdown_detail/index',
        timeout: 20000,
       });
       
@@ -480,6 +562,12 @@ export default {
         },
         params: {"path":this.path, 'url':document.URL, 'mail':Cookies.get("mail"), 'password':Cookies.get("password")},
       }).then((response) => {
+        // 后端校验失败（ret:-100）或文章不存在（ret:-1）时没有 markdown 字段，
+        // 直接提示，避免把 undefined 塞进页面和 v-for
+        if (!response.data || typeof response.data.markdown !== 'string') {
+          ElMessage.error((response.data && response.data.msg) || "文章加载失败");
+          return;
+        }
         // alert(response);
         // console.log(response.data);
         // console.log(response.type);
@@ -489,7 +577,12 @@ export default {
         // console.log(response.config);
         this.result = response.data.markdown;
         this.path = response.data.path;
-        this.resultresult = response.data;
+        // 各字段兜底默认值，防止后端缺字段时模板 v-for / .length 报错
+        this.resultresult = Object.assign({
+          'path': "", "upvote": [], 'comment': [], 'click': false,
+          'clickshoucang': false, 'kshoucang': [], 'title': ""
+        }, response.data);
+        this.computeCanManage();
         let detailvue = document.getElementById("detailvue");
 
         let isTop = response.data.isTop;
@@ -569,13 +662,17 @@ export default {
         // console.log(html);
         // console.log(element);
         // element.innerHTML = html;
+      }).catch(() => {
+        ElMessage.error("文章加载失败");
       });
       // render();
       let reload = Cookies.get('csdndetail_reload')
       if(reload==1) {
         let pinglun = document.getElementById("pinglunpinglun");
-        pinglun.click();
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        if (pinglun) {
+          pinglun.click();
+        }
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("csdndetail_reload");
         Cookies.set("csdndetail_reload", 0, { expires: expiresdate });
       }
@@ -620,7 +717,7 @@ export default {
           this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         } else {
           // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
-          this.$router.push({ path: '/csdn/homepage'}); //, query:{"currentpage": 1, "pagesize":20}
+          this.$router.push({ path: '/csdn/homepage@gmail.com'}); //, query:{"currentpage": 1, "pagesize":20}
         }
         // this.$router.go(-1);
       }
@@ -640,7 +737,7 @@ export default {
       this.dialogFormVisible = false;
       ElMessage.info("正在删除的请等待！");
       const instanc = axios.create({
-        baseURL: 'http://localhost:7009/csdn/delete',
+        baseURL: '/csdn/delete',
         timeout: 20000,
       });
       instanc({
@@ -994,6 +1091,41 @@ export default {
   margin-top:10px;
   margin-bottom:0px;
   margin-left:3px;
+}
+
+/* 手机端适配：正文区域撑满并收窄内边距，图片/代码块不超宽，操作按钮大边距收窄 */
+@media (max-width: 768px) {
+  :deep(#detailvue) {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .detailarticle {
+    margin-left: 2%;
+    margin-right: 2%;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  :deep(.img_blank_class) {
+    width: 100%;
+    margin-left: 0;
+  }
+  :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
+  :deep(pre) {
+    overflow-x: auto;
+  }
+  :deep(.post_revise_time) {
+    margin-left: 10%;
+  }
+  .filter-item {
+    margin-left: 3px !important;
+    margin-top: 6px;
+  }
 }
 </style>
   

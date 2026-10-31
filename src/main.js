@@ -11,6 +11,7 @@ import { createApp } from 'vue'
 import Cookies from 'js-cookie'
 
 import App from './App.vue'
+import { initMusic } from './music.js'
 // import require from 'require'
 // import axios from 'axios'
 import router from './router/routers.js'
@@ -26,7 +27,6 @@ var notrelease = false
 export default notrelease
 
 app.use(router)
-app.use(notrelease)
 // app.use(katex)
 // app.use(Cookies)
 // app.use(videojs) 
@@ -34,4 +34,5 @@ app.use(notrelease)
 app.use(ElementPlus)
 // app.use(axios)
 router.isReady().then(() => app.mount('#app'))
+initMusic()
 // app.mount('#app')

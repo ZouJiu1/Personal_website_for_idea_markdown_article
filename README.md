@@ -1,222 +1,255 @@
-# the website of myself using below open source projects
-[http://zoujiu.com.cn](http://zoujiu.com.cn)
+> English | [简体中文](README_CN.md)
 
-support idea post, reading book post, personal introduction with images, traveler post and video upload
+# Personal Website (Ideas / Markdown Articles / Books / Videos / Zhihu / Fragments / Guestbook / Quick Links / Images)
 
-support markdown article, including Math Latex, table, list and so on.
+A personal website built on **Vue 3 + Element Plus + Django**. Live demo: [http://zoujiu.com.cn](http://zoujiu.com.cn)
 
-## 1. environment
-`element-plus + django + vue3`
+- Markdown article authoring (KaTeX math, tables, lists, code highlighting, etc.)
+- Book and video upload & playback (hls.js), Zhihu articles, idea fragments, guestbook, quick links, daily images
+- No database: users, articles, and settings are all stored in plain text files (txt / markdown)
+- Multi-user isolation: every registered user gets an independent `people/<username>/` data directory
+- Session persistence via js-cookie (30 days); registration, login, logout, and email-verification password reset
+- Built-in draft box on the article publishing page: save drafts, list drafts, re-edit, delete; drafts auto-cleared after publishing (see 4.4)
+- Built-in admin panel: view user list, create users, reset passwords, change roles, delete users
+- Built-in Live2D widget: 23 open-source characters in 9 categories, per-account memory (works across devices),
+  automatic holiday greetings on lunar-calendar festivals (Spring Festival / Mid-Autumn / New Year's Eve, etc.)
+- Built-in music player (APlayer + Meting NetEase playlist, proxied by Django), floating above the widget on desktop
+- Both the widget and the music player are draggable and dockable: drag to reposition (persisted in
+  localStorage and restored on reload); double-click the widget / the player cover to reset
+- Responsive layout: works on phones, tablets, and desktops
 
-### 1.1 npm + nodejs
+## Directory Structure
 
->**Macos**: `brew install node@22`
-
-[https://nodejs.org/zh-cn/download](https://nodejs.org/zh-cn/download)
-
-[install brew help---https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/](https://mirrors.tuna.tsinghua.edu.cn/help/homebrew/)
-
-according to homebrew's tips at tail, add to environment variables
-
-`echo 'export PATH="/usr/local/opt/node@22/bin:$PATH"' >> ~/.zshrc`
-
-`export PATH="/usr/local/opt/node@22/bin:$PATH"`
-
-compile setting
 ```
-  export LDFLAGS="-L/usr/local/opt/node@22/lib"
-  export CPPFLAGS="-I/usr/local/opt/node@22/include"
+Personal_website_for_idea_markdown_article/
+├── src/                    # Vue 3 frontend source
+│   ├── views/              # Feature pages (home/csdn/zhihu/think/video/travel/...)
+│   │   └── admin/          # Admin panel (admin only)
+│   ├── router/routers.js   # Frontend routes (hash mode)
+│   ├── common.js           # Shared helpers such as getusername (relative-path requests)
+│   └── assets/main.css     # Global styles + responsive rules
+├── mysite/                 # Django backend
+│   ├── mysite/projectpaths.py  # Auto-locates the project root (no hardcoded absolute paths)
+│   ├── csdn/               # Articles + user registration/login/admin APIs
+│   ├── zhihu/ think/ video/ travel/ commonuse/ markdown_detail/ upload_video/
+│   └── manage.py
+├── article/                # Shared data (member.txt user table, register.txt codes, articles, etc.)
+├── people/<username>/      # Per-user isolated data directory
+├── public/live2d/          # Live2D widget assets (engine/styles/scripts/lunar library/23 model dirs)
+├── vite.config.js          # Vite config (dev proxy to Django, build code splitting)
+├── nginx_http.conf         # Production nginx config example (http)
+└── nginx_https.conf        # Production nginx config example (https)
 ```
 
-**reboot your macos system computer to make effect**
+## 1. Prerequisites
 
-### 1.2 set mirror
->`npm config set registry https://registry.npmmirror.com`
+### 1.1 Node.js
 
-### 1.3 download packages
->cd /Users/zoujiu/Desktop
+Install Node.js (v18+ recommended) from [https://nodejs.org/en/download](https://nodejs.org/en/download).
 
->npm create vue@latest
-------all default, don't change anything
-[https://cn.vuejs.org/guide/quick-start](https://cn.vuejs.org/guide/quick-start)
+On macOS with Homebrew: `brew install node@22`
 
->cd /Users/zoujiu/Desktop/vue-project
+Optional registry mirror (mainland China):
 
->npm install element-plus --save
+```bash
+npm config set registry https://registry.npmmirror.com
+```
 
-[https://element-plus.org/zh-CN/guide/installation.html](https://element-plus.org/zh-CN/guide/installation.html)
+### 1.2 Install Frontend Dependencies
 
->npm install axios --save
+```bash
+cd Personal_website_for_idea_markdown_article
+npm install
+```
 
->npm install hls.js --save
+Main dependencies: `vue` `vue-router` `element-plus` `axios` `js-cookie` `katex` `hls.js` `aplayer` (the widget music player); the widget's lunar-calendar conversion uses a self-hosted UMD build `public/live2d/solarlunar.min.js` (npm package solarlunar)
 
-[https://github.com/video-dev/hls.js](https://github.com/video-dev/hls.js)
+### 1.3 Python Environment
 
->npm install js-cookie --save
+```bash
+cd Personal_website_for_idea_markdown_article
+python3 -m venv ./venv
+source ./venv/bin/activate
+python3 -m pip install -r ./mysite/requirements.txt
+```
 
-[https://github.com/js-cookie/js-cookie](https://github.com/js-cookie/js-cookie)
+## 2. Local Development (no nginx required)
 
->npm install katex --save
+All frontend requests use relative paths; the Vite dev server automatically proxies `/csdn`, `/zhihu`, `/article`, `/people`, etc. to Django, so local development needs **no nginx**.
 
-[https://katex.org/docs/node](https://katex.org/docs/node)
+```bash
+# Terminal 1: frontend (default port is 5173, customizable)
+npm run dev -- --port 9000
 
->npm install vue-router@4 --save
-
-[https://router.vuejs.org/zh/installation.html](https://router.vuejs.org/zh/installation.html)
-
-### 1.four git clone
->cd /Users/zoujiu/Desktop
-
->`git clone https://github.com/ZouJiu1/Personal_website_for_idea_markdown_article.git`
-
->cp -rf Personal_website_for_idea_blog_article/*  ./vue-project
-
-now, you have some directorys like these:
-
----Desktop
-
---------vue-project
-
-------------mysite
-
-------------src
-
-------------people
-
-...
-
-### 1.5 Python set up
-> cd /Users/zoujiu/Desktop/vue-project
-
->python3 -m venv ./venv
-
->source ./venv/bin/activate
-
->python3 -m pip install -r ./mysite/requirements.txt
-
-
-## 2. Run
-### 2.1 all project
->cd /Users/zoujiu/Desktop/vue-project
-
->`npm run dev -- --port 9000`
-
->source ./venv/bin/activate
-
->cd mysite
-
+# Terminal 2: backend
+source ./venv/bin/activate
+cd mysite
 python3 manage.py runserver localhost:7009
-
-## 3. release
-### 3.1 packaging
->cd /Users/zoujiu/Desktop/vue-project
-
->npm run build
-
->cd mysite && python3 manage.py runserver localhost:7009
-
-### 3.2 nginx
->sudo apt-get install nginx
-
-or
-
->./configure --sbin-path=/home/admin/vue-project/nginx/nginx-1.26.2/bin --conf-path=/home/admin/vue-project/nginx/nginx-1.26.2/conf/nginx.conf --pid-path=/home/admin/vue-project/nginx/nginx-1.26.2/nginx.pid --with-http_ssl_module --add-module=/home/admin/vue-project/nginx/nginx-1.26.2/nginx-rtmp-module-master  --with-pcre=/home/admin/vue-project/nginx/nginx-1.26.2/pcre2-10.44 --with-openssl=/home/admin/vue-project/nginx/nginx-1.26.2/openssl-3.3.2  --user=root  --error-log-path=/home/admin/vue-project/nginx/nginx-1.26.2/error.log
-
-**nginx.conf configuration**
-
-http like this: [nginx_http.conf](./nginx_http.conf), you may need modify some path according to your directory. 
-
-https with ssl_certificate like this: [nginx_https.conf](./nginx_https.conf), you may need modify some path according to your directory. 
-
-### 3.3 start or restart
-start: `nginx -c /etc/nginx/conf/nginx.conf`
-
-stop: `nginx -s stop`
-
-restart: `nginx -s restart`
-
-after building src with `npm run build`、launching **django** and launching **nginx**, you can visit this website in **http://localhost**
-
-## 4. administer
-### 4.1 administer account and password
->account: **homepage@gmail.com**
-
->password: **01ab!+**
-
-### 4.2 change administer password
->cd /Users/zoujiu/Desktop/vue-project
-
->modify the genpassword.py with `password = 01ab!+`
-
-```python []
-python3 genpassword.py
-
-will get genpassword file, which content is:
-
-01ab!+
-83e6936fb8d502de61ebab5f4b7babf007eacff9324cf59bcc03c1012510000b
 ```
 
->modify the genpassword.py with `password = 06hj@#`
+Open `http://localhost:9000` in your browser.
 
-```python []
-python3 genpassword.py
+- The backend address can be overridden via env var: `DJANGO_TARGET=http://127.0.0.1:7009 npm run dev`
+- In DEBUG mode Django serves `/article`, `/people`, and `/hls` static files directly
 
-will get genpassword file, which content is:
+## 3. Production Deployment (nginx)
 
-06hj@#
-34629c7dd225e65c1ba6e884ffde42edf6d253fd0df4eb6dd4c897959d89aeb1
+```bash
+# Build the frontend; output goes to dist/
+npm run build
+
+# Start the backend (in production set DJANGO_DEBUG=0 and let nginx serve static files)
+source ./venv/bin/activate
+cd mysite
+DJANGO_DEBUG=0 python3 manage.py runserver localhost:7009
 ```
 
-```text []
-edit file "vue-project/article/member.txt", change the password from 01ab!+ to 06hj@#
+### Release Checklist
 
-modify
+- `DJANGO_DEBUG=0`: local development enables DEBUG by default (runserver serves `/article` `/people` `/hls` directly);
+  in production it must be 0 and nginx should serve these three directories. Note the **active settings live in the inner `mysite/mysite/settings.py`**
+- `ALLOWED_HOSTS` is limited to `zoujiu.com.cn` / `121.40.168.141` / `localhost` / `127.0.0.1`;
+  update `mysite/mysite/settings.py` when changing domains
+- `SECRET_KEY`: prefers the env var `DJANGO_SECRET_KEY`, then `mysite/secret_key.txt`
+  (a random key has been generated and is `.gitignore`d — never commit it)
+- CSRF: `ScopedCsrfMiddleware` in `mysite/middleware.py` only enforces checks for Django admin (`/admin`);
+  custom APIs authenticate via body params (no cookies) and are inherently CSRF-immune
+- Passwords are only stored in salted format (`sha256s$<salt>$<digest>`); the legacy bare-sha256 format is fully
+  deprecated and always fails verification — legacy users must re-register (see 4.1)
+- Upload APIs only accept image extensions (jpg/jpeg/png/bmp/gif) and file names are stripped of path components
+- Delete APIs and admin proxy-edit/proxy-upload are confined to the project's `people/` and `article/` directories to prevent path traversal
+- In production, run Django with multiple gunicorn/uwsgi workers and apply rate limiting at nginx (see "Concurrency & Multi-user Notes")
 
-83e6936fb8d502de61ebab5f4b7babf007eacff9324cf59bcc03c1012510000b<》!=$)(=$@homepage@gmail.com<》!=$)(=$@邹九<》!=$)(=$@1000000
+See [nginx_http.conf](./nginx_http.conf) or [nginx_https.conf](./nginx_https.conf) for nginx config references, and adjust paths to your setup:
 
-to
+- `dist/` as the frontend static root
+- `/article`, `/people`, `/hls` mapped to the same-named directories under the project root
+- API prefixes such as `/csdn`, `/zhihu`, `/think`, `/video`, `/travel`, `/commonuse`, `/markdown_detail`, `/upload_video` proxied via proxy_pass to `http://localhost:7009`
 
-34629c7dd225e65c1ba6e884ffde42edf6d253fd0df4eb6dd4c897959d89aeb1<》!=$)(=$@homepage@gmail.com<》!=$)(=$@邹九<》!=$)(=$@1000000
+Common commands:
+
+```bash
+nginx -c /path/to/nginx.conf   # start
+nginx -s reload                # reload config
+nginx -s stop                  # stop
 ```
 
-**now, you can use the new password to log in**
+## 4. Users & Permissions
 
+### 4.1 User File Format
 
-## other register user
-you can use your email to change your password after you log in
+Users are stored in `article/member.txt`, one per line, fields separated by `<》!=$)(=$@`:
 
-because you have no access to modify the "vue-project/article/member.txt"
-
-only the repo owner have access to it
-
-## email setting
-File `vue-project/mysite/csdn/views.py`
-
-Function `def mailsend(mail, modify=False, notify_guanliyuan=None):`
-
-change the password `smpt.login(user="1069679911@qq.com", password='zzzzzzzzzzzzz')`, open the service **POP3/IMAP/SMTP/Exchange/CardDAV**
-
-```python []
-    msg['From'] = '1069679911@qq.com'
-    msg['To'] = mail
-    # smtplib.SMTP()
-    smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
-    # smpt.connect("smtp.qq.com", port=465)
-    smpt.login(user="1069679911@qq.com", password='zzzzzzzzzzzzz')
+```
+<password hash><》!=$)(=$@<email><》!=$)(=$@<nickname><》!=$)(=$@<role>
 ```
 
-Function `def notify_administer(dir, truemail, mail, urlmail, own=True, action='delete'):`
+Password hashes must use the salted format: `sha256s$<salt>$<sha256(salt + frontend-sha256-value)>`.
+The legacy bare-sha256 format is fully deprecated: the backend always rejects it, so legacy users must re-register.
+The role field is an integer: `999999999` = site owner, `1000000` = super admin, `100` = regular admin, `1` = regular user.
 
-```python []
-try:
-    mailsend('1069679911@qq.com', modify=False, \
-            notify_guanliyuan=['---delete', \
-            f'{mail} delete {urlmail}\n\ncontent: \n{dir}\n\nnowdir: \n{urlmaildir}'])
+### 4.2 Admin Panel (admins)
+
+After logging in, admins see a **Manage** entry in the left menu (route `/admin/<username>`), which provides:
+
+- View all registered users (username, email, nickname, role, whether the data directory exists)
+- Create users (site owner / super admin only: create directly in the panel with email, username, and password)
+- Reset any user's password
+- Change user roles
+- Delete users (personal data is automatically backed up to `article/deleted_users/`; the site-owner account is protected and cannot be deleted)
+
+Backend APIs: `/csdn/admin_userlist`, `/csdn/admin_createuser`, `/csdn/admin_resetpass`, `/csdn/admin_setquanxian`, `/csdn/admin_deleteuser` — all verify admin identity.
+
+### 4.3 Change the Admin Password
+
+```bash
+cd <project root>
+# Pass the new password via --pw (or edit the default value in the script)
+python3 genpassword.py --pw <new password>
 ```
 
-## my blogs
+Replace the first field of the admin row in `article/member.txt` with the printed `sha256s$salt$digest`
+(the frontend sends the sha256 value on login; the backend verifies the salted format).
+
+### 4.4 Draft Box (Article Publishing Page)
+
+The publishing page (`/csdn/post_article`) offers drafts for logged-in users:
+
+- **Save draft**: stores the current title and Markdown content into the personal draft box
+  (`people/<username>/draft/<timestamp>.json`), up to 100 drafts per user
+- **Draft box**: a dialog lists all drafts (title + save time), supporting:
+  - **Re-edit**: refills the title and content for further editing; saving overwrites the original draft
+  - **Delete**: removes a draft after confirmation
+- **Auto-clear on publish**: after an article loaded from a draft is published successfully, that draft is removed automatically
+
+Backend APIs: `/csdn/save_draft`, `/csdn/draft_list`, `/csdn/draft_get`, `/csdn/draft_delete`;
+auth is identical to other write APIs (mail + password verified against member.txt);
+draft directories are isolated per user and draft IDs accept digits only to prevent path injection.
+
+## 5. Concurrency & Multi-user Notes
+
+- Design targets: up to 1,000 concurrent users and 100 requests per second
+- File writes are serialized with `threading.Semaphore` (`memmute`, `regmute`, etc.) to prevent concurrent corruption of txt files
+- List caches are isolated per user data directory (`allfile = {}` keyed by basepath), so users never interfere with each other
+- The frontend build applies code splitting (element-plus / katex / vendor as separate chunks) for better browser caching
+- In production, run Django with multiple gunicorn/uwsgi workers and let nginx handle load balancing and rate limiting
+
+## 6. Live2D Widget & Music Player
+
+### 6.1 Live2D Widget (desktop ≥768px only)
+
+- Assets and logic are self-hosted in `public/live2d/`; loaded by the inline script in `index.html`
+  (solarlunar.min.js → live2d.min.js → waifu-tips.js, in order)
+- Character list `public/live2d/model_list.json`: 23 open-source characters in 9 categories
+  (all / male / female / cats / dogs / birds / panda / anime / history & deities)
+- Widget toolbar: 🎵 music / 💬 chat / ⚙️ choose character / 🔄 switch / 📷 photo / ✖️ hide
+- **Draggable & dockable**: drag anywhere on the widget to move it (toolbar buttons excluded); the position is
+  persisted in localStorage and survives reloads; double-click resets it to the default bottom-right corner
+- Character priority: account setting (`/csdn/get_widget`) > local record (localStorage) >
+  day/night default (izumi from 20:00–8:00 next day, haruto otherwise)
+- Adding a custom character: put the model directory in `public/live2d/model/<id>/` (entry named `index.json`),
+  then register `{id, name, category, desc}` in `model_list.json`
+- Lunar festival greetings: on load, the lunar date is derived from the solar date; when it hits a festival
+  (Spring Festival / Lantern / Longtaitou / Shangsi / Duanwu / Qixi / Zhongyuan / Mid-Autumn / Chongyang / Laba / Xiaonian / New Year's Eve, dynamically detected),
+  the greeting replaces the time-of-day welcome and joins the widget's random chat pool; leap months are excluded
+
+### 6.2 Music Player (APlayer + Meting multi-source failover)
+
+- Player module `src/music.js` (invoked by `initMusic()` in `src/main.js`); APlayer fixed mode floats above the widget
+- **Draggable & dockable**: drag the player cover to move the whole player; the position is persisted in
+  localStorage and survives reloads; double-click the cover to reset to the default bottom-right corner
+- Multi-source failover: the `music_sources` list in `mysite/site_config.json` forms an ordered failover chain — **the first working source is used by default**; when a playlist fetch fails (502/empty/unplayable) or playback errors mid-stream (e.g. 403), the frontend automatically switches to the next source and resumes playing; if all sources fail it stops and logs a console warning
+- Sources are configurable: edit the `music_sources` array (fields `name`/`server`/`type`/`id`; netease/tencent/kugou/kuwo supported) — takes effect after a refresh; deleting the key falls back to the 3 built-in NetEase playlists in `siteconfig.py`, and an empty array falls back to the legacy single-source fields `music_server`/`music_type`/`music_id`
+- Meting requests are proxied through the Django endpoint `/csdn/meting` (with retries) to avoid direct-browser blocking/cors issues
+- The widget's 🎵 button toggles play/pause; when a song starts, the widget announces it in a speech bubble
+
+See [readme.txt](./readme.txt) for more details (customizations relative to the upstream crowya/live2d, scripts, easter eggs, etc.).
+
+## 7. Mail Setup (Registration Verification Codes)
+
+In `mysite/csdn/views.py`, function `mailsend(mail, modify=False, notify_guanliyuan=None)`:
+
+```python
+msg['From'] = '1069679911@qq.com'
+smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
+smpt.login(user="1069679911@qq.com", password='<SMTP auth code>')
+```
+
+Enable SMTP in your QQ Mail settings, get an auth code, and replace the placeholder.
+
+## My Blog
 
 [http://zoujiu.com.cn](http://zoujiu.com.cn)
 
 [https://zoujiu.blog.csdn.net/](https://zoujiu.blog.csdn.net/)
+
+## Reference
+
+Official docs and open-source projects referenced during development:
+
+- [Vue.js](https://vuejs.org/)
+- [Vite](https://vitejs.cn/vite3-cn/guide/)
+- [Vue Router](https://router.vuejs.org/zh/)
+- [Element Plus](https://element-plus.org/zh-CN/)
+- [MDN Web Docs](https://developer.mozilla.org/en-US/)
+- [live2d (crowya)](https://github.com/crowya/live2d)

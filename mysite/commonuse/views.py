@@ -19,7 +19,8 @@ if os.path.exists(mainpath):
 import sys
 sys.path.append(addpath)
 sys.path.append(os.path.abspath(__file__ + "/../../"))
-from csdn.views import getusername, renzheng, check_logined, kshoucangmutex
+from csdn.views import getusername, renzheng, check_logined, kshoucangmutex, check_identity
+import siteconfig   # 站点统一配置（SMTP 授权码等敏感项，见 mysite/site_config.json）
 from think.views import kshoucangmutexpianduan
 from manage import timezone
 from datetime import datetime
@@ -35,7 +36,8 @@ import smtplib
 from email.message import EmailMessage
 
 def index(request):
-    return HttpResponse(".")
+    # 原 return HttpResponse(".") 的 HttpResponse 未在本模块导入，访问即 NameError 500
+    return JsonResponse({"ret": True})
 
 textarea_content_predefined = \
 '''
@@ -347,6 +349,9 @@ def parseTxt(textarea_content):
         j = i.split('===')
         j[0] = removekongge(j[0])
         j[1] = removekongge(j[1])
+        if not result:
+            # 第一行就直接是"名称===链接"时还没有父级条目，先补一个占位避免 IndexError
+            result.append(["", []])
         try:
             result[-1][1].append([j[0], j[1]])
         except:
@@ -357,19 +362,22 @@ def parseTxt(textarea_content):
 filemutex = Semaphore(value=1)
 def getfiledata(request):
     global path, textarea_content_predefined, filemutex, kshoucangmutex, kshoucangmutexpianduan
-    # body = request.body
-    # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
-    # req = json.loads(body)
-
-    # req = request.POST.dict()
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        # 空 body / 非法 JSON：按匿名处理，而不是 500
+        req = {}
     basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
-    get = json.loads(getusername(request).content)
-    # basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
-    if get['ret'] > 0:
-        basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
+    # 收藏数据是个人数据：仅当密码校验通过（check_logined）且请求 url 属于本人页面时才读本人目录。
+    # 旧逻辑 get['ret']>0 就切到 url 对应用户目录，匿名请求传他人 url 即可读取任意用户收藏（越权读）
+    auth = check_identity(request, req)
+    get = auth['get']
+    if auth['passed'] and str(get['mail']) in str(req.get('url', '')):
+        basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
 
     file = os.path.join(basepath, 'commonuse.txt')
     if not os.path.exists(file):
+        os.makedirs(basepath, exist_ok=True)
         with open(file, 'w', encoding='utf-8') as obj:
             obj.write(textarea_content_predefined + '\n')
             app = '\n收藏\n'
@@ -379,41 +387,51 @@ def getfiledata(request):
                                   'result':result[:-2], 'result2':result[-2:] }, safe = False)
 
     filepath = os.path.join(basepath, 'kshoucang.json')
+    app = ''
     kshoucangmutex.acquire()
-    if not os.path.exists(filepath):
-        with open(filepath, 'w', encoding='utf-8') as obj:
-            json.dump([], obj, indent=2, ensure_ascii=False)
-    delet = []
-    with open(filepath, 'r', encoding='utf-8') as obj:
-        try:
-            kshoucangJson = json.load(obj)
-        except:
+    try:
+        if not os.path.exists(filepath):
+            with open(filepath, 'w', encoding='utf-8') as obj:
+                json.dump([], obj, indent=2, ensure_ascii=False)
+        delet = []
+        with open(filepath, 'r', encoding='utf-8') as obj:
+            try:
+                kshoucangJson = json.load(obj)
+            except Exception:
+                kshoucangJson = []
+        if not isinstance(kshoucangJson, list):
             kshoucangJson = []
+        kshoucangJson = [i for i in kshoucangJson if isinstance(i, str)]
         for i in kshoucangJson:
             ij = i.split("?plan=")[-1]
             if not os.path.exists(ij):
                 delet.append(i)
         for i in delet:
             kshoucangJson.remove(i)
-        app = '\n'.join(kshoucangJson)
-        app = '\n收藏\n' + app
+        app = '\n收藏\n' + '\n'.join(kshoucangJson)
 
-    if len(delet)!=0:
-        with open(filepath, 'w', encoding='utf-8') as obj:
-            json.dump(kshoucangJson, obj, indent=2, ensure_ascii=False)
-    kshoucangmutex.release()
+        if len(delet)!=0:
+            with open(filepath, 'w', encoding='utf-8') as obj:
+                json.dump(kshoucangJson, obj, indent=2, ensure_ascii=False)
+    finally:
+        kshoucangmutex.release()
 
     filepathPD = os.path.join(basepath, 'kshoucangpianduan.json')
+    apppianduan = ''
     kshoucangmutexpianduan.acquire()
-    if not os.path.exists(filepathPD):
-        with open(filepathPD, 'w', encoding='utf-8') as obj:
-            json.dump([], obj, indent=2, ensure_ascii=False)
-    delet = []
-    with open(filepathPD, 'r', encoding='utf-8') as obj:
-        try:
-            kshoucangpianduanJson = json.load(obj)
-        except:
+    try:
+        if not os.path.exists(filepathPD):
+            with open(filepathPD, 'w', encoding='utf-8') as obj:
+                json.dump([], obj, indent=2, ensure_ascii=False)
+        delet = []
+        with open(filepathPD, 'r', encoding='utf-8') as obj:
+            try:
+                kshoucangpianduanJson = json.load(obj)
+            except Exception:
+                kshoucangpianduanJson = []
+        if not isinstance(kshoucangpianduanJson, list):
             kshoucangpianduanJson = []
+        kshoucangpianduanJson = [i for i in kshoucangpianduanJson if isinstance(i, str)]
         for i in kshoucangpianduanJson:
             ij = i.split("?plan=")[-1]
             if not os.path.exists(ij):
@@ -421,25 +439,34 @@ def getfiledata(request):
         for i in delet:
             try:
                 kshoucangpianduanJson.remove(i)
-            except:
+            except Exception:
                 continue
-        apppianduan = '\n'.join(kshoucangpianduanJson)
-        apppianduan = '\n片段\n' + apppianduan
-    if len(delet)!=0:
-        with open(filepathPD, 'w', encoding='utf-8') as obj:
-            json.dump(kshoucangpianduanJson, obj, indent=2, ensure_ascii=False)
-    kshoucangmutexpianduan.release()
+        apppianduan = '\n片段\n' + '\n'.join(kshoucangpianduanJson)
 
-    with open(file, 'r', encoding='utf-8') as obj:
-        text = obj.read()
+        if len(delet)!=0:
+            with open(filepathPD, 'w', encoding='utf-8') as obj:
+                json.dump(kshoucangpianduanJson, obj, indent=2, ensure_ascii=False)
+    finally:
+        kshoucangmutexpianduan.release()
+
+    # 读-解析-规范化写回合并到同一把锁：原先读在锁外、写在锁内，
+    # 与 submitAddwebsite 并发时可能读到截断中的半截文件
+    filemutex.acquire()
+    try:
+        with open(file, 'r', encoding='utf-8') as obj:
+            text = obj.read()
         result, modify = parseTxt(text.strip())
 
         text2 = text + "\n" + app + '\n' + apppianduan
         __result2, modify___ = parseTxt(text2.strip())
-    filemutex.acquire()
-    with open(file, 'w', encoding='utf-8') as obj:
-        obj.write(''.join(modify))
-    filemutex.release()
+
+        # tmp + os.replace 原子写，避免并发读到大文件写一半的状态
+        tmpfile = file + '.tmp'
+        with open(tmpfile, 'w', encoding='utf-8') as obj:
+            obj.write(''.join(modify))
+        os.replace(tmpfile, file)
+    finally:
+        filemutex.release()
 
     return JsonResponse( { "ret": True, 'textarea_content': text, 'result':__result2[:-2], 'result2':__result2[-2:]}, safe = False)
 
@@ -447,35 +474,39 @@ def submitAddwebsite(request):
     global path #, thememutex
     body = request.body
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
-    req = json.loads(body)
+    try:
+        req = json.loads(body)
+    except Exception:
+        # 空 body / 非法 JSON：按未授权处理，而不是 500
+        return JsonResponse( { "ret" : -100} , safe = False)
 
     # req = request.POST.dict()
     basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
-    rz = renzheng(request)
-    rzret = json.loads(rz.content)
-    passed = False
-    if "mail" in req.keys():
-        get = json.loads(getusername(request).content)
-        if not rzret['ret'] and 'password' in req.keys() and check_logined(req['mail'], req['password']):
-            basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-            passed = True
-            if f"{get['mail']}" not in req['url']:
-                return JsonResponse( { "ret" : -100} , safe = False)
-        elif get['ret']==2 and not rzret['ret']:
-            return JsonResponse( { "ret" : -100} , safe = False)
-    if not passed and not rzret['ret']:
+    auth = check_identity(request, req)
+    get = auth['get']
+    if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
-    elif not passed and rzret['ret']:
-        get = json.loads(getusername(request).content)
-        if get['ret'] > 0:
-            basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-    
+    basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
+    if f"{get['mail']}" not in str(req.get('url', '')):
+        return JsonResponse( { "ret" : -100} , safe = False)
+
     file = os.path.join(basepath, 'commonuse.txt')
-    result, modify = parseTxt(req['textarea_content'])
+    # 内容容量上限：防止超大 body 拖慢解析与后续每次 getfiledata 的读取
+    textarea_content = str(req.get('textarea_content', ''))
+    if len(textarea_content) > 5 * 1024 * 1024:
+        return JsonResponse( { "ret" : -2, "msg": "内容过长（最多5MB）"} , safe = False)
+    # 新用户首次保存时 people/<mail>/ 目录可能还不存在
+    os.makedirs(basepath, exist_ok=True)
+    result, modify = parseTxt(textarea_content)
     filemutex.acquire()
-    with open(file, 'w', encoding='utf-8') as obj:
-        obj.write(''.join(modify))
-    filemutex.release()
+    try:
+        # tmp + os.replace 原子写，避免并发读到大文件写一半的状态
+        tmpfile = file + '.tmp'
+        with open(tmpfile, 'w', encoding='utf-8') as obj:
+            obj.write(''.join(modify))
+        os.replace(tmpfile, file)
+    finally:
+        filemutex.release()
     return JsonResponse( { "ret": True, 'result':result}, safe = False)
 
 def getbingimg(request):
@@ -483,8 +514,11 @@ def getbingimg(request):
     kasepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
     file = os.path.join(kasepath, 'everydayimg.txt')
     result = ""
-    with open(file, 'r', encoding='utf-8') as obj:
-        result = obj.read().strip()
+    try:
+        with open(file, 'r', encoding='utf-8') as obj:
+            result = obj.read().strip()
+    except OSError:
+        result = ""   # 每日图片任务未运行/文件缺失时返回空，页面降级而非 500
     return JsonResponse( { "ret": True, 'result':result}, safe = False)
 
 def mailsend(mail):
@@ -496,17 +530,21 @@ def mailsend(mail):
     msg['Subject'] = "zoujiu.com.cn数据下载请求"
     msg['From'] = '1069679911@qq.com'
     msg['To'] = "1069679911@qq.com"
-    # smtplib.SMTP()
-    smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
-    # smpt.connect("smtp.qq.com", port=465)
-    smpt.login(user="1069679911@qq.com", password='qqaymrpfctvlbcif')
-    # smpt.sendmail()
+    # 连接/登录失败同样会抛异常，整体收口：失败返回 '------' 并确保连接关闭
+    smpt = None
     try:
+        smpt = smtplib.SMTP_SSL("smtp.qq.com", port=465)
+        # 授权码移至 mysite/site_config.json 的 smtp_password（敏感配置不落代码）
+        smpt.login(user="1069679911@qq.com", password=siteconfig.get('smtp_password'))
         smpt.send_message(msg)
-    except:
+    except Exception:
         return '------'
-    # smpt.close()
-    smpt.quit()
+    finally:
+        try:
+            if smpt is not None:
+                smpt.quit()
+        except Exception:
+            pass
     return
 
 mutexdownload = Semaphore(value=1)
@@ -514,51 +552,54 @@ def downloadall(request):
     global path, mutexdownload
     body = request.body
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
-    req = json.loads(body)
+    try:
+        req = json.loads(body)
+    except Exception:
+        # 空 body / 非法 JSON：按未授权处理，而不是 500
+        return JsonResponse( { "ret" : -100} , safe = False)
 
     # req = request.POST.dict()
     basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
     file = os.path.join(basepath, 'download.txt')
-    rz = renzheng(request)
-    rzret = json.loads(rz.content)
-    passed = False
-    if "mail" in req.keys():
-        get = json.loads(getusername(request).content)
-        if not rzret['ret'] and 'password' in req.keys() and check_logined(req['mail'], req['password']):
-            basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-            passed = True
-            if f"{get['mail']}" not in req['url']:
-                return JsonResponse( { "ret" : -100} , safe = False)
-        elif get['ret']==2 and not rzret['ret']:
-            return JsonResponse( { "ret" : -100} , safe = False)
-    if not passed and not rzret['ret']:
+    auth = check_identity(request, req)
+    get = auth['get']
+    if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
-    elif not passed and rzret['ret']:
-        get = json.loads(getusername(request).content)
-        if get['ret'] > 0:
-            basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
+    basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
+    if f"{get['mail']}" not in str(req.get('url', '')):
+        return JsonResponse( { "ret" : -100} , safe = False)
     if basepath[-1]==os.sep:
         asepath = basepath[:-1]
     else:
         asepath = basepath
-    receivemail = req['receivemail']
-
-    if os.path.exists(file):
-        with open(file, 'r', encoding='utf-8') as obj:
-            for i in obj.readlines():
-                if receivemail in i:
-                    return JsonResponse( { "ret" : 2} , safe = False)
+    # 消毒：剥掉换行与记录分隔符，防止伪造多条记录/破坏 download.txt 行结构
+    receivemail = str(req.get('receivemail', '')).replace('\n', ' ').replace('\r', ' ').replace('==;<==', '_')
+    if '@' not in receivemail or '.' not in receivemail:
+        return JsonResponse( { "ret" : -101, "msg": "收件邮箱格式不合法"} , safe = False)
 
     postDate = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19].replace(":", "_")
     postDate = postDate.replace("T", " ")
     savepath = os.path.join(basepath, 'download.zip')
+    line = f"{receivemail}==;<=={asepath}==;<=={savepath}==;<=={postDate}\n"
 
+    # 查重与追加合并到同一把锁：原先查重在锁外，并发请求可同时通过查重而重复写入
     mutexdownload.acquire()
-    with open(file, 'a+', encoding='utf-8') as obj:
-        obj.write(f"{receivemail}==;<=={asepath}==;<=={savepath}==;<=={postDate}\n")
-    mutexdownload.release()
-    mailsend(f"{receivemail}==;<=={asepath}==;<=={savepath}==;<=={postDate}")
-    
+    try:
+        if os.path.exists(file):
+            with open(file, 'r', encoding='utf-8') as obj:
+                for i in obj.readlines():
+                    if receivemail in i:
+                        return JsonResponse( { "ret" : 2} , safe = False)
+        with open(file, 'a+', encoding='utf-8') as obj:
+            obj.write(line)
+    finally:
+        mutexdownload.release()
+    # 邮件发送失败（SMTP 不可达等）只影响通知，不应让请求 500
+    try:
+        mailsend(line.strip())
+    except Exception:
+        pass
+
     cmd = f"cd {asepath} && nohup zip -r -q {savepath} {asepath} &"
     # os.system(cmd)
     return JsonResponse( { "ret" : 10} , safe = False)

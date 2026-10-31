@@ -1,0 +1,38 @@
+{
+	"categories": [
+		{ "id": "all", "name": "全部", "icon": "🌈" },
+		{ "id": "male", "name": "男性", "icon": "👦" },
+		{ "id": "female", "name": "女性", "icon": "👧" },
+		{ "id": "cat", "name": "猫咪", "icon": "🐱" },
+		{ "id": "dog", "name": "狗狗", "icon": "🐶" },
+		{ "id": "bird", "name": "鸟类", "icon": "🐦" },
+		{ "id": "panda", "name": "熊猫", "icon": "🐼" },
+		{ "id": "anime", "name": "动漫", "icon": "✨" },
+		{ "id": "figure", "name": "历史·仙神", "icon": "🏯" }
+	],
+	"models": [
+		{ "id": "haruto", "name": "阳翔", "category": "male", "desc": "阳光少年，白天的元气伙伴！" },
+		{ "id": "izumi", "name": "和泉", "category": "male", "desc": "夜猫子时间，由我来守护～" },
+		{ "id": "chitose", "name": "千岁", "category": "male", "desc": "想换换心情，就来找我聊哦！" },
+		{ "id": "hibiki", "name": "响", "category": "male", "desc": "安静可靠型，随时待命中。" },
+		{ "id": "shizuku", "name": "雫", "category": "female", "desc": "水手服少女，温柔陪在你身边。" },
+		{ "id": "kesyoban", "name": "看板娘", "category": "female", "desc": "经典看板娘，营业微笑全天在线。" },
+		{ "id": "koharu", "name": "小春", "category": "female", "desc": "元气满满的小春，今天也一起加油！" },
+		{ "id": "haru01", "name": "小晴·校服", "category": "female", "desc": "校服版小晴，青春气息扑面而来。" },
+		{ "id": "haru02", "name": "小晴·便服", "category": "female", "desc": "便服版小晴，周末一起逛逛吧。" },
+		{ "id": "nico", "name": "妮可", "category": "female", "desc": "妮可妮可妮～有我在别担心。" },
+		{ "id": "nito", "name": "仁藤", "category": "female", "desc": "黑长直少女，陪你安静看文章。" },
+		{ "id": "nipsilon", "name": "妮普西隆", "category": "female", "desc": "神秘系少女，偶尔冒出冷知识。" },
+		{ "id": "tsumiki", "name": "积木酱", "category": "female", "desc": "积木酱登场，萌力全开！" },
+		{ "id": "z16", "name": "Z16", "category": "female", "desc": "小小机娘 Z16，待机中～" },
+		{ "id": "tororo", "name": "白猫·虎白", "category": "cat", "desc": "白猫虎白，喵～今天也想打盹。" },
+		{ "id": "hijiki", "name": "黑猫·羊羹", "category": "cat", "desc": "黑猫羊羹，蹭蹭你的屏幕。" },
+		{ "id": "wanko", "name": "柴犬小圆", "category": "dog", "desc": "汪汪！出门散步吗？" },
+		{ "id": "miku", "name": "初音未来", "category": "anime", "desc": "世界第一的公主殿下，登基！🎵" },
+		{ "id": "unitychan", "name": "Unity酱", "category": "anime", "desc": "Unity酱参上，引擎全速运转！" },
+		{ "id": "epsilon2_1", "name": "Epsilon2.1", "category": "anime", "desc": "机械少女 Epsilon2.1，系统正常。" },
+		{ "id": "gf", "name": "甘茨特", "category": "anime", "desc": "甘茨特到场，请多指教。" },
+		{ "id": "pio", "name": "皮欧", "category": "anime", "desc": "萌物皮欧，可换装的小可爱。" },
+		{ "id": "nietzsche", "name": "尼采", "category": "figure", "desc": "凡杀不死我的，必使我更强大。" }
+	]
+}

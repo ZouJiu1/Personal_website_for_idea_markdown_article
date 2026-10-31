@@ -1,0 +1,542 @@
+[
+  {
+    "introduction": "GitHub [github.com/ZouJiu1]",
+    "link": "https://github.com/ZouJiu1",
+    "color": "#ff4500",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 1
+  },
+  {
+    "introduction": "numpy实现所有前向传播和反向传播的LSTM、RNN，古诗词生成",
+    "link": "https://github.com/ZouJiu1/numpy_lstm_RNN",
+    "color": "#c7158577",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 2
+  },
+  {
+    "introduction": "numpy实现所有前向传播和反向传播的Alexnet分类CNN网络来train MNIST，准确率：96.2%",
+    "link": "https://github.com/ZouJiu1/CNN_numpy",
+    "color": "#ffd700",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 3
+  },
+  {
+    "introduction": "numpy实现所有前向传播和反向传播的transformer网络，包括VIT、MNIST分类 (准确率：97.2%) 、古诗词生成",
+    "link": "https://github.com/ZouJiu1/numpy_transformer",
+    "color": "#ff4500",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 4
+  },
+  {
+    "introduction": "自己写好并且train的Yolov3网络，分类、分割、检测、关节点检测",
+    "link": "https://github.com/ZouJiu1/Pytorch_YOLOV3",
+    "color": "#00ced1",
+    "button1": "检测",
+    "button2": "分割",
+    "button3": "分割+keypoint",
+    "n": 5
+  },
+  {
+    "introduction": "CSDN博客 [zoujiu.blog.csdn.net/]",
+    "link": "https://zoujiu.blog.csdn.net/",
+    "color": "#c71585",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 6
+  },
+  {
+    "introduction": "知乎 [www.zhihu.com/people/zoujiu1]",
+    "link": "https://www.zhihu.com/people/zoujiu1",
+    "color": "#c71585",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 7
+  },
+  {
+    "introduction": "123123",
+    "link": "123123",
+    "color": "#000000",
+    "button1": "1232123",
+    "button2": "",
+    "button3": "",
+    "n": 8
+  },
+  {
+    "introduction": "234234",
+    "link": "234234",
+    "color": "#000000",
+    "button1": "234234",
+    "button2": "",
+    "button3": "",
+    "n": 9
+  },
+  {
+    "introduction": "46456",
+    "link": "456456",
+    "color": "#000000",
+    "button1": "456456",
+    "button2": "",
+    "button3": "",
+    "n": 10
+  },
+  {
+    "introduction": "24234",
+    "link": "2342334",
+    "color": "#000000",
+    "button1": "234234",
+    "button2": "",
+    "button3": "",
+    "n": 11
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 12
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 13
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 14
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 15
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 16
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 17
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 18
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 19
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 20
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 21
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 22
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 23
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 24
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 25
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 26
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 27
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 28
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 29
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 30
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 31
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 32
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 33
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 34
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 35
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 36
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 37
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 38
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 39
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 40
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 41
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 42
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 43
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 44
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 45
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 46
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 47
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 48
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 49
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 50
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 51
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 52
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 53
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 54
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 55
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 56
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 57
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 58
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 59
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 60
+  }
+]

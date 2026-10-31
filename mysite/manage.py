@@ -13,7 +13,9 @@ from bs4 import BeautifulSoup as fbsp
 import requests
 import re as regular
 
-timezone = 2 * 2 * 7200
+import siteconfig   # 站点统一配置（mysite/site_config.json，修改即时生效）
+
+timezone = int(siteconfig.get('display_timezone_offset_seconds'))
 kseamutex = {}
 
 def combine_audio_video():
@@ -193,6 +195,16 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    # runserver 是多线程的，但 socketserver 默认 listen backlog 只有 5，
+    # 100 个并发连接会有一部分被内核直接 reset（压测实测约 6%）。
+    # 提到 128 以支撑"1000 人在线/每秒 100 请求"的目标；仅影响开发服务器。
+    try:
+        from django.core.servers import basehttp
+        import siteconfig
+        # backlog 统一配置在 mysite/site_config.json 的 server_request_queue_size
+        basehttp.WSGIServer.request_queue_size = int(siteconfig.get('server_request_queue_size'))
+    except Exception:
+        pass
     execute_from_command_line(sys.argv)
 
 if __name__ == '__main__':

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,13 +21,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6$_vtfj^7j7k2053if=$d^st9&!f^9-481v&3se(*p3pf2x6i2'
+# 密钥加载优先级：环境变量 DJANGO_SECRET_KEY > mysite/secret_key.txt（勿提交 git）> 开发默认值兜底
+def _load_secret_key():
+    env = os.environ.get('DJANGO_SECRET_KEY')
+    if env:
+        return env
+    key_file = BASE_DIR / 'secret_key.txt'
+    if key_file.exists():
+        try:
+            key = key_file.read_text().strip()
+            if key:
+                return key
+        except Exception:
+            pass
+    return 'django-insecure-6$_vtfj^7j7k2053if=$d^st9&!f^9-481v&3se(*p3pf2x6i2'
+
+SECRET_KEY = _load_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-ALLOWED_HOSTS = ['*']
-DEBUG = True
+# 本地调试默认开 DEBUG（runserver 直接伺服 /article /people /hls 静态资源）；
+# 生产环境务必以 DJANGO_DEBUG=0 启动，静态资源改由 nginx 直接伺服（见 README 生产部署）。
+ALLOWED_HOSTS = ['zoujiu.com.cn', 'www.zoujiu.com.cn', '121.40.168.141', 'localhost', '127.0.0.1']
+DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
+# Django admin 跨域场景的 CSRF 来源（站点部署域名 http://zoujiu.com.cn）
+CSRF_TRUSTED_ORIGINS = ['http://zoujiu.com.cn', 'https://zoujiu.com.cn',
+                        'http://localhost:7009', 'http://127.0.0.1:7009']
 # PORT = 6000
-
+# APPEND_SLASH=False
 # Application definition
 
 INSTALLED_APPS = [
@@ -45,6 +66,7 @@ INSTALLED_APPS = [
     'video',
     'travel',
     'upload_video',
+    'commonuse',
 ]
 # APPEND_SLASH=False
 
@@ -61,7 +83,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE=2255057830
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    # 自定义 CSRF 中间件：仅对 Django admin 执行校验（本站自定义 API 认证走 body 传参，
+    # 不依赖 cookie 会话，天然免疫 CSRF，详见 mysite/middleware.py）
+    'mysite.middleware.ScopedCsrfMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -123,9 +147,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hans'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
@@ -147,11 +171,15 @@ CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
+    "https://zoujiu.com.cn",
     "http://zoujiu.com.cn",
     "http://121.40.168.141",
     "http://121.40.168.141:80",
     "http://121.40.168.141:7000",
     "http://localhost:80",
+    "http://localhost",
+    "https://zoujiu.com.cn",
+    "http://localhost:7000",
     "http://0.0.0.0:80",
     "http://0.0.0.0:80",
     "http://127.0.0.1:80",

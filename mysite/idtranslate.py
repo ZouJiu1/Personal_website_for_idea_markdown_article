@@ -6,9 +6,12 @@ import shutil
 import numpy as np
 from copy import deepcopy as dcp
 
+# 项目根目录自动确定（mysite 目录的上一级），不再硬编码绝对路径
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 def confirm():
-    csdn = r'/home/admin/vue-project/article/csdn_spider_selenium/article'
-    zhihu = r'/home/admin/vue-project/article/zhihu_spider_selenium/article'
+    csdn = os.path.join(PROJECT_ROOT, 'article', 'csdn_spider_selenium', 'article')
+    zhihu = os.path.join(PROJECT_ROOT, 'article', 'zhihu_spider_selenium', 'article')
     csdnlist = os.listdir(csdn)
     zhihulist = os.listdir(zhihu)
     ret = []
@@ -68,9 +71,9 @@ def confirm():
     k = 0
 
 def idtran():
-    csdn = r'/home/admin/vue-project/article/csdn_spider_selenium/article'
-    zhihu = r'/home/admin/vue-project/article/zhihu_spider_selenium/article'
-    savepath = r'/home/admin/vue-project/article/idtranslate.json'
+    csdn = os.path.join(PROJECT_ROOT, 'article', 'csdn_spider_selenium', 'article')
+    zhihu = os.path.join(PROJECT_ROOT, 'article', 'zhihu_spider_selenium', 'article')
+    savepath = os.path.join(PROJECT_ROOT, 'article', 'idtranslate.json')
     csdnlist = os.listdir(csdn)
     zhihulist = os.listdir(zhihu)
     ret = {'zhihu2id': {}, 'csdn2id':{}, 'id2zhihu':{}, "id2csdn":{}}

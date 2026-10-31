@@ -2,7 +2,7 @@
   <div class="app-container">
     <!-- <el-card shadow="always"> -->
     <div>
-      <div style="margin-top:-2px;">
+      <div class="post-toolbar" style="margin-top:-2px;">
         <el-button type="primary" plain @click="PrePage" class="PrePage_class">上一页</el-button>
         <el-link type="primary" href="https://zoujiu.blog.csdn.net/" target="_blank" style="margin-left:10px;">CSDN</el-link>
         <span hidden>
@@ -31,11 +31,11 @@
           >
           上传图片
         </el-button>
-        <el-dialog v-model="dialogFormVisible" title="上传图片" width="500">
+        <el-dialog v-model="dialogFormVisible" title="上传图片" width="min(500px, 92%)">
           <el-upload
             v-model:file-list="fileList"
             class="upload-demo"
-            action="http://localhost:7009/csdn/uploadImg"
+            action="/csdn/uploadImg"
             multiple
             :on-preview="handleUpPreview"
             :on-remove="handleRemove"
@@ -54,22 +54,42 @@
             </template>
           </el-upload>
         </el-dialog>
-        <!-- <el-button
+        <el-dialog v-model="draftDialogVisible" title="草稿箱" width="min(640px, 92%)">
+          <el-table :data="draftList" v-loading="draftLoading" size="small" max-height="420">
+            <el-table-column label="标题" show-overflow-tooltip>
+              <template #default="scope">
+                <span>{{ scope.row.title || '（无标题）' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="save_time" label="保存时间" width="170" />
+            <el-table-column label="操作" width="160">
+              <template #default="scope">
+                <el-button size="small" type="primary" @click="loadDraft(scope.row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="deleteDraft(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="!draftLoading && draftList.length===0" style="text-align:center;color:#999;padding:20px 0;">
+            草稿箱空空如也，写点什么然后点【保存草稿】吧
+          </div>
+        </el-dialog>
+        <el-button
           class="filter-item"
-          type="primary"
-          @click="handleSavedraft"
+          type="warning"
+          @click="saveDraft"
           style="margin-left:36px;text-align:center;"
           >
           保存草稿
         </el-button>
         <el-button
           class="filter-item"
-          type="primary"
-          @click="handleSavedraft"
+          type="warning"
+          plain
+          @click="openDraftBox"
           style="margin-left:10px;text-align:center;"
           >
-          加载草稿
-        </el-button> -->
+          草稿箱
+        </el-button>
         <el-button
           class="filter-item"
           type="success"
@@ -91,7 +111,7 @@
         />
         <!-- <span style="margin-left:20px;font-weight:600;font-size:23px;">markdown格式</span> -->
       </div>
-      <div style="margin-top:-10px;margin-bottom: 2px;">
+      <div class="title-row" style="margin-top:-10px;margin-bottom: 2px;">
         <span style="margin-left:6%;font-weight:600;font-size:26px;margin-top:3px;">标题</span>
         <el-input
           v-model="title"
@@ -157,6 +177,10 @@ export default {
       title: "",
       postkey: "",
       intervalId: "",
+      draft_id: "",
+      draftDialogVisible: false,
+      draftList: [],
+      draftLoading: false,
       dialogFormVisible: false,
       elaside: "",
       save: false,
@@ -189,25 +213,145 @@ export default {
     this.getPrimaryText();
     this.hidden_elaside();
     this.editArticleLoad();
+    // 窗口尺寸变化会影响左右滚动量与锚点，重新计算
+    this._onResize = () => { this.buildScrollAnchors(); };
+    window.addEventListener("resize", this._onResize);
+  },
+  beforeUnmount(){
+    // 退出编辑页时停止定时器，防止后台持续请求
+    if(this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = "";
+    }
+    if(this._onResize) {
+      window.removeEventListener("resize", this._onResize);
+    }
   },
   watch: {},
   methods: {
     scrollChange(event) {
-      if(this.scrollChangealway) {
-        let htmlHeight = event.target.clientHeight;
-        let editorHeight = event.target.scrollHeight;
-        let editorTop = event.target.scrollTop;
-        let remain = editorHeight - htmlHeight;
-        let ratio = editorTop / remain;
-
-        let rightele = document.getElementById("previewHalf");
-        rightele.scrollTop = (rightele.scrollHeight - htmlHeight) * ratio;
-        // console.log(event, remain, editorTop, ratio,  rightele.scrollTop / rightele.scrollHeight);
+      if(!this.scrollChangealway) {
+        return;
       }
+      const ta = event.target;
+      const pre = document.getElementById("previewHalf");
+      if(!pre) {
+        return;
+      }
+      const srcMax = ta.scrollHeight - ta.clientHeight;
+      if(srcMax <= 0) {
+        return;
+      }
+      // 有标题锚点则按锚点分段插值（图片/标题高度不同导致的失配由锚点校正），
+      // 否则退回整体比例映射（保留原有行为）。
+      const anchors = this._scrollAnchors;
+      if(anchors && anchors.s && anchors.s.length >= 2) {
+        pre.scrollTop = this.mapScrollTop(ta.scrollTop, anchors.s, anchors.p);
+      } else {
+        pre.scrollTop = (pre.scrollHeight - pre.clientHeight) * (ta.scrollTop / srcMax);
+      }
+    },
+    // 在 [ss] -> [pp] 之间做分段线性插值，两端锚定 0 与最大滚动量
+    mapScrollTop(v, ss, pp) {
+      if(v <= ss[0]) return pp[0];
+      if(v >= ss[ss.length - 1]) return pp[pp.length - 1];
+      let i = 1;
+      while(i < ss.length - 1 && ss[i] < v) i++;
+      const x0 = ss[i - 1], x1 = ss[i], y0 = pp[i - 1], y1 = pp[i];
+      if(x1 === x0) return y0;
+      return y0 + (y1 - y0) * (v - x0) / (x1 - x0);
+    },
+    // 依据源文本标题行与右预览标题元素，构建“源滚动px -> 预览滚动px”的锚点
+    buildScrollAnchors() {
+      const ta = document.getElementById("textarea_input");
+      const pre = document.getElementById("previewHalf");
+      if(!ta || !pre) {
+        this._scrollAnchors = null;
+        return;
+      }
+      const src = this.textarea_content || ta.value || "";
+      const srcIdx = [];
+      const re = /^([ \t]*#{1,6}[ \t]+)[^\n]*/gm;
+      let m;
+      while((m = re.exec(src)) !== null) {
+        srcIdx.push(m.index);
+      }
+      const heads = pre.querySelectorAll("h1, h2, h3, h4, h5, h6");
+      const srcMax = ta.scrollHeight - ta.clientHeight;
+      const preMax = pre.scrollHeight - pre.clientHeight;
+      if(srcMax <= 0 || preMax <= 0) {
+        this._scrollAnchors = null;
+        return;
+      }
+      const n = Math.min(srcIdx.length, heads.length);
+      const s = [0], p = [0];
+      for(let i = 0; i < n; i++) {
+        const sp = Math.max(0, Math.min(srcMax, this.measureSourcePx(ta, src, srcIdx[i])));
+        const pp = Math.max(0, Math.min(preMax, heads[i].getBoundingClientRect().top - pre.getBoundingClientRect().top + pre.scrollTop));
+        // 保证严格单调递增，避免插值分母为负或跳变
+        if(sp > s[s.length - 1] && pp >= p[p.length - 1]) {
+          s.push(sp);
+          p.push(pp);
+        }
+      }
+      if(s[s.length - 1] < srcMax) {
+        s.push(srcMax);
+        p.push(preMax);
+      }
+      this._scrollAnchors = s.length >= 2 ? { s, p } : null;
+    },
+    // 用与 textarea 完全一致样式的镜像 div 测量源文本某字符处的像素高度
+    measureSourcePx(ta, src, offset) {
+      let mirror = document.getElementById("_taMirror");
+      if(!mirror) {
+        mirror = document.createElement("div");
+        mirror.id = "_taMirror";
+        mirror.setAttribute("aria-hidden", "true");
+        document.body.appendChild(mirror);
+      }
+      const cs = getComputedStyle(ta);
+      const st = mirror.style;
+      st.position = "absolute";
+      st.left = "-10000px";
+      st.top = "0";
+      st.visibility = "hidden";
+      st.pointerEvents = "none";
+      st.width = ta.clientWidth + "px";
+      st.boxSizing = cs.boxSizing;
+      st.font = cs.font;
+      st.fontSize = cs.fontSize;
+      st.lineHeight = cs.lineHeight;
+      st.letterSpacing = cs.letterSpacing;
+      st.wordSpacing = cs.wordSpacing;
+      st.padding = cs.padding;
+      st.border = cs.border;
+      st.tabSize = cs.tabSize;
+      st.whiteSpace = "pre-wrap";
+      st.wordBreak = "break-word";
+      st.overflowWrap = "break-word";
+      mirror.textContent = src.slice(0, offset);
+      return mirror.scrollHeight;
+    },
+    // 渲染完成后刷新锚点；若预览含未加载完成的图片，等图片加载完再刷（图片高度计入滚动量）
+    scheduleScrollAnchors() {
+      const pre = document.getElementById("previewHalf");
+      if(!pre) return;
+      const imgs = Array.from(pre.querySelectorAll("img"));
+      const pending = imgs.filter(im => !im.complete);
+      if(pending.length === 0) {
+        this.buildScrollAnchors();
+        return;
+      }
+      let left = pending.length;
+      const done = () => { if(--left <= 0) this.buildScrollAnchors(); };
+      pending.forEach(im => {
+        im.addEventListener("load", done, { once: true });
+        im.addEventListener("error", done, { once: true });
+      });
     },
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -223,7 +367,7 @@ export default {
     },
     async getPrimaryText() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/getPrimaryText',
+        baseURL: '/csdn/getPrimaryText',
        timeout: 20000,
       });
       
@@ -255,7 +399,7 @@ export default {
         clearInterval(this.intervalId);
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/renzheng',
+        baseURL: '/csdn/renzheng',
         timeout: 20000,
       });
       
@@ -300,6 +444,7 @@ export default {
         input[0].setAttribute('disabled', "true");
         // delete input.disabled;
       }
+      this.draft_id = ""; // 进入编辑页时清掉草稿上下文；载入/保存草稿时再重新设置
       this.path = this.$router.currentRoute._value.query.plan;
       if(!this.path) {
         return;
@@ -307,7 +452,7 @@ export default {
       this.data.path = this.path;
       // console.log(this.path);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/editArticle',
+        baseURL: '/csdn/editArticle',
         timeout: 20000,
       });
       
@@ -341,10 +486,113 @@ export default {
     setTextarea(txt="") {
       this.textarea_content = txt;
     },
-    handleSavedraft() {
-      // this.save = true;
-      // this.axiospost();
-      // this.save = false;
+    async draftRequest(url, payload) {
+      const instance = axios.create({ baseURL: url, timeout: 20000 });
+      const response = await instance({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        data: payload,
+        withCredentials: true,
+      });
+      return response.data;
+    },
+    async saveDraft() {
+      const mail = Cookies.get("mail");
+      const password = Cookies.get("password");
+      if(!mail || !password) {
+        ElMessage.error("请先登录后再保存草稿");
+        return;
+      }
+      if(this.title.trim()==="" && this.textarea_content.trim()==="") {
+        ElMessage.error("标题和内容不能同时为空");
+        return;
+      }
+      try {
+        const r = await this.draftRequest('/csdn/save_draft', {
+          mail: mail, password: password,
+          title: this.title, markdown: this.textarea_content,
+          draft_id: this.draft_id || "",
+        });
+        if(r.ret === 1) {
+          this.draft_id = r.draft_id;
+          ElMessage.success("草稿已保存");
+        } else {
+          ElMessage.error(r.msg || "草稿保存失败");
+        }
+      } catch(e) {
+        ElMessage.error("草稿保存失败");
+      }
+    },
+    async openDraftBox() {
+      const mail = Cookies.get("mail");
+      const password = Cookies.get("password");
+      if(!mail || !password) {
+        ElMessage.error("请先登录后查看草稿箱");
+        return;
+      }
+      this.draftDialogVisible = true;
+      this.draftLoading = true;
+      try {
+        const r = await this.draftRequest('/csdn/draft_list', { mail: mail, password: password });
+        if(r.ret === 1) {
+          this.draftList = r.drafts || [];
+        } else {
+          this.draftList = [];
+          ElMessage.error(r.msg || "草稿列表获取失败");
+        }
+      } catch(e) {
+        this.draftList = [];
+        ElMessage.error("草稿列表获取失败");
+      } finally {
+        this.draftLoading = false;
+      }
+    },
+    async loadDraft(item) {
+      try {
+        const r = await this.draftRequest('/csdn/draft_get', {
+          mail: Cookies.get("mail"), password: Cookies.get("password"), id: item.id,
+        });
+        if(r.ret === 1) {
+          // 草稿是新文章：清掉文章编辑态，回填标题与内容
+          this.path = "";
+          this.old_title = "";
+          this.dirname = "";
+          this.data.path = "";
+          this.data.old_title = "";
+          this.data.dirname = "";
+          this.title = r.title;
+          this.textarea_content = r.markdown;
+          this.setTextarea(r.markdown);
+          this.draft_id = r.id;
+          this.draftDialogVisible = false;
+          ElMessage.success("草稿已载入，可继续编辑");
+        } else {
+          ElMessage.error(r.msg || "草稿读取失败");
+        }
+      } catch(e) {
+        ElMessage.error("草稿读取失败");
+      }
+    },
+    deleteDraft(item) {
+      this.$confirm(`确定删除草稿【${item.title || '（无标题）'}】？`, "删除确认", {type: 'warning'})
+        .then(async () => {
+          try {
+            const r = await this.draftRequest('/csdn/draft_delete', {
+              mail: Cookies.get("mail"), password: Cookies.get("password"), id: item.id,
+            });
+            if(r.ret === 1) {
+              if(this.draft_id === item.id) {
+                this.draft_id = "";
+              }
+              ElMessage.success("草稿已删除");
+              this.openDraftBox();
+            } else {
+              ElMessage.error(r.msg || "草稿删除失败");
+            }
+          } catch(e) {
+            ElMessage.error("草稿删除失败");
+          }
+        }).catch(() => {});
     },
     handlePreview() {
       if(this.intervalId) {
@@ -357,7 +605,7 @@ export default {
     },
     async handlePreview_interval() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/renzheng',
+        baseURL: '/csdn/renzheng',
        timeout: 20000,
       });
 
@@ -381,7 +629,7 @@ export default {
               this.intervalId = setInterval(() => {
               this.save = false;
               this.axiospost();
-            }, 1000);
+            }, 6000);
           })
         } else {
           // this.$alert("发布密钥不正确");
@@ -399,7 +647,7 @@ export default {
         clearInterval(this.intervalId);
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/postArticle',
+        baseURL: '/csdn/postArticle',
         timeout: 20000,
       });
       
@@ -447,6 +695,10 @@ export default {
             throwOnError: false
           });
         }
+
+        // 预览刚更新，先失效旧锚点，再按图片加载情况重建（图片高度计入后才准确）
+        this._scrollAnchors = null;
+        this.scheduleScrollAnchors();
       });
     },
     postarticle() {
@@ -493,7 +745,7 @@ export default {
             clearInterval(this.intervalId);
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/renzheng',
+        baseURL: '/csdn/renzheng',
        timeout: 20000,
       });
       
@@ -515,7 +767,7 @@ export default {
           // console.log(r);
           this.save = true;
           const instan = axios.create({
-            baseURL: 'http://localhost:7009/csdn/postArticle',
+            baseURL: '/csdn/postArticle',
             timeout: 20000,
           });
           
@@ -544,6 +796,21 @@ export default {
             this.path = response.data.path;
             // this.$alert("发布成功了的");
             ElMessage.success("发布成功了的");
+            if(this.draft_id) {
+              // 发布成功后自动移除对应草稿
+              const draft_payload = {"mail": Cookies.get("mail"), "password": Cookies.get("password"), "id": this.draft_id};
+              const draft_inst = axios.create({ baseURL: '/csdn/draft_delete', timeout: 20000 });
+              draft_inst({
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+                data: draft_payload,
+              }).then((resp) => {
+                if(resp.data && resp.data.ret === 1) {
+                  ElMessage("对应草稿已从草稿箱移除");
+                }
+              }).catch(() => {});
+              this.draft_id = "";
+            }
             this.elaside.hidden = false;
             // this.$router.go(-2);
             if(this.path) {
@@ -558,7 +825,7 @@ export default {
                   this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
                 } else {
                   // this.$router.push({ path: '/csdn/zj',});
-                  this.$router.push({ path: '/csdn/homepage',});
+                  this.$router.push({ path: '/csdn/homepage@gmail.com',});
                 }
               } 
             } else {
@@ -593,6 +860,7 @@ export default {
       this.title="";
       this.postkey="";
       this.save=false;
+      this.draft_id="";
       this.textarea_content="";
       this.old_title = "";
       this.dirname = "";
@@ -623,8 +891,8 @@ export default {
             this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
           } else {
             // this.$router.push({ path: '/csdn/zj'});
-            // this.$router.push({ path: '/csdn/homepage'});
-            this.$router.push({ path: '/csdn/homepage',  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+            // this.$router.push({ path: '/csdn/homepage@gmail.com'});
+            this.$router.push({ path: '/csdn/homepage@gmail.com',  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
           }
         } 
       } else {
@@ -633,8 +901,8 @@ export default {
           this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         } else {
           // this.$router.push({ path: '/csdn/zj'});
-          // this.$router.push({ path: '/csdn/homepage'});
-          this.$router.push({ path: '/csdn/homepage',  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+          // this.$router.push({ path: '/csdn/homepage@gmail.com'});
+          this.$router.push({ path: '/csdn/homepage@gmail.com',  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         }
       }
       // this.$router.push({ path: '/csdn/markdown_detail', hash: '#csdn/markdown_detail', query: { plan: this.path }});
@@ -649,9 +917,9 @@ export default {
 
     handleExceed(files, uploadFiles) {
       ElMessage.warning(
-        `The limit is 3, you selected ${files.length} files this time, add up to ${
+        `最多上传 20 张图片，本次选择了 ${files.length} 张，合计 ${
           files.length + uploadFiles.length
-        } totally`
+        } 张`
       )
     },
 
@@ -1037,6 +1305,38 @@ textarea {
   margin-top:10px;
   margin-bottom:0px;
   margin-left:3px;
+}
+
+/* 手机端适配：工具栏按钮换行、标题输入占满、编辑器与预览改为上下堆叠 */
+@media (max-width: 768px) {
+  .post-toolbar .el-button {
+    margin-left: 6px !important;
+    margin-top: 6px;
+  }
+
+  .title-row > span {
+    margin-left: 6px !important;
+  }
+
+  .title-row .el-input {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-top: 4px;
+  }
+
+  .app-container .el-container {
+    flex-direction: column;
+  }
+
+  .lefteditor,
+  .previewclass {
+    width: 100%;
+  }
+
+  .previewclass :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 </style>

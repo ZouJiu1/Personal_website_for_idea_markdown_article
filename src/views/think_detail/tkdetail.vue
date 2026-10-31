@@ -11,11 +11,12 @@
     type="warning"
     @click="dialogFormVisible = true"
     style="text-align:center; margin-left:60%;"
+    v-if="canManage"
     >
     删除
   </el-button>
   <!-- <el-dialog v-model="dialogFormVisible" title="输入密钥删除" width="500"> -->
-    <el-dialog v-model="dialogFormVisible" title="删除" width="500">
+    <el-dialog v-model="dialogFormVisible" title="删除" width="min(500px, 92%)">
     <span hidden>
       <el-input
         v-model="postkey"
@@ -39,7 +40,7 @@
     @click="dialogFormVisible_top = true"
     style="text-align:center; margin-left:1%;"
     id="placetop"
-    v-if="nottop"
+    v-if="nottop && canManage"
     >
     放在最上面
   </el-button>
@@ -49,7 +50,7 @@
     @click="cancel_dialogFormVisible_top = true"
     style="text-align:center; margin-left:1%;"
     id="placetop"
-    v-if="toptop"
+    v-if="toptop && canManage"
     >
     取消放在最上面
   </el-button>
@@ -58,11 +59,12 @@
     type="warning"
     @click="modifyvisible = true"
     style="text-align:center; margin-left:1%;"
+    v-if="canManage"
     >
     修改
   </el-button>
   <!-- <el-dialog v-model="dialogFormVisible_top" title="输入密钥放在最上面" width="500"> -->
-  <el-dialog v-model="dialogFormVisible_top" title="放在最上面的" width="500">
+  <el-dialog v-model="dialogFormVisible_top" title="放在最上面的" width="min(500px, 92%)">
     <span hidden>
       <el-input
         v-model="postkey"
@@ -80,7 +82,7 @@
       确认放在最上面
     </el-button>
   </el-dialog>
-  <el-dialog v-model="cancel_dialogFormVisible_top" title="取消放在最上面的" width="500">
+  <el-dialog v-model="cancel_dialogFormVisible_top" title="取消放在最上面的" width="min(500px, 92%)">
     <span hidden>
       <el-input
         v-model="postkey"
@@ -110,7 +112,7 @@
     <br>
     <el-upload
         v-model:file-list="fileList"
-        action="http://localhost:7009/think/uploadImg"
+        action="/think/uploadImg"
         list-type="picture-card"
         :on-preview="handlePictureCardPreview"
         :on-remove="handleRemove"
@@ -216,7 +218,7 @@ import renderMathInElement from 'katex/contrib/auto-render/auto-render.js'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import Cookies from 'js-cookie';
-import getusername from '/src/common.js'
+import getusername, { isAdminQuanxian, getCookieDays } from '/src/common.js'
 
 export default {
   name: 'markdown_detail',
@@ -242,6 +244,7 @@ export default {
       },
       toptop:false,
       nottop:true,
+      canManage:false,
     }
   },
   mounted(){
@@ -252,7 +255,7 @@ export default {
   methods: {
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -287,7 +290,7 @@ export default {
       }
       // console.log(this.resultresult);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/kshoucang',
+        baseURL: '/think/kshoucang',
         timeout: 20000,
       });
       
@@ -301,7 +304,7 @@ export default {
           'click':this.resultresult['clickshoucang'], 'path':this.resultresult['path'], 'title':this.resultresult['title'],
         },
       }).then((response) => {
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("thinkReset");
         Cookies.set("thinkReset", 1, { expires: expiresdate });
         // this.resetSearch();
@@ -324,8 +327,17 @@ export default {
         ElMessage.error("没有登陆不能操作！");
         return
       }
+      // 与后端 comment_add 的限制保持一致，避免白跑一次请求
+      if(!this.textarea_content || !this.textarea_content.trim()) {
+        ElMessage.warning("评论不能为空！");
+        return
+      }
+      if(this.textarea_content.length > 2000) {
+        ElMessage.warning("评论不能超过 2000 字！");
+        return
+      }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/comment_add',
+        baseURL: '/think/comment_add',
         timeout: 20000,
       });
       
@@ -343,7 +355,7 @@ export default {
         this.textarea_content = "";
         location.reload();
 
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("thinkdetail_reload");
         Cookies.set("thinkdetail_reload", 1, { expires: expiresdate });
 
@@ -452,7 +464,7 @@ export default {
       
       // console.log(this.kdianzanlength);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/upvote_change',
+        baseURL: '/think/upvote_change',
         timeout: 20000,
       });
       
@@ -473,14 +485,15 @@ export default {
         // console.log(response.statusText);
         // console.log(response.headers);
         // console.log(response.config);
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("thinkReset");
         Cookies.set("thinkReset", 1, { expires: expiresdate });
       });
     },
     async handleTop() {
+      this.dialogFormVisible_top = false;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/placeTop',
+        baseURL: '/think/placeTop',
         timeout: 20000,
       });
           
@@ -505,8 +518,9 @@ export default {
       })
     },
     async cancelhandleTop() {
+      this.cancel_dialogFormVisible_top = false;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/cancelPlaceTop',
+        baseURL: '/think/cancelPlaceTop',
         timeout: 20000,
       });
           
@@ -533,7 +547,7 @@ export default {
     async modify_content() {
       this.path = this.$router.currentRoute._value.query.plan;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/modify',
+        baseURL: '/think/modify',
        timeout: 20000,
       });
       
@@ -558,9 +572,10 @@ export default {
     },
     async detailget() {
       this.path = this.$router.currentRoute._value.query.plan;
+      this.computeCanManage();
       // console.log(this.path);
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/detail',
+        baseURL: '/think/detail',
        timeout: 20000,
       });
       
@@ -664,7 +679,7 @@ export default {
       if(reload==1) {
         let pinglun = document.getElementById("pinglunpinglun");
         pinglun.click();
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
         Cookies.remove("thinkdetail_reload");
         Cookies.set("thinkdetail_reload", 0, { expires: expiresdate });
       }
@@ -672,6 +687,19 @@ export default {
     },
     getImage(k) {
       // console.log(k);
+    },
+    // 管理/编辑类按钮只对内容归属者或管理员可见（后端仍有守卫，这里只是前端隐藏）
+    computeCanManage() {
+      let owner = "";
+      const m = (this.path || "").match(/\/people\/([^/]+)/);
+      if (m && m[1]) {
+        owner = m[1];
+      }
+      if (!owner && this.$route.params.id) {
+        owner = this.$route.params.id;
+      }
+      const my = Cookies.get("mail");
+      this.canManage = (owner && my === owner) || isAdminQuanxian(Cookies.get("quanxian"));
     },
     async PrePage() {
       // this.$router.go(-1);
@@ -683,7 +711,7 @@ export default {
         this.$router.push({ path: '/think/'+gu.urlmail, query:{"currentpage": Cookies.get("think"), "pagesize": Cookies.get("thinkpage")}});
       } else {
         // this.$router.push({ path: '/think/zj'});
-        this.$router.push({ path: '/think/homepage'});
+        this.$router.push({ path: '/think/homepage@gmail.com'});
       }
     },
     async sha(str) { 
@@ -700,7 +728,7 @@ export default {
       this.dialogFormVisible = false;
       ElMessage.info("正在删除的请等待！");
       const instanc = axios.create({
-        baseURL: 'http://localhost:7009/think/delete',
+        baseURL: '/think/delete',
         timeout: 20000,
       });
             
@@ -734,7 +762,7 @@ export default {
       // this.sha(this.postkey).then((r)=>{
       //   if(sharet == r) {
       //     const instance = axios.create({
-      //       baseURL: 'http://localhost:7009/think/delete',
+      //       baseURL: '/think/delete',
       //       timeout: 20000,
       //     });
             
@@ -897,6 +925,30 @@ export default {
   margin-top:10px;
   margin-bottom:0px;
   margin-left:3px;
+}
+
+/* 手机端适配：正文区域撑满并收窄内边距，操作按钮大边距收窄，代码块可横向滚动 */
+@media (max-width: 768px) {
+  :deep(#detailvue) {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .detailthink {
+    margin-left: 2%;
+    margin-right: 2%;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  .filter-item {
+    margin-left: 3px !important;
+    margin-top: 6px;
+  }
+  :deep(pre) {
+    overflow-x: auto;
+  }
 }
 </style>
   

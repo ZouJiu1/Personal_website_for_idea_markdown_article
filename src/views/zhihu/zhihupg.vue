@@ -1,27 +1,25 @@
 <template>
   <div class="app-container">
     <!-- <el-card shadow="always"> -->
-      <div style="margin-top: 3px;">
+      <div style="margin-top: 3px;" class="search-toolbar">
         <el-link type="primary" href="https://www.zhihu.com/people/zoujiu1/" target="_blank">知乎</el-link>
         <el-input
           v-model="search_param.search"
           placeholder="标题、日期或者内容, 空格 分隔"
-          style="width: 30%; margin-left:20px;"
-          class="filter-item"
+          class="filter-item search-input"
+          clearable
+          @keyup.enter="handleSearch"
         />
         <el-button
           class="filter-item"
           type="primary"
           @click="handleSearch"
-          style="margin-left:20px;text-align:center;"
           >
           搜索
         </el-button>
         <el-button
           class="filter-item"
-          type="primary"
           @click="resetSearch"
-          style="text-align:center;"
           >
           重置
         </el-button>
@@ -54,6 +52,7 @@
     </el-card>
   </div>
   <el-pagination 
+    class="mobile-pagination"
     layout='total, sizes, prev, pager, next, jumper'
     :page-sizes="[6,10,20,30,60,100]"
     background
@@ -83,7 +82,7 @@
 
 <script>
 import axios from 'axios'
-import getusername from '/src/common.js'
+import getusername, { getCookieDays } from '/src/common.js'
 import Cookies from 'js-cookie'
 export default {
   name: 'app',
@@ -111,7 +110,7 @@ export default {
   methods: {
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -127,7 +126,7 @@ export default {
     },
     axiosget() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/zhihu/index',
+        baseURL: '/zhihu/index',
        timeout: 20000,
       });
       this.search_param.password = Cookies.get("password");
@@ -202,7 +201,7 @@ export default {
     handleSearch() {
       this.search_param.reset = 1;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/zhihu/index',
+        baseURL: '/zhihu/index',
         timeout: 20000,
       });
       this.search_param.password = Cookies.get("password");
@@ -227,7 +226,7 @@ export default {
         this.search_param.reset = 0;
       });
 
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.remove("zhihusearch");
       Cookies.set("zhihusearch", this.search_param.search, { expires: expiresdate });
       this.search_param.password = "";
@@ -296,6 +295,29 @@ export default {
 </script>
 
 <style scoped>
+/* 资料搜索工具栏：flex 统一排列（替代散排 margin 硬凑），回车触发、可清空 */
+.search-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, .07), rgba(103, 194, 58, .07));
+  border: 1px solid rgba(64, 158, 255, .18);
+  border-radius: 10px;
+}
+.search-toolbar .search-input {
+  width: 30%;
+  min-width: 220px;
+}
+@media (max-width: 768px) {
+  .search-toolbar .search-input {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 h1 {
   font-weight: 500;
   font-size: 2.6rem;
@@ -338,6 +360,24 @@ h3 {
   .greetings h1,
   .greetings h3 {
     text-align: left;
+  }
+}
+
+/* 手机端适配：搜索控件占满可用宽度，卡片与分页收紧边距 */
+@media (max-width: 768px) {
+  .filter-item {
+    width: calc(100% - 6px) !important;
+    margin-left: 6px !important;
+  }
+  .el-card-detail {
+    width: calc(100% - 12px);
+    margin-left: 6px;
+    margin-right: 6px;
+  }
+  .mobile-pagination {
+    margin-left: 6px !important;
+    margin-right: 6px !important;
+    flex-wrap: wrap;
   }
 }
 </style>

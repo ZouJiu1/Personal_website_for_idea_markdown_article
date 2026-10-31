@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 import os
 from datetime import datetime
+from copy import deepcopy
 import time
 import json
 
@@ -15,6 +16,7 @@ import sys
 sys.path.append(addpath)
 from manage import timezone
 from csdn.views import getusername
+from csdn.views import check_logined, check_identity
 
 if os.path.exists(mainpath):
     path = path.replace("/article/", '/dist/article/')
@@ -23,7 +25,7 @@ def rep(i):
               replace("小于", "<").replace("大于", ">").replace("_逗号_", "，").\
               replace("_空格_", " ").replace("_冒号_", "：").replace("_顿号_", "、")
 
-allfile = None
+allfile = {}  # 按 basepath 隔离的多用户缓存，避免用户间串数据
 pre_page_size = None
 
 def findlatest(pth):
@@ -55,22 +57,23 @@ def index(request):
     reset = int(re["reset"])
 
     get = json.loads(getusername(request).content)
-    # basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
+    basepath = deepcopy(path)
     if get['ret'] > 0:
-        path = path.replace("/article/", f"/people/{get['urlmail']}/")
+        basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
 
     # reset = 1
     if reset==1:
-        allfile = None
+        allfile.pop(basepath, None)
     collect = []
     search = search.split(" ")
     while '' in search:
         search.remove("")
-    if allfile!=None:
-        ret = allfile[(currentpage-1) * pagesize : currentpage * pagesize]
-        return JsonResponse({"collect":ret, "length":len(allfile)}, safe = False)
-    for i in os.listdir(path):
-        nth = os.path.join(path, i)
+    cache = allfile.get(basepath)
+    if cache is not None:
+        ret = cache[(currentpage-1) * pagesize : currentpage * pagesize]
+        return JsonResponse({"collect":ret, "length":len(cache)}, safe = False)
+    for i in os.listdir(basepath):
+        nth = os.path.join(basepath, i)
         if not os.path.isdir(nth):
             continue
         if '20'==i[:2]:
@@ -103,8 +106,7 @@ def index(request):
         if len(search)==0:
             collect.append({"date":date, "title": title, "markdown": markdown[:200], "path":markdownpth})
     collect = sorted(collect.__iter__(), key = lambda x:x['date'], reverse=True)
-    if allfile==None:
-        allfile = collect
+    allfile[basepath] = collect
     ret = collect[(currentpage-1) * pagesize : currentpage * pagesize]
     return JsonResponse({"collect":ret, "length":len(collect)}, safe = False)
     # return Response({
@@ -126,5 +128,18 @@ def index(request):
 
 def notify_edit(request):
     global allfile
-    allfile = None
+    # 清空全局缓存属于管理操作，未登录用户不允许触发（高并发下被恶意刷会导致缓存失效）
+    try:
+        if isinstance(request.POST.dict(), dict) and len(request.POST.dict()) != 0:
+            req = request.POST.dict()
+        else:
+            req = json.loads(request.body)
+    except Exception:
+        req = {}
+    # renzheng 恒返回 ret=False（keyok 恒 True），check_identity 的 passed
+    # 与原判断（mail/password 齐全且 check_logined）完全等价
+    auth = check_identity(request, req)
+    if not auth['passed']:
+        return JsonResponse( { "ret" : -100} , safe = False)
+    allfile.clear()
     return HttpResponse("clear")

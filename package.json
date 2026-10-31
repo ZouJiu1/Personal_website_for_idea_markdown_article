@@ -9,17 +9,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.7.9",
-    "element-plus": "^2.9.3",
-    "hls.js": "^1.5.20",
-    "js-cookie": "^3.0.5",
-    "katex": "^0.16.21",
+    "aplayer": "^1.10.1",
+    "axios": "^1.20.0",
+    "element-plus": "^2.14.7",
+    "hls.js": "^1.7.3",
+    "js-cookie": "^3.0.8",
+    "katex": "^0.16.47",
+    "solarlunar": "^3.1.0",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
-    "vite": "^6.0.11",
+    "vite": "^6.4.5",
     "vite-plugin-vue-devtools": "^7.7.0"
   }
 }

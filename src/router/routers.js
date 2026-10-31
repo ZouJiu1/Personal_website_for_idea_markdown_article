@@ -23,8 +23,10 @@
  * all perms can be accessed
  */
 
-import { createMemoryHistory, createRouter, createWebHistory, createWebHashHistory, 
-  createRouterMatcher} from 'vue-router'
+import {
+  createMemoryHistory, createRouter, createWebHistory, createWebHashHistory,
+  createRouterMatcher
+} from 'vue-router'
 import allbooksfile from '../views/allbook/allbooks.vue'
 import csdnpg from '../views/csdn/csdnpg.vue'
 import postarticle from '../views/csdn/post.vue'
@@ -37,24 +39,31 @@ import video from '../views/video/index.vue'
 import travel from '../views/travel/travel_.vue'
 import commonuse from '../views/commonuse/commonuse_.vue'
 import everydayimg from '../views/everydayimg/everydayimg_.vue'
+import adminpg from '../views/admin/admin.vue'
 import Cookies from 'js-cookie';
 import getusername from '/src/common.js'
 
 export const constantRoutes = [
   {
-      path: '/book/:id',
-      component: allbooksfile,
-      name: 'book'
+    // 裸域名访问（无 hash）时重定向到站长空间，避免路由 no-match 告警与空白内容区。
+    // 站长账号为全邮箱 homepage@gmail.com：裸域名、/、/#、/#/ 四种形态都归结为根路由 '/'
+    path: '/',
+    redirect: '/homepage@gmail.com',
   },
   {
-      path: '/zhihu/:id',
-      component: zhihupg,
-      name: 'zhihu'
+    path: '/book/:id',
+    component: allbooksfile,
+    name: 'book'
   },
   {
-      path: '/csdn/:id',
-      component: csdnpg,
-      name: 'csdn'
+    path: '/zhihu/:id',
+    component: zhihupg,
+    name: 'zhihu'
+  },
+  {
+    path: '/csdn/:id',
+    component: csdnpg,
+    name: 'csdn'
   },
   {
     path: '/csdn/post_article/:id',
@@ -97,41 +106,46 @@ export const constantRoutes = [
     name: 'everydayimg'
   },
   {
-      path: '/:id',
-      component: Home,
-      name: 'home',
-      // beforeEnter: (to, from, next) => {
-      //   const uri = to.query;
-      //   const fromuri = from.fullPath;
-      //   console.log(to, from, fromuri);
-      //   if(fromuri!=null && fromuri!='/zj' && fromuri!='/') {
-      //     // next(false);
-      //     console.log(to, from, from.fullPath);
-      //     router.push(from.fullPath);
-      //   } else {
-      //     next();
-      //   }
-      // }
-      // beforeEnter: async (to, from, next) => {
-      //   const uri = to.query;
-      //   const fromuri = from.fullPath;
-      //   let gu;
-      //   await getusername(document.URL).then((response) => {
-      //     gu = response;
-      //   });
-      //   console.log(to, from, fromuri, gu);
-      //   if(fromuri==null || fromuri=='/') {
-      //     // next(false);
-      //     // console.log(to, from, from.fullPath);
-      //     if(gu && gu.ret > 0) {
-      //       router.push({ path: '/'+gu.mail});
-      //     } else {
-      //       router.push({path: "/zj"});
-      //     }
-      //   } else {
-      //     next();
-      //   }
-      // }
+    path: '/admin/:id',
+    component: adminpg,
+    name: 'admin'
+  },
+  {
+    path: '/:id',
+    component: Home,
+    name: 'home',
+    // beforeEnter: (to, from, next) => {
+    //   const uri = to.query;
+    //   const fromuri = from.fullPath;
+    //   console.log(to, from, fromuri);
+    //   if(fromuri!=null && fromuri!='/zj' && fromuri!='/') {
+    //     // next(false);
+    //     console.log(to, from, from.fullPath);
+    //     router.push(from.fullPath);
+    //   } else {
+    //     next();
+    //   }
+    // }
+    // beforeEnter: async (to, from, next) => {
+    //   const uri = to.query;
+    //   const fromuri = from.fullPath;
+    //   let gu;
+    //   await getusername(document.URL).then((response) => {
+    //     gu = response;
+    //   });
+    //   console.log(to, from, fromuri, gu);
+    //   if(fromuri==null || fromuri=='/') {
+    //     // next(false);
+    //     // console.log(to, from, from.fullPath);
+    //     if(gu && gu.ret > 0) {
+    //       router.push({ path: '/'+gu.mail});
+    //     } else {
+    //       router.push({path: "/zj"});
+    //     }
+    //   } else {
+    //     next();
+    //   }
+    // }
   },
   // {
   //   path: '/',
@@ -149,7 +163,7 @@ const router = createRouter({
   // history: createMemoryHistory(),
   history: createWebHashHistory(),
   // history: createWebHistory(),
-  routes:constantRoutes,
+  routes: constantRoutes,
 })
 
 // router.matcher = createRouterMatcher(router, {end:true})

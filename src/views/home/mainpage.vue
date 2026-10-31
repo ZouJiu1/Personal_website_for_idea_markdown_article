@@ -11,7 +11,7 @@
           setting
         </el-button>
         <!-- <el-color-picker v-model="colortheme" show-alpha :predefine="predefineColors" /> -->
-        <el-dialog v-model="dialogSetting" title="配置" width="60%" height="90%">
+        <el-dialog v-model="dialogSetting" title="配置" width="min(600px, 92%)" height="90%">
           <span hidden>
             <el-input
               v-model="postkey"
@@ -22,16 +22,16 @@
               type="password"
             />
           </span>
-          <el-form
-            v-for="tgf in SettingForm"
-            :key="tgf"
-            style="max-width: 600px"
-            :model="tgf"
-            status-icon
-            label-width="auto"
-            class="demo-ruleForm"
-            >
-            <el-form-item :label="tgf.n" prop="">
+          <div class="setting-scroll">
+            <el-form
+              v-for="tgf in SettingForm"
+              :key="tgf.n"
+              class="setting-item"
+              :model="tgf"
+              status-icon
+              label-width="auto"
+              >
+              <el-form-item :label="'第 ' + tgf.n + ' 项'" prop="">
               <el-input
                 v-model="tgf.introduction"
                 placeholder="姓名、邮箱、Leetcode.若需要删除配置,请输入【/$删除$/】这六个字的"
@@ -70,7 +70,7 @@
               <el-dialog v-model="dialogFormVisible" title="传图片" width="500"> -->
                 <el-upload
                   class="upload-demo"
-                  action="http://localhost:7009/csdn/mainpageuploadImg"
+                  action="/csdn/mainpageuploadImg"
                   multiple
                   :on-preview="handleUpPreview"
                   :on-remove="handleRemove"
@@ -90,8 +90,9 @@
                 </el-upload>
               <!-- </el-dialog> -->
             </el-form-item>
-          </el-form>
-          <el-button type="primary" @click="submitSettingForm" id="submitSettingForm">
+            </el-form>
+          </div>
+          <el-button type="primary" @click="submitSettingForm" id="submitSettingForm" style="display:block;margin:10px auto 0;">
             提交
           </el-button>
         </el-dialog>
@@ -143,7 +144,7 @@
       </el-button>
       <el-dialog v-model="dialogVisible">
         <div>
-          <img src="/article/imgbook/PAT证书.jpg" alt="Preview Image" style="width:100%; overflow:auto;"/>
+          <img :src="'/article/imgbook/PAT证书.jpg'" alt="Preview Image" style="width:100%; overflow:auto;"/>
         </div>
       </el-dialog>
     </p>
@@ -167,7 +168,7 @@
       </div>
     </template> -->
   </el-card>
-  <el-container>
+  <el-container class="main-container">
     <el-main class="lefteditor">
       <!-- <div style="margin:6px 20px 30px 20px;">
         <el-link type="primary" href="https://github.com/ZouJiu1" target="_blank">GitHub [github.com/ZouJiu1]</el-link>
@@ -311,7 +312,7 @@
       >
         下载
       </el-button>
-      <el-dialog v-model="downloadzipvisible" title="提交下载请求" width="60%" height="90%">
+      <el-dialog v-model="downloadzipvisible" title="提交下载请求" width="min(600px, 92%)" height="90%">
         <span hidden>
           <el-input
             v-model="postkey"
@@ -329,7 +330,7 @@
           v-model="receivemail"
           placeholder="请填写接收邮箱，最好是国内邮箱账号"
           style="width: 60%; margin-left:20px;margin-bottom:10px;"
-          class="filter-item"
+          class="filter-item mobile-full"
           id="elinputmail"
           @change="mailChange"
           @blur="mailChange"
@@ -341,7 +342,7 @@
           确认下载所有
         </el-button>
       </el-dialog>
-      <el-dialog v-model="LeftSettingVisible" title="配置" width="60%" height="90%">
+      <el-dialog v-model="LeftSettingVisible" title="配置" width="min(600px, 92%)" height="90%">
           <span hidden>
             <el-input
               v-model="postkey"
@@ -352,16 +353,16 @@
               type="password"
             />
           </span>
-          <el-form
-            v-for="tgf in LeftSettingForm"
-            :key="tgf"
-            style="max-width: 600px"
-            :model="tgf"
-            status-icon
-            label-width="auto"
-            class="demo-ruleForm"
-            >
-            <el-form-item :label="tgf.n" prop="">
+          <div class="setting-scroll">
+            <el-form
+              v-for="tgf in LeftSettingForm"
+              :key="tgf.n"
+              class="setting-item"
+              :model="tgf"
+              status-icon
+              label-width="auto"
+              >
+              <el-form-item :label="'第 ' + tgf.n + ' 项'" prop="">
               <el-input
                 v-model="tgf.introduction"
                 placeholder="描述. 若需要删除配置,请输入【/$删除$/】这六个字的"
@@ -377,6 +378,7 @@
                 v-model="tgf.color"
                 placeholder="Select"
                 size="small"
+                class="mobile-full"
                 style="width: 240px"
               >
                 <el-option label="默认#000000" value="#000000" style="color:#000000;"></el-option>
@@ -402,7 +404,7 @@
               />
               <el-upload
                 class="upload-demo"
-                action="http://localhost:7009/csdn/mainpageuploadImg"
+                action="/csdn/mainpageuploadImg"
                 multiple
                 :on-preview="handleUpPreview"
                 :on-remove="handleRemove"
@@ -428,7 +430,7 @@
               />
               <el-upload
                   class="upload-demo"
-                  action="http://localhost:7009/csdn/mainpageuploadImg"
+                  action="/csdn/mainpageuploadImg"
                   multiple
                   :on-preview="handleUpPreview"
                   :on-remove="handleRemove"
@@ -449,7 +451,7 @@
                 />
                 <el-upload
                   class="upload-demo"
-                  action="http://localhost:7009/csdn/mainpageuploadImg"
+                  action="/csdn/mainpageuploadImg"
                   multiple
                   :on-preview="handleUpPreview"
                   :on-remove="handleRemove"
@@ -463,8 +465,9 @@
                   <el-button type="success" style="margin-left:20px; margin-top:2px;" @click="clickimage">传图片{{ tgf.n }}_3</el-button>
                 </el-upload>
             </el-form-item>
-          </el-form>
-          <el-button type="primary" @click="submitLeftSettingForm" id="submitLeftSettingForm">
+            </el-form>
+          </div>
+          <el-button type="primary" @click="submitLeftSettingForm" id="submitLeftSettingForm" style="display:block;margin:10px auto 0;">
             提交
           </el-button>
         </el-dialog>
@@ -473,7 +476,7 @@
     <div>
     <el-image 
       style="width:60%; overflow:auto;"
-      src="/article/2寸.jpg"
+      :src="'/article/2寸.jpg'"
       :zoom-rate="1.0"
       :max-scale="10"
       :min-scale="0.1"
@@ -493,7 +496,7 @@
       >
       照片
     </el-button>
-    <el-dialog v-model="PersonImageVisible" title="照片" width="60%" height="90%">
+    <el-dialog v-model="PersonImageVisible" title="照片" width="min(600px, 92%)" height="90%">
       <span hidden>
         <el-input
           v-model="postkey"
@@ -506,7 +509,7 @@
       </span>
       <el-upload
         class="upload-demo"
-        action="http://localhost:7009/csdn/mainpageuploadImg"
+        action="/csdn/mainpageuploadImg"
         multiple
         :on-preview="handleUpPreview"
         :on-remove="handleRemove"
@@ -531,7 +534,7 @@
         v-model="modifiednickname"
         placeholder="昵称，若不需要修改可以留空"
         style="width: 30%; margin-left:20px;margin-bottom:10px;margin-top:10px"
-        class="filter-item"
+        class="filter-item mobile-full"
         id="nickname"
       />
       <el-button type="primary" @click="NicknameSetting" id="NicknameSetting" style="margin-left:10px;">
@@ -549,6 +552,16 @@ import { ElMessage } from 'element-plus'
 import Cookies from 'js-cookie'
 import { ref } from 'vue'
 import getusername from '/src/common.js'
+
+// 个人卡片/左侧卡片配置槽位总数（与后端 views.py SETTING_SLOTS_MAX 保持一致，最多各 60 项）
+const SETTING_SLOTS_MAX = 60
+function blankPersonalItem(n) {
+  return { introduction: '', link: '', link_describe: '', other_describe: '', button: '', n: n }
+}
+function blankLeftItem(n) {
+  return { introduction: '', link: '', color: '#000000', button1: '', button2: '', button3: '', n: n }
+}
+
 export default {
   name: 'app',
   data() {
@@ -585,30 +598,8 @@ export default {
         {'value':'hsla(209, 100%, 56%, 0.73)','label':'hsla(209, 100%, 56%, 0.73)'},
         {'value':'#c7158577','label':'#c7158577'},
       ]),
-      LeftSettingForm:[
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':1},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':2},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':3},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':4},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':5},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':6},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':7},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':8},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':9},
-        {"introduction":"", "link":"", "color":'#000000', "button1":"", "button2":"", "button3":"", 'n':10},
-      ],
-      SettingForm: [
-        {"introduction":"姓名", "link":"", "link_describe":"邹九", 'other_describe':"", "button":"", 'n':1},
-        {"introduction":"邮箱", "link":"", "link_describe":"1069679911@qq.com", 'other_describe':"", "button":"", 'n':2},
-        {"introduction":"攀拓PAT", "link":"https://github.com/ZouJiu1/PAT", "link_describe":"github.com/ZouJiu1/PAT", 'other_describe':"甲级/乙级基本都刷完了", "button":"PAT证书", 'n':3},
-        {"introduction":"Leetcode主页", "link":"https://leetcode.cn/u/shiheyingzhe/", "link_describe":"leetcode.cn/u/shiheyingzhe/", 'other_describe':"刷完了406道题目", "button":"", 'n':4},
-        {"introduction":"Kaggle主页", "link":"https://www.kaggle.com/shiheyingzhe", "link_describe":"www.kaggle.com/shiheyingzhe", 'other_describe':"", "button":"", 'n':5},
-        {"introduction":"", "link":"", "link_describe":"", 'other_describe':"", "button":"", "n":6},
-        {"introduction":"", "link":"", "link_describe":"", 'other_describe':"", "button":"", "n":7},
-        {"introduction":"", "link":"", "link_describe":"", 'other_describe':"", "button":"", "n":8},
-        {"introduction":"", "link":"", "link_describe":"", 'other_describe':"", "button":"", "n":9},
-        {"introduction":"", "link":"", "link_describe":"", 'other_describe':"", "button":"", "n":10},
-      ],
+      LeftSettingForm: Array.from({ length: SETTING_SLOTS_MAX }, (_, k) => blankLeftItem(k + 1)),
+      SettingForm: Array.from({ length: SETTING_SLOTS_MAX }, (_, k) => blankPersonalItem(k + 1)),
       personImg: ["/article/2寸.jpg",],
       urlsdetect: [
         "/article/github_yolov3/0.jpg",
@@ -701,14 +692,9 @@ export default {
     // },
     mailChange() {
       // console.log(this.ruleForm.email);
-      if(this.receivemail.length < 7) {
-        ElMessage("邮箱格式不正确！");
-        return false;
-      }
-      let r = this.receivemail;
-      // console.log(r);
-      let ret = r.indexOf("@");
-      if( ret < 0) {                              // || r.indexOf(".com") < 0
+      // 邮箱格式正则校验：@ 前后段合法且域名带 . 后缀
+      let ret = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z0-9-]{2,}$/.test(this.receivemail);
+      if(!ret) {
         ElMessage("邮箱格式不正确！");
         return false;
       }
@@ -720,7 +706,7 @@ export default {
         return false;
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/commonuse/downloadall',
+        baseURL: '/commonuse/downloadall',
         timeout: 20000,
       });
       
@@ -746,10 +732,23 @@ export default {
         this.postkey = "";
         this.downloadzipvisible = false;
         ElMessage.info('提交下载申请成功，一周内会发送到填写的邮箱!');
+      }).catch(() => {
+        ElMessage.error('网络错误，提交下载申请失败!');
       });
     },
     pictureChange() {
       this.PersonImageVisible = true;
+    },
+    // 老账号保存的配置可能不足 60 条：过滤脏数据后按现有最大 n 补空白槽位，
+    // 保证配置界面始终有完整 60 槽可填（保存时后端 setting_max_items 同为 60）
+    padSettingSlots(list, blankFn) {
+      const items = (list || []).filter(s => s && typeof s === 'object')
+      let maxn = items.reduce((m, s) => Math.max(m, Number(s.n) || 0), 0)
+      while (items.length < SETTING_SLOTS_MAX) {
+        maxn += 1
+        items.push(blankFn(maxn))
+      }
+      return items
     },
     async FunctiondialogSetting() {
       let gu;
@@ -758,7 +757,7 @@ export default {
       });
 
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/GetSetting',
+        baseURL: '/csdn/GetSetting',
         timeout: 20000,
       });
       
@@ -775,13 +774,17 @@ export default {
           this.modifiednickname = gu.username;
           this.originnickname = gu.username;
         }
-        this.SettingForm = response.data.jfile;
+        if(response.data && Array.isArray(response.data.jfile)) {
+          this.SettingForm = this.padSettingSlots(response.data.jfile, blankPersonalItem);
+        }
         this.dialogSetting = true;
+      }).catch(() => {
+        ElMessage.error("网络错误，读取配置失败！");
       });
     },
     async LeftFunctiondialogSetting() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/GetSetting',
+        baseURL: '/csdn/GetSetting',
         timeout: 20000,
       });
       
@@ -794,8 +797,12 @@ export default {
         data: {'SettingForm' : this.LeftSettingForm, "url":document.URL, "mail":Cookies.get("mail"),
                "password":Cookies.get("password"), 'postkey':this.postkey,'index':'.'},
       }).then((response) => {
-        this.LeftSettingForm = response.data.jfile;
+        if(response.data && Array.isArray(response.data.jfile)) {
+          this.LeftSettingForm = this.padSettingSlots(response.data.jfile, blankLeftItem);
+        }
         this.LeftSettingVisible = true;
+      }).catch(() => {
+        ElMessage.error("网络错误，读取左侧配置失败！");
       });
     },
     clickimage(event) {
@@ -831,7 +838,7 @@ export default {
     },
     async upLoadbutton() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/renzheng',
+        baseURL: '/csdn/renzheng',
         timeout: 20000,
       });
       
@@ -855,6 +862,8 @@ export default {
           // this.$alert("发布密钥不正确，自动取消上传");
           ElMessage.error("没有登陆自动取消上传");
         }
+      }).catch(() => {
+        ElMessage.error("网络错误，校验失败！");
       });
       // this.postkey = "";
       // let sharet = "45c144247124160a29e93a160e62bc7128bd33a9da552c1b9441d562240754637b38e5a25fa151044e902b99ff22ec91ffa9e9e0e2edde67317cc04adf329b78";
@@ -867,11 +876,15 @@ export default {
       // });
     },
     async NicknameSetting() {
+      if(this._submitBusy) {
+        return;
+      }
+      this._submitBusy = true;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/NicknameSetting',
+        baseURL: '/csdn/NicknameSetting',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
       let mnn="";
       if(this.modifiednickname!=this.originnickname){
@@ -883,7 +896,7 @@ export default {
           'X-Requested-With': 'XMLHttpRequest'
         },
         data: {"url":document.URL, "mail":Cookies.get("mail"),
-            "password":Cookies.get("password"), 'postkey':this.postkey, 
+            "password":Cookies.get("password"), 'postkey':this.postkey,
             'modifiednickname':mnn},
       }).then((response) => {
         if(response.data.ret < 0) {
@@ -895,15 +908,24 @@ export default {
         this.getdata();
         this.postkey = "";
         this.PersonImageVisible = false;
+        ElMessage.success('昵称修改成功');
         location.reload();
+      }).catch(() => {
+        ElMessage.error("网络错误，修改昵称失败！");
+      }).finally(() => {
+        this._submitBusy = false;
       });
     },
     async submitSettingForm() {
+      if(this._submitBusy) {
+        return;
+      }
+      this._submitBusy = true;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/FormsubmitSetting',
+        baseURL: '/csdn/FormsubmitSetting',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
       await instance({
         method: 'POST',
@@ -922,14 +944,23 @@ export default {
         this.getdata();
         this.postkey = "";
         this.dialogSetting = false;
+        ElMessage.success('保存成功');
+      }).catch(() => {
+        ElMessage.error("网络错误，保存失败！");
+      }).finally(() => {
+        this._submitBusy = false;
       });
     },
     async submitLeftSettingForm() {
+      if(this._submitBusy) {
+        return;
+      }
+      this._submitBusy = true;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/FormsubmitSetting',
+        baseURL: '/csdn/FormsubmitSetting',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
       await instance({
         method: 'POST',
@@ -948,14 +979,19 @@ export default {
         this.getdata();
         // this.postkey = "";
         this.LeftSettingVisible = false;
+        ElMessage.success('保存成功');
+      }).catch(() => {
+        ElMessage.error("网络错误，保存失败！");
+      }).finally(() => {
+        this._submitBusy = false;
       });
     },
     async getdata() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/mainpagedataget',
+        baseURL: '/csdn/mainpagedataget',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
       let mail = "";
       mail = Cookies.get("mail");
@@ -966,18 +1002,28 @@ export default {
         },
         data: {'url' : document.URL, "mail":mail, "password":"."},
       }).then((response) => {
-        this.result = response.data.jfile[0];
-        let touxiang = response.data.jfile[1];
-        this.leftresult = response.data.jfile[2];
-        let pi = document.getElementsByClassName("personimg")[0].children[0];
-        pi.src = touxiang;
+        // 响应结构守卫：jfile 需为 [个人卡片, 头像, 左侧卡片] 数组，缺项时跳过对应赋值
+        let jf = (response.data && Array.isArray(response.data.jfile)) ? response.data.jfile : [];
+        if(jf.length > 0 && Array.isArray(jf[0])) {
+          this.result = jf[0];
+        }
+        let touxiang = jf.length > 1 ? jf[1] : "";
+        if(jf.length > 2 && Array.isArray(jf[2])) {
+          this.leftresult = jf[2];
+        }
+        let pimg = document.getElementsByClassName("personimg")[0];
+        if(pimg && pimg.children.length > 0 && touxiang) {
+          pimg.children[0].src = touxiang;
+        }
         this.personImg[0] = touxiang;
         // console.log(pi);
+      }).catch(() => {
+        ElMessage.error("网络错误，加载个人页配置失败！");
       });
     },
     // async leftgetdata() {
     //   const instance = axios.create({
-    //     baseURL: 'http://localhost:7009/csdn/mainpagedataget',
+    //     baseURL: '/csdn/mainpagedataget',
     //     timeout: 20000,
     //   });
       
@@ -997,7 +1043,7 @@ export default {
     // },
     // async getimage() {
     //   const instance = axios.create({
-    //     baseURL: 'http://localhost:7009/csdn/mainpagedataget',
+    //     baseURL: '/csdn/mainpagedataget',
     //     timeout: 20000,
     //   });
       
@@ -1016,7 +1062,7 @@ export default {
     // },
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -1028,6 +1074,7 @@ export default {
         },
         params: {'type' : 'home'},
       }).then((response) => {
+      }).catch(() => {
       });
     },
     handleRemove(file, uploadFiles) {
@@ -1078,8 +1125,7 @@ export default {
         ElMessage.error('没有登陆不能修改!');
         return false;
       }
-      this.imgdata.mail = "";
-      this.imgdata.password = "";
+      // 上传成功后刷新个人页数据（清除 imgdata 凭据的旧逻辑已无用，凭据经 dataimg() 方法动态读取）
       this.getdata();
       // this.postkey = "";
     },
@@ -1139,5 +1185,72 @@ p {
 }
 .demo-image__lazy .el-image:last-child {
   margin-bottom: 0;
+}
+
+/* 60 项配置弹窗：内容区限高内部滚动，条目卡片化分隔，提交按钮固定在滚动区外 */
+.setting-scroll {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.setting-item {
+  max-width: 600px;
+  padding: 8px 12px 2px;
+  margin-bottom: 10px;
+  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter, #fafbfc);
+  transition: border-color 0.2s;
+}
+.setting-item:hover {
+  border-color: var(--el-color-primary-light-5, #a0cfff);
+}
+
+/* 手机端（<=768px）响应式适配：边距收紧、左右分栏改上下堆叠、图片与表单控件占满宽度 */
+@media (max-width: 768px) {
+  /* 个人卡片左右边距收紧，避免小屏内容被挤压 */
+  .el-card-detail {
+    margin-left: 10px !important;
+    margin-right: 10px !important;
+  }
+  /* 左侧配置区与右侧照片区在手机上改为单列上下堆叠 */
+  .main-container {
+    flex-direction: column;
+  }
+  .lefteditor,
+  .preview {
+    width: 100%;
+    height: auto;
+  }
+  /* 个人照片占满可用宽度，防止溢出 */
+  .personimg {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  .personimg :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
+  /* 弹窗内图片列表宽度自适应，防止撑破弹窗 */
+  .demo-image__lazy .el-image {
+    max-width: 100%;
+  }
+  .demo-image__lazy :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
+  /* 弹窗内的邮箱、昵称输入框和颜色下拉框占满可用宽度 */
+  .mobile-full {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+  /* 窄屏下 60 项配置弹窗：滚动区略降高度，卡片内边距收紧 */
+  .setting-scroll {
+    max-height: 55vh;
+  }
+  .setting-item {
+    padding: 6px 8px 2px;
+    border-radius: 6px;
+  }
 }
 </style>

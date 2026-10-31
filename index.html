@@ -9,5 +9,85 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
+    <script>
+      // Live2D 看板郎（自托管于 public/live2d/，Vite 按根路径 /live2d/ 伺服；仅桌面端加载）
+      if (screen.width >= 768) {
+        window.live2d_path = "/live2d/";
+        var l2dCss = document.createElement("link");
+        l2dCss.rel = "stylesheet";
+        l2dCss.href = live2d_path + "waifu.css";
+        document.head.appendChild(l2dCss);
+        (function loadNext(i) {
+          var files = ["solarlunar.min.js", "live2d.min.js", "waifu-tips.js"];
+          if (i >= files.length) { initWidget(); attachWaifuDrag(); return; }
+          var s = document.createElement("script");
+          s.src = live2d_path + files[i];
+          s.onload = function () { loadNext(i + 1); };
+          document.head.appendChild(s);
+        })(0);
+      }
+
+      // 看板郎可拖拽停靠：按住拖动改变位置（localStorage 记忆，刷新恢复），双击复位到默认右下角。
+      // 5px 拖拽阈值避免干扰原有的点击触发文案；工具按钮区（#waifu-tool）不参与拖拽。
+      function attachWaifuDrag() {
+        var waifu = document.getElementById("waifu");
+        if (!waifu) return;
+        var KEY = "waifu_pos";
+        // 恢复记忆位置：等入场动画（bottom 3s transition）结束后再切 left/top 定位
+        function applySaved() {
+          var p = null;
+          try { p = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+          if (p && typeof p.left === "number" && typeof p.top === "number") {
+            waifu.style.transition = "none";
+            waifu.style.right = "auto";
+            waifu.style.bottom = "auto";
+            waifu.style.left = p.left + "px";
+            waifu.style.top = p.top + "px";
+            setTimeout(function () { waifu.style.transition = ""; }, 60);
+          }
+        }
+        setTimeout(applySaved, 3500);
+        var drag = null;
+        waifu.addEventListener("mousedown", function (e) {
+          if (e.button !== 0) return;
+          if (e.target && e.target.closest && e.target.closest("#waifu-tool")) return;
+          var r = waifu.getBoundingClientRect();
+          drag = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top,
+                   w: r.width, h: r.height, moved: false };
+        });
+        document.addEventListener("mousemove", function (e) {
+          if (!drag) return;
+          if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return;
+          drag.moved = true;
+          waifu.style.transition = "none";
+          waifu.style.right = "auto";
+          waifu.style.bottom = "auto";
+          var left = Math.min(Math.max(e.clientX - drag.ox, 0), window.innerWidth - drag.w);
+          var top = Math.min(Math.max(e.clientY - drag.oy, 0), window.innerHeight - drag.h);
+          waifu.style.left = left + "px";
+          waifu.style.top = top + "px";
+        });
+        document.addEventListener("mouseup", function () {
+          if (!drag) return;
+          if (drag.moved) {
+            var left = parseInt(waifu.style.left, 10) || 0;
+            var top = parseInt(waifu.style.top, 10) || 0;
+            try { localStorage.setItem(KEY, JSON.stringify({ left: left, top: top })); } catch (e) {}
+            waifu.style.transition = "";
+          }
+          drag = null;
+        });
+        // 双击：清除记忆并复位到默认右下角
+        waifu.addEventListener("dblclick", function () {
+          try { localStorage.removeItem(KEY); } catch (e) {}
+          waifu.style.transition = "none";
+          waifu.style.left = "auto";
+          waifu.style.top = "auto";
+          waifu.style.right = "0";
+          waifu.style.bottom = "0";
+          setTimeout(function () { waifu.style.transition = ""; }, 60);
+        });
+      }
+    </script>
   </body>
 </html>

@@ -1,27 +1,25 @@
 <template>
   <div class="app-container" id="thought"> 
     <!-- <el-card shadow="always"> -->
-      <div style="margin-top:3px;">
+      <div style="margin-top:3px;" class="search-toolbar">
         <!-- <span style="font-size:26px; font-weight:600; color:#00ffee;">游客</span> -->
         <el-input
           v-model="search_param.search"
           placeholder="日期或者内容, 空格 分隔"
-          style="width: 30%; margin-left:20px;"
-          class="filter-item"
+          class="filter-item search-input"
+          clearable
+          @keyup.enter="handleSearch"
         />
         <el-button
           class="filter-item"
           type="primary"
           @click="handleSearch"
-          style="margin-left:20px;text-align:center;"
         >
           搜索
         </el-button>
         <el-button
           class="filter-item"
-          type="primary"
           @click="resetSearch"
-          style="text-align:center;"
         >
           重置
         </el-button>
@@ -49,6 +47,7 @@
       <span style="margin-top:16px;color:#000000;margin-left:6px;">*姓名：</span>
       <el-input
         v-model="travelname"
+        class="mobile-form-input"
         style="width: 20%;margin-top:3px;"
         @change="nameChange"
         @blur="nameChange"
@@ -58,6 +57,7 @@
       <span style="margin-top:16px;color:#000000;margin-left:6px;">*邮箱：</span>
       <el-input
         v-model="travelemail"
+        class="mobile-form-input"
         style="width: 20%;margin-top:3px;"
         placeholder="@"
         @change="mailChange"
@@ -67,6 +67,7 @@
       <span style="margin-top:16px;color:#000000;margin-left:6px;">*Contact：</span>
       <el-input
         v-model="travelcontact"
+        class="mobile-form-input"
         style="width: 20%;margin-top:3px;"
         @change="contactChange"
         @blur="contactChange"
@@ -101,7 +102,7 @@
       </span>
       <span @click="delcardClick(o)" style="color:#f0f0f0;font-size:10px;font-weight:600;margin-left:10px;">删除</span>
     </el-card>
-    <el-dialog v-model="deletevisible" title="删除" width="60%" height="90%">
+    <el-dialog v-model="deletevisible" title="删除" width="min(600px, 92%)" height="90%">
       <span hidden>
         <el-input
           v-model="postkey"
@@ -118,6 +119,7 @@
     </el-dialog>
   </div>
   <el-pagination 
+    class="mobile-pagination"
     layout='total, sizes, prev, pager, next, jumper'
     :page-sizes="[6,10,20,30,60,100]"
     background
@@ -164,7 +166,7 @@ var wait_think_render = 100;
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import Cookies from 'js-cookie';
-import getusername from '/src/common.js'
+import getusername, { getCookieDays } from '/src/common.js'
 
 export default {
   name: 'app',
@@ -238,15 +240,12 @@ export default {
       return true;
     },
     mailChange() {
-      // console.log(this.ruleForm.email);
       if(this.travelemail.length < 7) {
         ElMessage("邮箱格式不正确！");
         return false;
       }
-      let r = this.travelemail;
-      // console.log(r);
-      let ret = r.indexOf("@");
-      if( ret < 0) {              // || r.indexOf(".com") < 0
+      // 简单格式校验：@ 前后各至少一个非空白字符，且域名带点
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.travelemail)) {
         ElMessage("邮箱格式不正确！");
         return false;
       }
@@ -254,7 +253,7 @@ export default {
     },
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -284,11 +283,16 @@ export default {
       this.deletevisible = true;
     },
     async carddelete() {
+      // 防连点：上一次请求未完成时忽略本次点击
+      if (this._busy) {
+        return;
+      }
+      this._busy = true;
       const insta = axios.create({
-        baseURL: 'http://localhost:7009/travel/delete',
+        baseURL: '/travel/delete',
         timeout: 20000,
       });
-          
+
       // console.log(this.search_param);deletecard
       insta({
         method: 'POST',
@@ -307,10 +311,17 @@ export default {
         } else if(response.data.ret == 0) {
           ElMessage.error("删除报错了的！");
         }
+        else if(response.data.ret == -100) {
+          ElMessage.error("没有权限删除该留言！");
+        }
         else {
           // this.$alert("发布密钥不正确！");
           ElMessage.error("发布密钥不正确！");
         }
+      }).catch(() => {
+        ElMessage.error("网络错误，删除失败！");
+      }).finally(() => {
+        this._busy = false;
       });
       this.postkey = "";
     },
@@ -318,12 +329,17 @@ export default {
       if(!this.mailChange() || !this.contactChange() || !this.nameChange() || !this.editPlaceChange()) {
         return;
       }
+      // 防连点：上一次请求未完成时忽略本次点击
+      if (this._busy) {
+        return;
+      }
+      this._busy = true;
       // console.log(this.textarea1);
       // let sharet = "45c144247124160a29e93a160e62bc7128bd33a9da552c1b9441d562240754637b38e5a25fa151044e902b99ff22ec91ffa9e9e0e2edde67317cc04adf329b78";
       // this.sha(this.postkey).then((r)=>{
       //   if(sharet == r) {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/travel/post_travel',
+        baseURL: '/travel/post_travel',
         timeout: 20000,
       });
       instance({
@@ -332,20 +348,26 @@ export default {
           'X-Requested-With': 'XMLHttpRequest'
         },
         data: {"postdate" : Date.now(), "text_content" : this.textarea1,
-              "travelname":this.travelname, "travelemail":this.travelemail, 
+              "travelname":this.travelname, "travelemail":this.travelemail,
               "travelcontact":this.travelcontact,
               "mail":Cookies.get("mail"), "password":Cookies.get("password"),
               'url':document.URL
               },
       }).then((response) => {
         let pt = response.data.post;
-        if(!pt) {
+        // 服务端确认发布成功才提示并清空表单；失败保留输入便于修改后重试
+        if(pt) {
+          ElMessage.success("已发布");
+          this.resetSearch();
+        } else {
           // this.$alert("不符合要求的，自动取消上传");
           ElMessage.error("不符合要求的，自动取消上传");
         }
-        this.resetSearch();
+      }).catch(() => {
+        ElMessage.error("网络错误，发布失败！");
+      }).finally(() => {
+        this._busy = false;
       });
-      ElMessage.success("已发布");
       // self.resetSearch();
         // }
         // else {
@@ -355,7 +377,7 @@ export default {
     },
     upLoadbuttonThink() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/renzheng',
+        baseURL: '/csdn/renzheng',
         timeout: 20000,
       });
       
@@ -438,71 +460,29 @@ export default {
         this.search_param.reset = 1;
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/travel/index',
+        baseURL: '/travel/index',
        timeout: 20000,
       });
-      this.search_param.password = Cookies.get("password");
-      this.search_param.mail = Cookies.get("mail");
-      this.search_param.url = document.URL;
+      // 凭据放副本里随请求发送；直接写进 search_param 再同步清空，
+      // 会因 axios 异步序列化导致后端拿到已清空的凭据
+      const payload = {
+        ...this.search_param,
+        password: Cookies.get("password"),
+        mail: Cookies.get("mail"),
+        url: document.URL,
+      };
       instance({
         method: 'POST',
         headers: {
           'X-Requested-With': 'XMLHttpRequest'
         },
-        data: this.search_param,
+        data: payload,
       }).then((response) => {
-        // alert(response);
-        // console.log(response.data);
-        // console.log(response.type);
-        // console.log(response.status);
-        // console.log(response.statusText);
-        // console.log(response.headers);
-        // console.log(response.config);
-        this.result = response.data.collect;
-        this.total = response.data.length;
-        // this.findkey(wait);
-        // console.log(response.data);
-        // console.log(this.result.length);
-        // let card = document.getElementsByClassName("el-card-detail");
-
-        // let image = document.getElementsByClassName("app-container"); 
-        // console.log(image);
-        // image[0].addEventListener("load", (event) => { 
-        //   let card = document.getElementsByClassName("el-card-detail");
-        //   console.log(card.length);
-        //   console.log(card);
-        // }); 
-
-        // console.log(card.length);
-        // console.log(card);
-        // console.log(" " + card.length + card);
-        // console.log(card["0"]);
-        // let cards = document.querySelector(".el-card-detail");
-        // console.log(cards);
-        // let spn1  = cards.querySelector(".cardspan1");
-        // let spn2  = cards.querySelector(".cardspan2");
-
-        // console.log(spn1);
-        // console.log(spn2);
-
-        // let span1 = document.getElementsByClassName("cardspan1");
-        // let span2 = document.getElementsByClassName("cardspan2");
-        // // // var len = this.result.length;
-        // console.log(span1);
-        // console.log(span1.length);
-        // // console.log(document.getElementsByClassName("cardspan1").length);
-        // console.log(span2);
-        // console.log(span1[0]);
-        // for(let i = 0; i < len; i++) {
-        // console.log(span1[0]);
-        // console.log(span1.item(0).innerText);
-        // span1.item(0).innerHTML = "innerHTML" // "<p>虽然没有疾病没有寻麻疹，但是医院多的药不能浪费，过期就浪费了，做为预防手段，我会全部用掉，防晒袖套唔出痱子了，不戴防晒袖套了</p>"; //this.result[i].markdown;
-        // span2.item(0).innerHTML = "span2";    //this.result[i].date;
-        // }
+        this.result = response.data.collect || [];
+        this.total = response.data.length || 0;
+      }).catch(() => {
+        ElMessage.error("网络错误，获取留言列表失败！");
       });
-      this.search_param.password = "";
-      this.search_param.mail = "";
-      this.search_param.url = "";
       Cookies.remove("travelReset");
     },
     async findkey(wait=false) {
@@ -578,38 +558,33 @@ export default {
     handleSearch() {
       this.search_param.reset = 1;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/travel/index',
+        baseURL: '/travel/index',
         timeout: 20000,
       });
-      
+
       // console.log(this.search_param);
-      this.search_param.password = Cookies.get("password");
-      this.search_param.mail = Cookies.get("mail");
-      this.search_param.url = document.URL;
+      // 凭据放副本里随请求发送（修 axiosget 同款时序问题）
+      const payload = {
+        ...this.search_param,
+        password: Cookies.get("password"),
+        mail: Cookies.get("mail"),
+        url: document.URL,
+      };
       instance({
         method: 'POST',
         headers: {
           'X-Requested-With': 'XMLHttpRequest'
         },
-        data: this.search_param,
+        data: payload,
       }).then((response) => {
-        // alert(response);
-        // console.log(response.data);
-        // console.log(response.type);
-        // console.log(response.status);
-        // console.log(response.statusText);
-        // console.log(response.headers);
-        // console.log(response.config);
-        this.result = response.data.collect;
-        this.total = response.data.length;
+        this.result = response.data.collect || [];
+        this.total = response.data.length || 0;
         this.search_param.reset = 0;
-        // this.findkey(true);
+      }).catch(() => {
+        ElMessage.error("网络错误，搜索留言失败！");
       });
-      this.search_param.password = "";
-      this.search_param.mail = "";
-      this.search_param.url = "";
 
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.set("travelsearch", this.search_param.search, { expires: expiresdate });
     },
     async resetSearch() {
@@ -618,7 +593,7 @@ export default {
       this.travelemail = "";
       this.travelcontact = "";
 
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.remove("travelsearch");
       Cookies.remove("travelReset");
       Cookies.set("travelsearch", "", { expires: expiresdate });
@@ -681,6 +656,29 @@ export default {
 </script>
 
 <style scoped>
+/* 资料搜索工具栏：flex 统一排列（替代散排 margin 硬凑），回车触发、可清空 */
+.search-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, .07), rgba(103, 194, 58, .07));
+  border: 1px solid rgba(64, 158, 255, .18);
+  border-radius: 10px;
+}
+.search-toolbar .search-input {
+  width: 30%;
+  min-width: 220px;
+}
+@media (max-width: 768px) {
+  .search-toolbar .search-input {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 /* :deep(p) {
   margin: 0em 0;
   display: block;
@@ -717,6 +715,19 @@ h3 {
   margin-left: 6%;
 }
 
+/* 与 csdnpg 同步：压缩卡片上下间距；正文内容不做截断/压缩 */
+.el-card-detail :deep(.el-card__header) {
+  padding: 8px 16px;
+}
+.el-card-detail :deep(.card-header) {
+  font-size: 20px;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+.el-card-detail :deep(.el-card__body) {
+  padding: 10px 16px;
+}
+
 .el-card-detail:hover {
   outline: 1 !important;
   color: #6681fa !important;
@@ -729,5 +740,35 @@ h3 {
 .el-card-detail.is-active {
   color: #337ecc !important;
   background: #ffeeee !important;
+}
+
+/* 手机端适配：搜索/表单控件占满可用宽度，卡片与分页收紧边距，内容图片自适应 */
+@media (max-width: 768px) {
+  .filter-item {
+    width: calc(100% - 6px) !important;
+    margin-left: 6px !important;
+  }
+  .mobile-form-input {
+    width: 100% !important;
+  }
+  .el-card-detail {
+    width: calc(100% - 12px);
+    margin-left: 6px;
+    margin-right: 6px;
+  }
+  .mobile-pagination {
+    margin-left: 6px !important;
+    margin-right: 6px !important;
+    flex-wrap: wrap;
+  }
+  :deep(.think_image) {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+  :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
 }
 </style>

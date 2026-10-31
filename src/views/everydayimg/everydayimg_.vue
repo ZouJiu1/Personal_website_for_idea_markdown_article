@@ -16,7 +16,7 @@
         <div class="image-slot">Loading<span class="dot">...</span></div>
       </template>
     </el-image> -->
-    <a href="https://dailybing.com" style='margin-top: 30px;color:#ffffff; font-size: 60px; color:blue;' target="_blank">Source From: Microsoft bing web search engine https://dailybing.com</a>
+    <a href="https://dailybing.com" class="mobile-source-link" style='margin-top: 30px;color:#ffffff; font-size: 60px; color:blue;' target="_blank">Source From: Microsoft bing web search engine https://dailybing.com</a>
   </div>
 </template>
 
@@ -45,7 +45,7 @@ export default {
     },
     async getdata() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/commonuse/getbingimg',
+        baseURL: '/commonuse/getbingimg',
         timeout: 20000,
       });
       
@@ -95,5 +95,16 @@ export default {
   background: var(--el-fill-color-light);
   color: var(--el-text-color-secondary);
   font-size: 20px;
+}
+
+/* 手机端适配：来源链接缩小字号并允许长链接换行 */
+@media (max-width: 768px) {
+  .mobile-source-link {
+    font-size: 16px !important;
+    margin-top: 10px !important;
+    display: inline-block;
+    max-width: 100%;
+    word-break: break-all;
+  }
 }
 </style>

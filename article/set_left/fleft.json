@@ -1,0 +1,92 @@
+[
+  {
+    "introduction": "GitHub [github.com/ZouJiu1]",
+    "link": "https://github.com/ZouJiu1",
+    "color": "#ff4500",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 1
+  },
+  {
+    "introduction": "numpy实现所有前向传播和反向传播的LSTM、RNN，古诗词生成",
+    "link": "https://github.com/ZouJiu1/numpy_lstm_RNN",
+    "color": "#c7158577",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 2
+  },
+  {
+    "introduction": "numpy实现所有前向传播和反向传播的Alexnet分类CNN网络来train MNIST，准确率：96.2%",
+    "link": "https://github.com/ZouJiu1/CNN_numpy",
+    "color": "#ffd700",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 3
+  },
+  {
+    "introduction": "numpy实现所有前向传播和反向传播的transformer网络，包括VIT、MNIST分类 (准确率：97.2%) 、古诗词生成",
+    "link": "https://github.com/ZouJiu1/numpy_transformer",
+    "color": "#ff4500",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 4
+  },
+  {
+    "introduction": "自己写好并且train的Yolov3网络，分类、分割、检测、关节点检测",
+    "link": "https://github.com/ZouJiu1/Pytorch_YOLOV3",
+    "color": "#00ced1",
+    "button1": "检测",
+    "button2": "分割",
+    "button3": "分割+keypoint",
+    "n": 5
+  },
+  {
+    "introduction": "CSDN博客 [zoujiu.blog.csdn.net/]",
+    "link": "https://zoujiu.blog.csdn.net/",
+    "color": "#c71585",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 6
+  },
+  {
+    "introduction": "知乎 [www.zhihu.com/people/zoujiu1]",
+    "link": "https://www.zhihu.com/people/zoujiu1",
+    "color": "#c71585",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 7
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 8
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 9
+  },
+  {
+    "introduction": "",
+    "link": "",
+    "color": "#000000",
+    "button1": "",
+    "button2": "",
+    "button3": "",
+    "n": 10
+  }
+]

@@ -10,14 +10,14 @@ path = os.path.abspath(__file__+"/../../../article/video")
 mainpath = os.path.abspath(__file__ + "/../../../dist/article")
 if os.path.exists(mainpath):
     path = path.replace("/article/", '/dist/article/')
-allfile = None
+allfile = {}  # 按 basepath 隔离的多用户缓存，避免用户间串数据
 pre_page_size = None
 
 import sys
 import json
 sys.path.append(os.path.abspath(__file__ + "/../../"))
 from manage import timezone
-from csdn.views import check_logined, getusername, renzheng, notify_administer
+from csdn.views import check_logined, getusername, renzheng, notify_administer, ADMIN_QUANXIAN, check_identity, is_admin, is_super_admin
 from copy import deepcopy
 import shutil
 
@@ -36,7 +36,7 @@ def index(request):
 def upload(request):
     # return HttpResponse("Hello, world. You're at the polls index.")
     global allfile, path
-    allfile = None
+    allfile.clear()
     # body = request.body
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
     req = request.POST.dict()
@@ -57,24 +57,13 @@ def upload(request):
     # if "mail" in req.keys():
     #     # if check_logined(req['mail'], req['password']):
     #     basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-    rz = renzheng(request)
-    rzret = json.loads(rz.content)
-    passed = False
-    if "mail" in req.keys():
-        get = json.loads(getusername(request).content)
-        if not rzret['ret'] and 'password' in req.keys() and check_logined(req['mail'], req['password']):
-            basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-            passed = True
-            if f"{get['mail']}" not in req['url']:
-                return JsonResponse( { "ret" : -100} , safe = False)
-        elif get['ret']==2 and not rzret['ret']:
-            return JsonResponse( { "ret" : -100} , safe = False)
-    if not passed and not rzret['ret']:
+    auth = check_identity(request, req)
+    get = auth['get']
+    if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
-    elif not passed and rzret['ret']:
-        get = json.loads(getusername(request).content)
-        if get['ret'] > 0:
-            basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
+    basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
+    if f"{get['mail']}" not in req['url']:
+        return JsonResponse( { "ret" : -100} , safe = False)
 
     savepath = deepcopy(basepath)
     
@@ -102,36 +91,22 @@ def delete(request):
     txtpath = req["txt"]
     ideopath = req["ideo"]
 
-    rz = renzheng(request)
-    rzret = json.loads(rz.content)
-    passed = False
-    get = {'quanxian': -1}
-    if "mail" in req.keys():
-        get = json.loads(getusername(request).content)
-        if get['quanxian'] < 1000000 and not rzret['ret'] and 'password' in req.keys() and check_logined(req['mail'], req['password']):
-            # basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-            passed = True
-            if f"/people/{get['mail']}/" not in ideopath or f"/people/{get['mail']}/" not in txtpath or \
-                '.txt' not in txtpath or ('.mp4' not in ideopath and '.webm' not in ideopath):
-                return JsonResponse( { "ret" : -100} , safe = False)
-        elif get['quanxian'] < 1000000 and get['ret']==2:
-            return JsonResponse( { "ret" : -100} , safe = False)
-        elif  get['quanxian'] == 1000000:
-            passed = True
-
-    if not passed and not rzret['ret']:
+    auth = check_identity(request, req, admin_bypass=True)
+    get = auth['get']
+    if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
-    # elif not passed and rzret['ret']:
-    #     get = json.loads(getusername(request).content)
-        # if get['ret'] > 0:
-        #     basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
+    realtxt = os.path.realpath(txtpath)      # realpath 归一化后校验归属，防 ../ 穿越删除他人视频
+    realideo = os.path.realpath(ideopath)
+    if not is_admin(get['quanxian']) and (f"/people/{get['mail']}/" not in realideo or f"/people/{get['mail']}/" not in realtxt or \
+        '.txt' not in realtxt or ('.mp4' not in realideo and '.webm' not in realideo)):
+        return JsonResponse( { "ret" : -100} , safe = False)
 
     try:
-        allfile = None
+        allfile.clear()
         # shutil.rmtree(currentpage)
-        if get['quanxian'] == 1000000 and get['mail']!=get['urlmail']:
+        if is_admin(get['quanxian']) and get['mail']!=get['urlmail']:
             notify_administer([txtpath, ideopath], get['truemail'], get['mail'], get['urlmail'], False)
-        elif get['quanxian'] == 1000000 and get['mail']==get['urlmail']:
+        elif is_admin(get['quanxian']) and get['mail']==get['urlmail']:
             notify_administer([txtpath, ideopath], get['truemail'], get['mail'], get['urlmail'], True)
         os.remove(txtpath)
         os.remove(ideopath)

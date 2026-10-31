@@ -11,12 +11,13 @@ path = os.path.abspath(__file__+"/../../../article/video")
 mainpath = os.path.abspath(__file__ + "/../../../dist/article")
 if os.path.exists(mainpath):
     path = path.replace("/article/", '/dist/article/')
-allfile = None
+allfile = {}  # 按 basepath 隔离的多用户缓存，避免用户间串数据
 pre_page_size = None
 addpath = os.path.abspath(__file__ + "/../../")
 import sys
 sys.path.append(addpath)
 from csdn.views import getusername
+import siteconfig   # 站点统一配置（mysite/site_config.json，修改即时生效）
 from copy import deepcopy
 import json
 
@@ -29,21 +30,21 @@ def index(request):
     try:
         currentpage = int(req["currentpage"])
     except:
-        currentpage = 1
+        currentpage = int(siteconfig.get('default_currentpage'))
     try:
         pagesize = int(req["pagesize"])
     except:
-        pagesize = 6
+        pagesize = int(siteconfig.get('default_pagesize_video'))
     search = req["search"]
     reset = int(req["reset"])
 
     # reset = 1
-    if reset==1:
-        allfile = None
     basepath = deepcopy(path)
     get = json.loads(getusername(request).content)
     if get['ret'] > 0:
         basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
+    if reset==1:
+        allfile.pop(basepath, None)
     # if "mail" in req.keys():
     #     # if check_logined(req['mail'], req['password']):
     #     basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
@@ -108,8 +109,7 @@ def index(request):
             collect.append({"date":date, "title": ti, 'describe':description, "path":filevideo, \
                             'txt':txtpath, 'ideo':ideopath})
     collect = sorted(collect.__iter__(), key = lambda x:x['date'], reverse=True)
-    if allfile==None:
-        allfile = collect
+    allfile[basepath] = collect
     ret = collect[(currentpage-1) * pagesize : currentpage * pagesize]
     
     audio = []

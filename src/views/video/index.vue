@@ -1,26 +1,24 @@
 <template>
   <div class="app-container">
     <!-- <el-card shadow="always"> -->
-      <div style="margin-top:3px;">
+      <div style="margin-top:3px;" class="search-toolbar">
         <el-input
           v-model="search_param.search"
           placeholder="描述或者日期"
-          style="width: 30%; margin-left:20px;"
-          class="filter-item"
+          class="filter-item search-input"
+          clearable
+          @keyup.enter="handleSearch"
         />
         <el-button
           class="filter-item"
           type="primary"
           @click="handleSearch"
-          style="margin-left:20px;text-align:center;"
           >
           搜索
         </el-button>
         <el-button
           class="filter-item"
-          type="primary"
           @click="resetSearch"
-          style="text-align:center;"
           >
           重置
         </el-button>
@@ -43,7 +41,7 @@
           >
           发布一个视频
         </el-button>
-        <el-dialog v-model="dialogFormVisible" title="发布一个视频" width="500">
+        <el-dialog v-model="dialogFormVisible" title="发布一个视频" width="min(500px, 92%)">
           <el-input
             v-model="textarea1"
             style="width: 100%;overflow:auto;height:100%"
@@ -53,7 +51,7 @@
             class="upload-demo"
             style="margin-top:6px;"
             drag
-            action="http://localhost:7009/upload_video/upload"
+            action="/upload_video/upload"
             :before-upload="handlebefore_Upload"
             :on-success="handleUpLoadSuccess"
             :data="data"
@@ -98,7 +96,7 @@
             查看
           </el-button>
           <span style="margin-left:6px;">音频每小时消耗的流量，当前每小时消耗约16Mb流量。</span>
-          <el-dialog v-model="dialogFormVisible_liulinag" title="纯音频直播每小时消耗流量" width="70vh">
+          <el-dialog v-model="dialogFormVisible_liulinag" title="纯音频直播每小时消耗流量" width="min(70vh, 92%)">
             <el-table
               :data="tableData"
               style="width: 100%"
@@ -173,7 +171,7 @@
         </div>
       </template>
     </el-card>
-    <el-dialog v-model="deletevisible" title="删除" width="60%" height="90%">
+    <el-dialog v-model="deletevisible" title="删除" width="min(600px, 92%)" height="90%">
       <span hidden>
         <el-input
           v-model="postkey"
@@ -226,7 +224,7 @@ import Hls from 'hls.js';
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import Cookies from 'js-cookie';
-import getusername from '/src/common.js'
+import getusername, { getCookieDays } from '/src/common.js'
 import notrelease from "/src/main.js"
 export default {
   name: 'app',
@@ -317,7 +315,7 @@ export default {
     },
     async carddelete() {
       const insta = axios.create({
-        baseURL: 'http://localhost:7009/upload_video/delete',
+        baseURL: '/upload_video/delete',
         timeout: 20000,
       });
           
@@ -350,7 +348,7 @@ export default {
     },
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -411,7 +409,7 @@ export default {
         gu = response;
       });
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/renzheng',
+        baseURL: '/csdn/renzheng',
        timeout: 20000,
       });
       
@@ -529,7 +527,7 @@ export default {
     },
     axiosget() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/video/index',
+        baseURL: '/video/index',
        timeout: 20000,
       });
       
@@ -620,7 +618,7 @@ export default {
     handleSearch() {
       this.search_param.reset = 1;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/video/index',
+        baseURL: '/video/index',
         timeout: 20000,
       });
       
@@ -649,7 +647,7 @@ export default {
       this.search_param.password = "";
       this.search_param.mail = "";
       this.search_param.url = "";
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.remove("videosearch");
       Cookies.set("videosearch", this.search_param.search, { expires: expiresdate });
     },
@@ -668,7 +666,7 @@ export default {
       // });
       Cookies.remove("videosearch");
       Cookies.remove("videoReset");
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.set("videosearch", "", { expires: expiresdate });
       let url = document.URL;
       let id = url.indexOf("?");
@@ -717,6 +715,29 @@ export default {
 </script>
 
 <style scoped>
+/* 资料搜索工具栏：flex 统一排列（替代散排 margin 硬凑），回车触发、可清空 */
+.search-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, .07), rgba(103, 194, 58, .07));
+  border: 1px solid rgba(64, 158, 255, .18);
+  border-radius: 10px;
+}
+.search-toolbar .search-input {
+  width: 30%;
+  min-width: 220px;
+}
+@media (max-width: 768px) {
+  .search-toolbar .search-input {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 h1 {
   font-weight: 500;
   font-size: 2.6rem;
@@ -742,6 +763,21 @@ video {
   margin-right: 10%;
 }
 
+/* 与 csdnpg 同步：压缩卡片上下间距 */
+.el-card-detail :deep(.el-card__header) {
+  padding: 8px 16px;
+}
+.el-card-detail :deep(.card-header) {
+  line-height: 1.4;
+  padding: 2px 0;
+}
+.el-card-detail :deep(.el-card__body) {
+  padding: 10px 16px;
+}
+.el-card-detail :deep(.el-card__footer) {
+  padding: 6px 16px 8px;
+}
+
 .el-card-detail:hover {
   outline: 1 !important;
   color: #6681fa !important;
@@ -760,5 +796,35 @@ video {
 }
 .el-table .success-row {
   --el-table-tr-bg-color: var(--el-color-success-light-9);
+}
+
+/* 手机端适配：卡片与视频撑满，音频占满行宽，搜索框/分页收窄边距并可换行 */
+@media (max-width: 768px) {
+  .el-card-detail {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  video {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+  .app-container .el-input {
+    width: 100% !important;
+  }
+  #audioplayback :deep(audio) {
+    width: 100% !important;
+    max-width: 100%;
+    margin-left: 0 !important;
+    margin-top: 6px;
+  }
+  .el-pagination {
+    margin-left: 4px !important;
+    flex-wrap: wrap;
+  }
+  .card-footer span:last-child {
+    margin-left: 4px !important;
+  }
 }
 </style>

@@ -1,28 +1,26 @@
 <template>
   <div class="app-container" id="thought"> 
     <!-- <el-card shadow="always"> -->
-      <div style="margin-top:3px;">
+      <div style="margin-top:3px;" class="search-toolbar mobile-stack">
         <!-- <el-link type="primary" href="https://www.zhihu.com/people/zoujiu1/" target="_blank">知乎</el-link> -->
         <el-input
           v-model="search_param.search"
           placeholder="日期或者内容, 空格 分隔"
-          style="width: 30%; margin-left:20px;"
-          class="filter-item"
+          class="filter-item search-input"
           id="riqisousuo"
+          clearable
+          @keyup.enter="handleSearch"
         />
         <el-button
           class="filter-item"
           type="primary"
           @click="handleSearch"
-          style="margin-left:20px;text-align:center;"
         >
           搜索
         </el-button>
         <el-button
           class="filter-item"
-          type="primary"
           @click="resetSearch"
-          style="text-align:center;"
         >
           重置
         </el-button>
@@ -40,6 +38,7 @@
     <el-card class="el-card-detail">
       <el-input
         v-model="textarea1"
+        v-if="canPost"
         style="width: 100%;overflow:auto;height:100%"
         type="textarea"
         :autosize="{ minRows: 3, maxRows: 9 }"
@@ -49,7 +48,7 @@
       <el-upload
         v-model:file-list="fileList"
         class="upload-demo"
-        action="http://localhost:7009/think/uploadImg"
+        action="/think/uploadImg"
         multiple
         :on-preview="handleUpPreview"
         :on-remove="handleRemove"
@@ -63,7 +62,7 @@
         <el-button type="primary" style="margin-top:3px;">Click to upload</el-button>
       </el-upload>
     </el-dialog> -->
-    <div style="margin-top:3px;">
+    <div style="margin-top:3px;" v-if="canPost">
       <el-row :gutter="0">
         <el-col :span="2" :push="0">
           <div id="upLoadbuttonThink" :hidden="uploadimgvisible">
@@ -90,7 +89,8 @@
       </el-row>
       <el-upload
         v-model:file-list="fileList"
-        action="http://localhost:7009/think/uploadImg"
+        v-if="canPost"
+        action="/think/uploadImg"
         list-type="picture-card"
         :on-preview="handlePictureCardPreview"
         :on-remove="handleRemove"
@@ -168,16 +168,16 @@
           <span hidden><p hidden @click="cardClick" class="hiddenp"> {{ o["path"] }} </p></span>
         </div>
       </template> -->
-      <span style="width:60%; font-size: 16px; color: #000000;" @click="cardClick" v-if="!o.isTop">
+      <span class="think-content" style="width:60%; font-size: 16px; color: #000000;" @click="cardClick" v-if="!o.isTop">
         <div v-html="o.markdown" style="background-color: #ffffff;color: #000000;">
         </div>
         <!-- {{ o["markdown"] }} -->
         <!-- <span class="imageplot"></span> -->
       </span>
-      <span style="width:60%; font-size: 16px; color: #000000; background-color: #FF00FF;" @click="cardClick" v-if="o.isTop">
+      <span class="think-content" style="width:60%; font-size: 16px; color: #000000; background-color: #FF00FF;" @click="cardClick" v-if="o.isTop">
         <div v-html="o.markdown" style="background-color: #FF00FF;color: aquamarine;">
         </div>
-        <p style="background-color: #1989fa;color:#ffffff;margin-left: 90vh;padding-left: 3vh;margin-top: 2px;font-weight: 900;">TOP</p>
+        <p style="background-color: #1989fa;color:#ffffff;float: right;padding: 0 8px;margin-top: 2px;font-weight: 900;">TOP</p>
         <!-- {{ o["markdown"] }} -->
         <!-- <span class="imageplot"></span> -->
       </span>
@@ -219,7 +219,14 @@
               <span hidden><p :hidden="true" class="hiddenp"> {{o["clickshoucang"]}} {{ o["path"] }} </p></span>
             </div> -->
           </el-col>
-          <el-col :span="20" :lg="6">
+          <el-col :span="2" :pull="0">
+            <div class="zhuanfa" @click="forwardThink" style="color:rgba(23, 114, 246);cursor:pointer;">
+              🔁转发
+              <span hidden><p :hidden="true" class="hiddenp"> {{ o["path"] }} </p></span>
+            </div>
+          </el-col>
+          <!-- 时间列：与 csdnpg 同步，16 格正好补满 24 格，避免时间被挤到第二行 -->
+          <el-col :span="16">
             <div class="card-footer" style="overflow:auto; font-size: 16px; color: #0000ee;" @click="cardClick">
               <span @click="cardClick"> {{ o["date"] }} </span>
               <span hidden><p :hidden="true" class="hiddenp"> {{ o["path"] }} </p></span>
@@ -272,6 +279,7 @@
   </div>
   <el-pagination 
     layout='total, sizes, prev, pager, next, jumper'
+    class="think-pagination"
     :page-sizes="[6,10,20,30,60,100]"
     background
     v-model:page-size="search_param.pagesize"
@@ -315,8 +323,8 @@
 // });
 var wait_think_render = 100;
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
-import getusername from '/src/common.js'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import getusername, { getCookieDays } from '/src/common.js'
 import Cookies from 'js-cookie'
 export default {
   name: 'app',
@@ -357,19 +365,22 @@ export default {
       ],
       dialogImageUrl: "",
       dialogVisible: false,
+      // 发布框只在自己的空间显示（访问他人空间时隐藏，后端 post_think 也有归属守卫）
+      canPost: false,
       // upLoadbutton_hidden: false,
       elupload_hidden: true,
-      nowpage: Number(this.$router.currentRoute._value.query.currentpage),
-      nowpagesize: Number(this.$router.currentRoute._value.query.pagesize),
+      nowpage: Number(this.$router.currentRoute._value.query.currentpage) || 1,
+      nowpagesize: Number(this.$router.currentRoute._value.query.pagesize) || 9,
       search_param: {
-        currentpage: Number(this.$router.currentRoute._value.query.currentpage),
-        pagesize: Number(this.$router.currentRoute._value.query.pagesize),
+        currentpage: Number(this.$router.currentRoute._value.query.currentpage) || 1,
+        pagesize: Number(this.$router.currentRoute._value.query.pagesize) || 9,
         search: "",
         reset: 0,
       },
     }
   },
   mounted(){
+    this.canPost = this.$router.currentRoute._value.params.id === Cookies.get('mail');
     this.axiosget(true);
     // this.clickpage();
   },
@@ -377,7 +388,7 @@ export default {
   methods: {
     async clickpage() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/clickpage',
+        baseURL: '/csdn/clickpage',
         timeout: 20000,
       });
       
@@ -402,6 +413,11 @@ export default {
       }
       this.search(event.srcElement);
       let star = this.dire_path.indexOf(" ");
+      // 兜底：卡片隐藏节点没取到时 dire_path 无空格，继续走会拼出垃圾 path 打到后端
+      if(star < 0) {
+        ElMessage.error("操作异常，请刷新页面后重试！");
+        return;
+      }
       // let first = this.dire_path.split(" ");
       let first = [this.dire_path.substring(0, star)];
       first[1] = this.dire_path.substring(star + 1);
@@ -441,7 +457,7 @@ export default {
       }
       
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/kshoucang',
+        baseURL: '/think/kshoucang',
         timeout: 20000,
       });
       
@@ -476,8 +492,17 @@ export default {
         ElMessage.error("没有登陆不能操作！");
         return
       }
+      // 与后端 comment_add 的限制保持一致，避免白跑一次请求
+      if(!this.textarea_content || !this.textarea_content.trim()) {
+        ElMessage.warning("评论不能为空！");
+        return
+      }
+      if(this.textarea_content.length > 2000) {
+        ElMessage.warning("评论不能超过 2000 字！");
+        return
+      }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/comment_add',
+        baseURL: '/think/comment_add',
         timeout: 20000,
       });
       
@@ -554,6 +579,11 @@ export default {
       this.search(event.srcElement);
       // console.log(event, this.dire_path);
       let star = this.dire_path.indexOf(" ");
+      // 兜底：卡片隐藏节点没取到时 dire_path 无空格，继续走会拼出垃圾 path 打到后端
+      if(star < 0) {
+        ElMessage.error("操作异常，请刷新页面后重试！");
+        return;
+      }
       // let first = this.dire_path.split(" ");
       let first = [this.dire_path.substring(0, star)];
       first[1] = this.dire_path.substring(star + 1);
@@ -582,7 +612,7 @@ export default {
       }
       
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/upvote_change',
+        baseURL: '/think/upvote_change',
         timeout: 20000,
       });
       
@@ -624,7 +654,7 @@ export default {
         return;
       }
       const instanc = axios.create({
-        baseURL: 'http://localhost:7009/think/post_think',
+        baseURL: '/think/post_think',
         timeout: 20000,
       });
       instanc({
@@ -653,7 +683,7 @@ export default {
       // this.sha(this.postkey).then((r)=>{
       //   if(sharet == r) {
       //     const instance = axios.create({
-      //       baseURL: 'http://localhost:7009/think/post_think',
+      //       baseURL: '/think/post_think',
       //     timeout: 20000,
       //     });
       //     instance({
@@ -678,7 +708,7 @@ export default {
         gu = response;
       });
       // const instance = axios.create({
-      //   baseURL: 'http://localhost:7009/csdn/renzheng',
+      //   baseURL: '/csdn/renzheng',
       //  timeout: 20000,
       // });
       
@@ -773,9 +803,18 @@ export default {
       this.dialogImageUrl = uploadFile.url;
       this.dialogVisible = true;
     },
+    // 图片懒加载：markdown 里的 <img> 在插入 DOM 前就带上 loading="lazy"，
+    // 浏览器只在图片进入可视范围时才发起请求（字符串级替换比 v-html 后再改 DOM 可靠，
+    // 避免浏览器抢先加载）；已有 loading 属性的 img 不重复添加
+    withLazyImages(md) {
+      if (!md || md.indexOf('<img') === -1) {
+        return md;
+      }
+      return md.replace(/<img(?=[\s>])/gi, '<img loading="lazy" decoding="async"');
+    },
     axiosget(wait=true) {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/index',
+        baseURL: '/think/index',
         timeout: 20000,
       });
       this.search_param.password = Cookies.get("password");
@@ -802,7 +841,9 @@ export default {
         // console.log(response.statusText);
         // console.log(response.headers);
         // console.log(response.config);
-        this.result = response.data.collect;
+        this.result = (response.data.collect || []).map((o) => (
+          { ...o, markdown: this.withLazyImages(o.markdown) }
+        ));
         this.total = response.data.length;
         // this.findkey(wait);
         // console.log(response.data);
@@ -849,7 +890,7 @@ export default {
       this.search_param.url = "";
       this.search_param.reset = 0;
 
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.remove("think");
       Cookies.remove("thinkpage");
       Cookies.set("think", this.nowpage, { expires: expiresdate });
@@ -911,7 +952,7 @@ export default {
       this.search_param.currentpage = this.nowpage;
       this.search_param.pagesize = this.nowpagesize;
       // let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       // console.log('99999999999', document.cookie, mail, password);
       Cookies.remove("think");
       Cookies.remove("thinkpage");
@@ -995,7 +1036,7 @@ export default {
       this.search_param.mail = Cookies.get("mail");
       this.search_param.url = document.URL;
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/think/index',
+        baseURL: '/think/index',
         timeout: 20000,
       });
       
@@ -1014,7 +1055,9 @@ export default {
         // console.log(response.statusText);
         // console.log(response.headers);
         // console.log(response.config);
-        this.result = response.data.collect;
+        this.result = (response.data.collect || []).map((o) => (
+          { ...o, markdown: this.withLazyImages(o.markdown) }
+        ));
         this.total = response.data.length;
         this.search_param.reset = 0;
         // this.findkey(true);
@@ -1023,7 +1066,7 @@ export default {
       this.search_param.mail = "";
       this.search_param.url = "";
 
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.remove("thinksearch");
       Cookies.remove("think");
       Cookies.remove("thinkpage");
@@ -1040,7 +1083,7 @@ export default {
       this.uploadimgvisible = false;
       this.elupload_hidden = true;
 
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.remove("thinksearch");
       Cookies.remove("thinkReset");
       Cookies.set("thinksearch", "", { expires: expiresdate });
@@ -1090,7 +1133,124 @@ export default {
         this.search(ele.nextElementSibling);
       }
     },
+    // 转发：把他人片段转发到自己的片段空间（复用已登录即可用的 post_think 接口）
+    async forwardThink(event) {
+      // 先向后端确认登录态，避免 Cookie 残留导致"看似登录"却实际未登录
+      let gu;
+      await getusername(document.URL).then((response) => {
+        gu = response;
+      });
+      if (!gu || gu.ret <= 0 || !Cookies.get('mail') || !Cookies.get('password')) {
+        ElMessage.error('请先登录后再转发！');
+        return;
+      }
+      // 从卡片隐藏元素中取原文路径
+      // 注意：hiddenp 位于 <span hidden> 内，outerText 恒为空，必须用 textContent
+      let node = event.target;
+      let originPath = '';
+      while (node) {
+        const hp = node.querySelector ? node.querySelector('.hiddenp') : null;
+        if (hp && hp.textContent && hp.textContent.trim()) {
+          originPath = hp.textContent.trim();
+          break;
+        }
+        node = node.parentElement;
+      }
+      if (!originPath) {
+        ElMessage.error('转发失败，未找到原文！');
+        return;
+      }
+      const myMail = Cookies.get('mail');
+      // 取卡片正文：用于 100 字摘要 + 识别已有的转发链（支持链式转发）
+      let cardText = '';
+      const card = event.target.closest ? event.target.closest('.el-card') : null;
+      if (card) {
+        const body = card.querySelector('.el-card__body');
+        if (body) {
+          cardText = (body.innerText || '').replace(/\s+/g, ' ').trim();
+        }
+      }
+      // 从 "🔁 转发自 @a → @b" 中提取已有的转发链
+      let chain = [];
+      const chainMatch = cardText.match(/转发自\s*([^\n]{0,200})/);
+      if (chainMatch) {
+        const names = chainMatch[1].match(/@[A-Za-z0-9_\-\.]+/g) || [];
+        chain = names.map((s) => s.slice(1));
+      }
+      // 摘要：去掉转发头，最多 100 字
+      let summary = cardText.replace(/^🔁\s*转发自[^。]*?(?=\s|$)/, '').trim();
+      if (summary.length > 100) {
+        summary = summary.slice(0, 100) + '…';
+      }
+      ElMessageBox.prompt('转发到你的片段空间，可以附上你的想法', '转发', {
+        confirmButtonText: '转发',
+        cancelButtonText: '取消',
+        inputPlaceholder: '说点什么（可选）',
+        inputType: 'textarea',
+      }).then(({ value }) => {
+        // 从路径提取原作者（people/<mail>/），公共区默认 homepage
+        let owner = 'homepage@gmail.com';
+        if (originPath.includes('/people/')) {
+          const parts = originPath.split('/people/')[1].split('/');
+          if (parts.length > 1 && parts[0]) {
+            owner = parts[0];
+          }
+        }
+        const link = location.origin + '/#/think/detail/' + owner + '?plan=' + encodeURIComponent(originPath);
+        // 转发链：我 → 原作者 → 更早的转发者（用户名都可点击跳转到其主页）
+        // 自发转发（我转发我自己的）时去重，避免用户名重复显示
+        const mails = myMail === owner ? [myMail] : [myMail, owner];
+        chain.forEach((m) => {
+          if (m && mails.indexOf(m) < 0) {
+            mails.push(m);
+          }
+        });
+        const chainStr = mails.map((m) => '[@' + m + '](/#/' + m + ')').join(' → ');
+        let content = '🔁 转发自 ' + chainStr;
+        if (summary) {
+          content += '\n\n> ' + summary;
+        }
+        content += '\n\n[查看全文](' + link + ')';
+        if (value && value.trim()) {
+          content += '\n\n' + value.trim();
+        }
+        const instanc = axios.create({
+          baseURL: '/think/post_think',
+          timeout: 20000,
+        });
+        instanc({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          data: {
+            "postdate": Date.now(),
+            "imgpostdate": "",
+            "text_content": content,
+            'mail': myMail,
+            'password': Cookies.get('password'),
+            // 必须带上自己的账号，后端会校验 mail 是否出现在 url 中
+            'url': location.origin + '/#/think/' + myMail,
+          },
+        }).then((response) => {
+          if (response.data.ret < 0) {
+            ElMessage.error('转发失败，请先登录！');
+            return;
+          }
+          ElMessage.success('转发成功，已发布到你的片段空间！');
+        }).catch(() => {
+          ElMessage.error('网络错误，转发失败！');
+        });
+      }).catch(() => {});
+    },
     async cardClick(event) {
+      // 转发链用户名（[@u](/#/u)）与 [查看全文] 等 markdown 链接自带跳转目标：
+      // 点击 <a> 时必须交给浏览器默认的 hash 导航（vue-router 会接管），
+      // 否则下面的整卡跳转会在链接跳转后把用户又带到当前卡片的详情页，造成"点用户名跳错"
+      if (event && event.target && event.target.closest && event.target.closest('a')) {
+        return;
+      }
       // console.log(event);
       this.search(event.target);
       // console.log(999);
@@ -1114,6 +1274,29 @@ export default {
 </script>
 
 <style scoped>
+/* 资料搜索工具栏：flex 统一排列（替代散排 margin 硬凑），回车触发、可清空 */
+.search-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, .07), rgba(103, 194, 58, .07));
+  border: 1px solid rgba(64, 158, 255, .18);
+  border-radius: 10px;
+}
+.search-toolbar .search-input {
+  width: 30%;
+  min-width: 220px;
+}
+@media (max-width: 768px) {
+  .search-toolbar .search-input {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 h1 {
   font-weight: 500;
   font-size: 2.6rem;
@@ -1136,6 +1319,29 @@ h3 {
   color: #00ff00;
   margin-top: 6px;
   margin-left: 6%;
+}
+
+/* 与 csdnpg 同步：压缩卡片上下间距；简介内容不做截断/压缩 */
+.el-card-detail :deep(.el-card__header) {
+  padding: 8px 16px;
+}
+.el-card-detail :deep(.card-header) {
+  font-size: 20px;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+.el-card-detail :deep(.el-card__body) {
+  padding: 10px 16px;
+}
+.el-card-detail :deep(.el-card__footer) {
+  padding: 6px 16px 8px;
+}
+/* 时间与左侧赞/评/藏/转发同行垂直居中对齐 */
+.el-card-detail :deep(.el-card__footer) .el-row {
+  align-items: center;
+}
+.el-card-detail :deep(.card-footer) {
+  line-height: 28px;
 }
 
 .zanzan{
@@ -1186,4 +1392,60 @@ h3 {
   background: #ffeeee !important;
 }
 
+/* 手机端（<=768px）响应式适配：卡片占满、搜索栏可换行、操作列自适应换行、宽内容横向滚动 */
+@media (max-width: 768px) {
+  /* 卡片占满屏幕，左右只留少量边距 */
+  .el-card-detail {
+    width: auto;
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+  /* 搜索栏改为可换行的弹性布局，输入框自适应占满、按钮不溢出 */
+  .mobile-stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+  }
+  .mobile-stack .el-input {
+    flex: 1 1 160px;
+    width: auto !important;
+    margin-left: 0 !important;
+  }
+  .mobile-stack .el-button {
+    margin-left: 0 !important;
+  }
+  /* 正文内容占满卡片宽度，超宽表格/代码/长链接横向滚动，图片不溢出 */
+  .think-content {
+    display: block;
+    width: 100% !important;
+    overflow-x: auto;
+    overflow-wrap: break-word;
+  }
+  .think-content :deep(img) {
+    max-width: 100%;
+    height: auto;
+  }
+  /* 底部操作列按内容自适应宽度并允许换行，避免小屏互相重叠 */
+  .el-card-detail :deep(.el-row) {
+    row-gap: 6px;
+  }
+  .el-card-detail :deep(.el-col) {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+  .el-card-detail :deep(.el-col .el-button) {
+    margin-left: 0 !important;
+    margin-right: 8px;
+  }
+  /* 分页器贴边显示、允许换行，超宽时横向滚动 */
+  .think-pagination {
+    margin-left: 0 !important;
+    padding-left: 8px;
+    padding-right: 8px;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    overflow-x: auto;
+  }
+}
 </style>

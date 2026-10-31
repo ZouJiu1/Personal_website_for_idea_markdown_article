@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -43,6 +43,10 @@ urlpatterns = [
     path("csdn/upvote_change", include("csdn.urls")),
     path("csdn/comment_add", include("csdn.urls")),
     path("csdn/kshoucang", include("csdn.urls")),
+    path("csdn/admin_userlist", include("csdn.urls")),
+    path("csdn/admin_resetpass", include("csdn.urls")),
+    path("csdn/admin_setquanxian", include("csdn.urls")),
+    path("csdn/admin_deleteuser", include("csdn.urls")),
     
     path("zhihu/", include("zhihu.urls")),
     path("zhihu/notify_edit", include("zhihu.urls")),
@@ -73,5 +77,21 @@ urlpatterns = [
     path("commonuse/submitAddwebsite", include("commonuse.urls")),
     path("commonuse/getbingimg", include("commonuse.urls")),
     path("commonuse/downloadall", include("commonuse.urls")),
-    
+
 ]
+
+# 本地调试（DEBUG=True）时由 Django 直接提供 article/people/hls 静态资源，
+# 生产环境由 nginx 提供，无需改动。
+from django.conf import settings
+from django.views.static import serve as _static_serve
+from mysite.projectpaths import project_path as _project_path
+
+if settings.DEBUG:
+    for _prefix in ("article", "people", "hls"):
+        urlpatterns.append(
+            re_path(
+                rf"^{_prefix}/(?P<path>.*)$",
+                _static_serve,
+                {"document_root": _project_path(_prefix)},
+            )
+        )

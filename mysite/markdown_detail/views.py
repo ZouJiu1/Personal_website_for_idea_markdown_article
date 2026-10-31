@@ -6,7 +6,7 @@ from django.http import HttpResponse
 # from rest_framework import status
 from django.http import JsonResponse
 import markdown2
-import numpy as np
+import random as _pyrandom
 import time
 from datetime import datetime
 import json
@@ -14,30 +14,42 @@ import json
 import sys
 sys.path.append(os.path.abspath(__file__ + "/../../"))
 from manage import timezone, kseamutex
+from mysite.projectpaths import web_dir_of, find_top_marker, TOP_CSDN
 # from csdn.views import kseamutex
 from threading import Semaphore
+import threading
 from copy import deepcopy
+
+def _rand_choice(pool, n):
+    """纯 Python 随机选择，替代 np.random.choice 生成着色占位符：
+    避免 numpy 全局锁和数组分配开销，高并发（1000 用户 / 每秒 100 请求）下开销更小。"""
+    return _pyrandom.choices(pool, k=n)
 
 def remove_code(inp):
     collect = []
     start = 0
     tmp = []
-    k = 0
-    while "```" in inp[start:]:
-        if len(tmp)==2:
-            rand = "===" + str(np.random.randint(999999999999)) + str(time.time()) + "==="
+    while True:
+        try:
+            k = inp.index("```", start)
+        except ValueError:
+            break
+        tmp.append(k)
+        start = k + 3
+        if len(tmp) == 2:
+            rand = "===" + str(_pyrandom.randint(0, 999999999999)) + str(time.time()) + "==="
             txt = inp[tmp[0] : tmp[1] + 3]
             collect.append([rand, txt[3:-3]])
             inp = inp.replace(txt, rand)
             tmp = []
-            k = 0
             start = 0
-        try:
-            k = inp[start:].index("```")
-            tmp.append(k + start)
-        except:
-            pass
-        start = k + 3 
+    if tmp:
+        # 存在未闭合的 ```：按 CommonMark 的容错行为，把该处到文末整体视为代码块。
+        # 否则裸 ``` 会留在正文里，破坏后续所有内容的渲染。
+        k = tmp[0]
+        rand = "===" + str(_pyrandom.randint(0, 999999999999)) + str(time.time()) + "==="
+        collect.append([rand, inp[k + 3:]])
+        inp = inp[:k] + rand
     return inp, collect
 
 choyang = list('《《《》》》》》》《《《？？；；；；；；；；、、、、、、、、）））（（（（（？？？？？】】】【【【ABCDEFGHIJKLMNOPQRSTUVWXYZ'.upper())
@@ -65,7 +77,7 @@ def remove_marked_cpp(inp, type=""):
             rr.append(i)
         if left + right!=0 and left==right:
             # rand = np.random.choice(choyang, rr[-1] - ll[0] + 1)
-            rand = np.random.choice(choyang, max(rr[-1] - ll[0] + 1, 100))
+            rand = _rand_choice(choyang, max(rr[-1] - ll[0] + 1, 100))
             rand = ''.join(rand) + '】'
             txt = inp[ll[0] : rr[-1] + 2]
             if type!='java':
@@ -107,7 +119,7 @@ def remove_marked_python(inp):
                 rr.append(i)
         if left + right!=0 and left==right:
             # rand = np.random.choice(choyang, rr[-1] - ll[0] + 2)
-            rand = np.random.choice(choyang, max(rr[-1] - ll[0] + 2, 100))
+            rand = _rand_choice(choyang, max(rr[-1] - ll[0] + 2, 100))
             rand = ''.join(rand) + '】'
             txt = inp[ll[0] : rr[-1] + 3]
             retxt = f"<span style=\"color:rgb(102, 153, 0); font-weight:600;\">{txt[:3]}</span>" + \
@@ -145,7 +157,7 @@ def remove_marked_javascript(inp):
             rr.append(i)
         if left + right!=0 and left==right:
             # rand = np.random.choice(choyang, rr[-1] - ll[0] + 2)
-            rand = np.random.choice(choyang, max(rr[-1] - ll[0] + 2, 100))
+            rand = _rand_choice(choyang, max(rr[-1] - ll[0] + 2, 100))
             rand = ''.join(rand) + '】'
             txt = inp[ll[0] : rr[-1] + 3]
             collect.append([rand, \
@@ -184,7 +196,7 @@ def remove_doublemarked_cpp(inp):
                     i += 1
                     continue
                 # rand = np.random.choice(choyang, len(l) - i - 1)
-                rand = np.random.choice(choyang, max(len(l) - i - 1, 100))
+                rand = _rand_choice(choyang, max(len(l) - i - 1, 100))
                 rand = ''.join(rand) + '】'
                 txt = l[i:]
                 retxt = "<span style=\"color: slategray;font-weight:600;\">"+ txt.replace("<", "<span><</span>") + "</span>"
@@ -220,7 +232,7 @@ def remove_doublemarked_python(inp):
                     i += 1
                     continue
                 # rand = np.random.choice(choyang, len(l) - i - 1)
-                rand = np.random.choice(choyang, max(len(l) - i - 1, 100))
+                rand = _rand_choice(choyang, max(len(l) - i - 1, 100))
                 rand = ''.join(rand) + '】'
                 txt = l[i:]
                 retxt = "<span style=\"color: slategray;font-weight:600;\">"+ txt.replace("<", "<span><</span>") + "</span>"
@@ -269,7 +281,7 @@ def remove_yinhao_cpp(inp):
                     rr.append(i)
             if left + right!=0 and left==right:
                 # rand = np.random.choice(choyang, rr[-1] - ll[0])
-                rand = np.random.choice(choyang, max(rr[-1] - ll[0], 100))
+                rand = _rand_choice(choyang, max(rr[-1] - ll[0], 100))
                 rand = ''.join(rand) + '】'
                 txt = l[ll[0] : rr[-1] + 1]
                 collect.append([rand, "<span style=\"color: rgb(102, 153, 0);font-weight:600;\">"+ txt + "</span>"])
@@ -293,10 +305,28 @@ def splited_js_css(inp):
     # for i in range(len(inp)):
     #     if inp[i:i+2**3]=='<script>':
 
-dic = []
-    
+_tls = threading.local()
+
+def _tls_dic():
+    """线程局部的占位符收集表。
+    原为模块级全局列表 dic，多用户并发请求时不同线程会互相污染，
+    导致 javascript 着色回填错乱（用户之间串内容）。"""
+    d = getattr(_tls, 'dic', None)
+    if d is None:
+        d = []
+        _tls.dic = d
+    return d
+
+def _tls_dic0():
+    """线程局部的闭标签占位符收集表（原全局 dic0，原因同上）。"""
+    d = getattr(_tls, 'dic0', None)
+    if d is None:
+        d = []
+        _tls.dic0 = d
+    return d
+
 def replace_sub_html2(txt):
-    global dic, choyang
+    global choyang
     inp = txt[0]
     if len(inp)==0:
         return ""
@@ -304,13 +334,13 @@ def replace_sub_html2(txt):
     for i in range(len(inp)):
         if inp[i]=='\'' or inp[i]=='\"':
             left.append(i)
-    rand = np.random.choice(choyang, 100)
+    rand = _rand_choice(choyang, 100)
     rand = ''.join(rand) + '】】】'
     txt = inp[left[0]:left[-1]+1]
     txt__ = f"<span style=\"color:slategray;font-weight:600;\">{inp[left[0]]}</span>" + \
         f"<span style=\"color: rgb(0, 119, 170);font-weight:600;\">{inp[left[0]+1:left[-1]]}</span>" + \
         f"<span style=\"color:slategray;font-weight:600;\">{inp[left[-1]]}</span>"
-    dic.append([rand, txt__])
+    _tls_dic().append([rand, txt__])
     inp = inp.replace(txt, rand)
     return inp
     
@@ -323,13 +353,12 @@ def replace_sub_html3(txt):
         f"<span style=\"color:slategray;font-weight:600;\">=</span>"
     
 def replace_sub_html1(txt):
-    global dic
     # print(txt[0])
     # print(txt)
     inp = txt[0]
     # inp_yinhao = re.findall(r'''= *[\'\"][\w \d=\.\?\+\t\r\-\(\)]*[\'\"]''', inp)
     inp_yinhao_ = re.sub(r'''= *[\'\"][\w :\#;%/\d=\.\?\+\t\r\-\(\)]*[\'\"]''', replace_sub_html2, inp)
-        
+
     # inp_re = re.findall(r''' [\w \d=\.\?\+\t\r\-\(\)]*=''', inp_yinhao_)
     inp_re_ = re.sub(r''' [\w \d=\#:;@%/\'\"\.\?\+\t\r\-_\(\)]*=''', replace_sub_html3, inp_yinhao_)
     try:
@@ -342,30 +371,30 @@ def replace_sub_html1(txt):
             inp_re_[id:-1] + f"<span style=\"color:slategray;font-weight:600;\">></span>"
     except:
         pass
-    for i in dic:
+    for i in _tls_dic():
         inp_re_ = inp_re_.replace(i[0], i[1])
-    dic = []
+    _tls_dic().clear()
     if inp==inp_re_:
         inp_re_ = f"<span style=\"color:slategray;font-weight:600;\"><</span>" + \
             f"<span style=\"color: rgb(153, 0, 85);font-weight:600;\">{inp_re_[1:-1]}</span>"+\
                 f"<span style=\"color:slategray;font-weight:600;\">></span>"
     return inp_re_
 
-dic0 = []
-
 def replace_sub_html0(txt):
-    global dic0
     inp = txt[0]
     retxt = f"<span style=\"color:slategray;font-weight:600;\"><</span>" + \
             f"<span style=\"color: rgb(153, 0, 85);font-weight:600;\">{inp[1:-1]}</span>"+\
                 f"<span style=\"color:slategray;font-weight:600;\">></span>"
-    rand = np.random.choice(choyang, 100)
+    rand = _rand_choice(choyang, 100)
     rand = ''.join(rand) + '】】】'
-    dic0.append([rand, retxt])
+    _tls_dic0().append([rand, retxt])
     return rand
-            
+
 def addSpan(precode):
-    global dic0, choyang, choyang_Java
+    global choyang, choyang_Java
+    if not precode:
+        # 空代码块（如未闭合时 ``` 之后再无内容），直接返回，避免后续取首行/找换行出错
+        return ""
     firstline = precode.split("\n")[0].lower()
     existFirst = True
     if len(firstline) == 0:
@@ -406,9 +435,9 @@ def addSpan(precode):
                 'int16_t', 'int32_t', 'int64_t']:
             return inp
         if type=='java':
-            rand = np.random.choice(choyang_Java, 100)
+            rand = _rand_choice(choyang_Java, 100)
         else:
-            rand = np.random.choice(choyang, 100)
+            rand = _rand_choice(choyang, 100)
         rand = ''.join(rand) + '】】】'
         # rand = '；】】】'*30
         inp = "<span style=\"color:#990055;font-weight:600;\">%s</span>"%str(inp)
@@ -433,7 +462,7 @@ def addSpan(precode):
             i = i[:cppStyle[0]] + f"<span style='color:rgb(102, 153, 0);font-weight:600;'>{i[cppStyle[0]]}</span>" + '<span style=\"color:rgb(102, 153, 0);font-weight:600;\">' + i[cppStyle[0] + 1:cppStyle[1] + 1] + '</span>' + i[cppStyle[1] + 1:]
         if len(incl)==2:
             i = i[:incl[0]] + '<span style=\"color:rgb(153, 0, 85);font-weight:600;\">' + i[incl[0]] + '</span>' + '<span style=\"color: rgb(0, 119, 170);font-weight:600;\">' + i[incl[0]+1:incl[1] + 1] + '</span>' + i[incl[1] + 1:]
-        rand = np.random.choice(choyang, 100)
+        rand = _rand_choice(choyang, 100)
         rand = ''.join(rand) + '】】】'
         cppInclude.append([rand, i])
         return rand
@@ -459,14 +488,14 @@ def addSpan(precode):
         # precode_html, precode_javascript, precode_style = splited_js_css(precode)
         precode = re.sub(r'''</\w+>''', replace_sub_html0, precode)
         precode = re.sub(r'''<[a-zA-Z][\w\s\d=:%"@/\\ \.\+\n\t\r\-\#\(\);']*/?>''', replace_sub_html1, precode)
-        for i in dic0:
+        for i in _tls_dic0():
             precode = precode.replace(i[0], i[1])
-        dic0 = []
+        _tls_dic0().clear()
         
         spl = precode.split("\n")
         for id, i in enumerate(spl):
             if '<span' in i:
-                rand = np.random.choice(choyang, 160)
+                rand = _rand_choice(choyang, 160)
                 rand = ''.join(rand) + '】】】'
                 Js_html.append([rand, spl[id]])
                 spl[id] = rand
@@ -476,7 +505,7 @@ def addSpan(precode):
         
         def replace_number_color(text):
             inp = text[0]
-            rand = np.random.choice(choyang, 100)
+            rand = _rand_choice(choyang, 100)
             rand = ''.join(rand) + '】】】'
             Js_color.append([rand, f'<span>{inp}</span>'])
             return rand
@@ -497,7 +526,7 @@ def addSpan(precode):
         inp = txt[0]
         file.append(inp)
         # np.random.seed(0)
-        rand = np.random.choice(choyang, 100)
+        rand = _rand_choice(choyang, 100)
         rand = ''.join(rand) + '】】】'
         inp = f"<span style=\"color: rgb(154, 110, 58);font-weight:600;\">{inp}</span>"
         allOperator.append([rand, inp])
@@ -617,7 +646,7 @@ def addSpan(precode):
             henggang = []
             def Js_sub_henggang(text):
                 inp = text[0]
-                rand = np.random.choice(choyang, 100)
+                rand = _rand_choice(choyang, 100)
                 rand = ''.join(rand) + '】】】'
                 retext = f"<span style=\"color: #ee9900;font-weight:600;\">{inp[:-1]}</span>" + \
                     f"<span style=\"color: slategray;font-weight:600;\">{inp[-1]}</span>"
@@ -664,7 +693,7 @@ def addSpan(precode):
             Java_xiaokuohao = []
             def Java_sub_xiaokuohao(text):
                 inp = text[0]
-                rand = np.random.choice(choyang_Java, 100)
+                rand = _rand_choice(choyang_Java, 100)
                 rand = ''.join(rand) + '】】】'
                 retxt = f"<span style=\"color: #dd4a68;font-weight:600;\">{inp[:-1]}</span>" + \
                     f"("
@@ -736,15 +765,17 @@ def addSpan(precode):
     #     return f"<span style='color:rgb(102, 153, 0);font-weight:600;'>{str(txt[0])}</span>"
     # precode = re.sub(r'''[\'\"][^'"]*[\'\"]''', replace_sub_yinhao, precode)
     # print(precode)
-    ind = precode.index("\n")
+    # 单行代码块（如 ```code```）没有换行，index 会直接抛 ValueError：
+    # 有语言标记时正文为空，否则把整行当作正文保留，避免内容丢失
+    ind = precode.find("\n")
+    if ind < 0:
+        ind = len(precode) if type else 0
     if not type:
         return precode[ind:]
     ft = firstline.replace("[]","")
     if len(ft)!=0:
         ft = ft[0].upper() + ft[1:].lower()
     precode = '<div style="background-color: #ffffff;"><span style="font-size: 26px;color:#000000;font-weight:600;">%s</span></div>'%ft + precode[ind:]
-    dic0 = []
-    # dic = []
     return precode
 
 def addback_code(markdown, collect):
@@ -763,7 +794,7 @@ def remove_katex(inp):
     k = 0
     while "$" in inp[start:]:
         if len(tmp)==2:
-            rand = "=,=?=" + str(np.random.randint(99999999999999)) + str(time.time()) + "=[];="
+            rand = "=,=?=" + str(_pyrandom.randint(0, 99999999999999)) + str(time.time()) + "=[];="
             if tmp[-1] - tmp[0]==1:
                 kk = inp[tmp[0]:tmp[1] + 1]
                 if kk=="$$":
@@ -807,72 +838,84 @@ def rep(i):
 
 def findlatest(pth):
     col = {}
-    for j in os.listdir(pth):
+    try:
+        names = os.listdir(pth)
+    except OSError:
+        # 目录不存在/无权限（文章已删除等）返回空，由调用方兜底而不是 500
+        return ""
+    for j in names:
         if '.md' in j:
             markdownpth = os.path.join(pth, j)
-            mtme = os.path.getmtime(markdownpth)
+            try:
+                mtme = os.path.getmtime(markdownpth)
+            except OSError:
+                continue
             col[mtme] = markdownpth
     col = sorted(col.items(), key = lambda x:x[0], reverse = True)
     if len(col)==0:
         return ""
     return col[0][1]
 
-def index(request):
-    global choyang, kseamutex
-    # https://docs.djangoproject.com/en/5.1/ref/request-response/#top
-    req = request.GET.dict()
-    # req = json.loads(request.body)
-    pathkkk = req["path"]
-    dirname = pathkkk.split(os.sep)[-2]
-    filename = pathkkk.split(os.sep)[-1]
-    
-    predir = pathkkk.replace(filename, "")
-    pathkkk = findlatest(predir)
-    markdownpth = deepcopy(pathkkk)
-    
-    create = pathkkk.replace(filename, "create.txt")
-    lastline = ""
-    postDate = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19]
-    postDate = postDate.replace("T", " ")
+# 渲染结果缓存：key=(实际渲染的 md 绝对路径, md mtime, create.txt mtime)，
+# 值为与请求者无关的中性渲染 HTML（点赞/收藏高亮在缓存外按 mail 另算，不会串人）。
+# 渲染要跑 remove_code/katex/多轮正则 + markdown2，是详情页最重的 CPU 开销，
+# 按 mtime 缓存后热文章的重复访问几乎零成本；超上限整体清空，避免常驻内存膨胀。
+RENDER_CACHE = {}
+RENDER_CACHE_MAX = 300
 
+def _render_key(markdownpth, create):
+    try:
+        md_mtime = os.path.getmtime(markdownpth)
+    except OSError:
+        md_mtime = 0
+    try:
+        create_mtime = os.path.getmtime(create)
+    except OSError:
+        create_mtime = 0
+    return (markdownpth, md_mtime, create_mtime)
+
+def _render_article(markdownpth, predir, dirname, create, postDate):
+    """把一篇文章渲染成展示 HTML：结果与请求者无关（中性），供 index 按 mtime 缓存。
+    title/date/lastline 一并在此解析，保证缓存命中与未命中两条路径返回一致。
+    正文文件读取失败返回 None，由调用方按业务错误响应而不是 500。"""
+    date = postDate
+    title = rep(dirname)
     if '20'==dirname[:2] or '21' == dirname[:2]:
         date = rep(dirname[:22]).replace("_", ":")
         title = rep(dirname[23:])
-    else:
-        date = postDate
-        title = rep(dirname)
-    if 'zhihu_' in pathkkk:
+    if 'zhihu_' in markdownpth:
         date = rep(dirname[:16]).replace("_", ":")
         date = date[:10] + " " + date[11:]
         title = rep(dirname[20 - 3:])
 
+    lastline = ""
     if os.path.exists(create):
         ij = 0
-        with open(create, 'r', encoding='utf-8') as obj:
-            for i in obj.readlines():
-                if ij==0:
-                    date = i.strip().replace("_空格_", " ").replace("_", ":")
-                ij += 1
-                lastline = i.strip().replace("_空格_", " ").replace("_", ":")
-                if 'zhihu_' in pathkkk:
-                    lastline = i.strip().replace("_", ":")[:-1]
-                    lastline = lastline[:10] + " " + lastline[11:]
+        try:
+            with open(create, 'r', encoding='utf-8') as obj:
+                for i in obj.readlines():
+                    if ij==0:
+                        date = i.strip().replace("_空格_", " ").replace("_", ":")
+                    ij += 1
+                    lastline = i.strip().replace("_空格_", " ").replace("_", ":")
+                    if 'zhihu_' in markdownpth:
+                        lastline = i.strip().replace("_", ":")[:-1]
+                        lastline = lastline[:10] + " " + lastline[11:]
+        except OSError:
+            pass
 
     markdown = r''
-    original = ""
-    with open(pathkkk, 'r', encoding='utf-8') as obj:
-        markdown = obj.read().strip()
-        original = deepcopy(markdown)
-    # assert 1==0, markdown
-    index = pathkkk.index("vue-project")
-    k = len(pathkkk) - 1
-    while pathkkk[k]!=os.sep:
-        k = k - 1
-    if 'dist' in pathkkk:
-        index += 16
-    else:
-        index += 11
-    nextline_index = markdown.index("\n")
+    try:
+        with open(markdownpth, 'r', encoding='utf-8') as obj:
+            markdown = obj.read().strip()
+    except OSError:
+        return None
+    original = deepcopy(markdown)
+    webdir = web_dir_of(markdownpth)
+    # 单行 md（没有换行）时 index 会抛 ValueError，用 find 兜底
+    nextline_index = markdown.find("\n")
+    if nextline_index < 0:
+        nextline_index = len(markdown)
     firstline = markdown[:nextline_index]
     # markdown = rep(firstline).replace("_", " ") + markdown[nextline_index:]
     markdown = rep(firstline) + markdown[nextline_index:]
@@ -883,7 +926,7 @@ def index(request):
     downline = []
     def remove_downline(text):
         inp = text[0]
-        rand = np.random.choice(choyang, 100)
+        rand = _rand_choice(choyang, 100)
         rand = ''.join(rand) + '】】】'
         downline.append([rand, inp])
         return rand
@@ -894,38 +937,45 @@ def index(request):
 
     markdown = markdown.replace('''<img src=\"''',\
         '''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"img_blank_class\"''' + \
-        '''src=\"''' + pathkkk[index : k] + os.sep)
+        '''src=\"''' + webdir + os.sep)
     
     def keepLeetcodeImage(text):
         inp = text[0]
         if "https" in inp and "leetcode" in inp:
             return inp.replace('''<img crossorigin=\"use-credentials\" loading=\"eager\" class=\"img_blank_class\"''' + \
-        '''src=\"''' + pathkkk[index : k] + os.sep, '''<img src=\"''')
+        '''src=\"''' + webdir + os.sep, '''<img src=\"''')
         else:
             return inp
     
-    markdown = re.sub(r'<img crossorigin=.*/?>', keepLeetcodeImage, markdown)
-    imglink = re.findall(r'<img src=\"(.*)\"\s', markdown)
+    # .*? 非贪婪：一行多图时贪婪匹配会把多个 <img> 并成一个匹配，只改到第一处
+    markdown = re.sub(r'<img crossorigin=.*?/?>', keepLeetcodeImage, markdown)
+    imglink = re.findall(r'<img src=\"(.*?)\"\s', markdown)
     if len(imglink) > 0:
         imglink = imglink[0].split('\"')
         if len(imglink) > 0:
             imglink = imglink[0]
-    
-            imgname = imglink.split("/")[-1]
-            if 'https' in imglink:
-                response = requests.get(imglink, timeout=30)
-                if response.status_code==200 and "leetcode" in imglink:
-                    original = original.replace(imglink, imgname);
-                    with open(os.path.join(predir, imgname), 'wb') as obj:
-                        obj.write(response.content)
-                    with open(pathkkk, 'w', encoding='utf-8') as obj:
-                        obj.write(original)
-    
+
+            # basename + 去查询串：远程 URL 的最后一段可能带 ?x-oss-process=...，
+            # 直接当文件名会写出带 ? 的文件；空名跳过
+            imgname = os.path.basename(imglink).split("?")[0]
+            if imgname and 'https' in imglink and "leetcode" in imglink:
+                # 下载/写盘失败只影响本图本地化，不应让整篇文章 500
+                try:
+                    response = requests.get(imglink, timeout=30)
+                    if response.status_code==200:
+                        original = original.replace(imglink, imgname);
+                        with open(os.path.join(predir, imgname), 'wb') as obj:
+                            obj.write(response.content)
+                        with open(markdownpth, 'w', encoding='utf-8') as obj:
+                            obj.write(original)
+                except Exception:
+                    pass
+
     def keepLeetcodeImagePreview(text):
         inp = text[0]
         return inp.replace('''<img ''', '''<img width=\"100%\"''')
-        
-    markdown = re.sub(r'<img .*/?>', keepLeetcodeImagePreview, markdown)
+
+    markdown = re.sub(r'<img .*?/?>', keepLeetcodeImagePreview, markdown)
     
     markdown = addback_code(markdown, collect)
     markdown = addback_katex(markdown, collect_katex)
@@ -967,6 +1017,52 @@ def index(request):
 # </div>
 # </div>''')
     markdown = replaceNextLine_br(markdown)
+    return markdown, title, date, lastline
+
+def index(request):
+    req = request.GET.dict()
+    # path 参数缺失/为空时直接拒绝，避免 KeyError 500
+    pathkkk = req.get("path", "")
+    # 安全：realpath 归一化后必须收容在项目内（people/article/dist），
+    # 防止 ../ 路径穿越把服务器上任意目录/文件当成文章读取
+    real = os.path.realpath(pathkkk) if pathkkk else ""
+    root = os.path.realpath(os.path.abspath(__file__ + "/../../../"))
+    allowed_roots = [os.path.join(root, 'people') + os.sep,
+                     os.path.join(root, 'article') + os.sep,
+                     os.path.join(root, 'dist') + os.sep]
+    if not real.endswith('.md') or not any(real.startswith(a) for a in allowed_roots):
+        return JsonResponse({"ret": -100, "msg": "非法的文章路径"}, safe=False)
+
+    predir = os.path.dirname(real)
+    dirname = os.path.basename(predir)
+    if not dirname:
+        return JsonResponse({"ret": -100, "msg": "非法的文章路径"}, safe=False)
+    # 原实现 pathkkk.replace(filename, "") 会把路径中所有同名片段都替换掉
+    # （目录名与文件名相同时 predir/create 就错了），改用 dirname/basename 精确切分
+    create = os.path.join(predir, "create.txt")
+    postDate = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19]
+    postDate = postDate.replace("T", " ")
+
+    pathkkk = findlatest(predir)
+    if not pathkkk:
+        # 目录里没有 .md（或目录已删除）时兜底：指名的文件还在就用它，
+        # 再不行按业务错误返回，而不是 open("") 直接 500
+        if os.path.isfile(real):
+            pathkkk = real
+        else:
+            return JsonResponse({"ret": -1, "msg": "文章不存在"}, safe=False)
+    markdownpth = deepcopy(pathkkk)
+
+    rkey = _render_key(markdownpth, create)
+    markdown, title, date, lastline = RENDER_CACHE.get(rkey, (None, None, None, None))
+    if markdown is None:
+        rendered = _render_article(markdownpth, predir, dirname, create, postDate)
+        if rendered is None:
+            return JsonResponse({"ret": -1, "msg": "文章读取失败"}, safe=False)
+        markdown, title, date, lastline = rendered
+        if len(RENDER_CACHE) >= RENDER_CACHE_MAX:
+            RENDER_CACHE.clear()
+        RENDER_CACHE[rkey] = (markdown, title, date, lastline)
 
     upvote = []
     comment = []
@@ -979,44 +1075,46 @@ def index(request):
     # with open(file, 'w', encoding='utf-8') as obj:upvote_comment
     #     json.dump(Setting_Formel, obj, indent=2, ensure_ascii=False)
     tails = markdownpth.split(os.sep)[-1]
-    if tails not in kseamutex.keys():
-        kseamutex[tails] = Semaphore(value=1)
+    # 原子创建锁，避免 check-then-set 竞态；锁对象永不 pop，
+    # 否则并发下其他线程会拿到 KeyError 或重建出第二把锁导致互斥失效
+    sem = kseamutex.setdefault(tails, Semaphore(value=1))
 
     upvotecomment = os.path.join(predir, 'upvote_comment.json')
     if not os.path.exists(upvotecomment):
-        os.system(f"touch \"{upvotecomment}\"")
+        open(upvotecomment, 'a').close()
 
-    kseamutex[tails].acquire()
-    with open(upvotecomment, 'r', encoding='utf-8') as obj:
-        try:
-            jsonfile = json.load(obj)
-        except:
-            jsonfile = {"upvote":[], 'comment':[], 'kshoucang':[]}
-            with open(upvotecomment, 'w', encoding='utf-8') as obj:
-                json.dump(jsonfile, obj, indent=2, ensure_ascii=False)
-        if len(jsonfile)==0:
-            pass
-        else:
-            upvote = jsonfile['upvote']
-            comment = jsonfile['comment']
+    sem.acquire()
+    try:
+        with open(upvotecomment, 'r', encoding='utf-8') as obj:
             try:
-                kshoucang = jsonfile['kshoucang']
+                jsonfile = json.load(obj)
             except:
-                jsonfile["kshoucang"] = []
+                jsonfile = {"upvote":[], 'comment':[], 'kshoucang':[]}
                 with open(upvotecomment, 'w', encoding='utf-8') as obj:
                     json.dump(jsonfile, obj, indent=2, ensure_ascii=False)
-            for i in upvote:
-                if len(maillogin)!=1 and maillogin == i:
-                    click = True
-                    break
-            for i in kshoucang:
-                if len(maillogin)!=1 and maillogin == i:
-                    clickshoucang = True
-                    break
-    kseamutex[tails].release()
-    kseamutex.pop(tails)
+            if len(jsonfile)==0:
+                pass
+            else:
+                upvote = jsonfile['upvote']
+                comment = jsonfile['comment']
+                try:
+                    kshoucang = jsonfile['kshoucang']
+                except:
+                    jsonfile["kshoucang"] = []
+                    with open(upvotecomment, 'w', encoding='utf-8') as obj:
+                        json.dump(jsonfile, obj, indent=2, ensure_ascii=False)
+                for i in upvote:
+                    if len(maillogin)!=1 and maillogin == i:
+                        click = True
+                        break
+                for i in kshoucang:
+                    if len(maillogin)!=1 and maillogin == i:
+                        clickshoucang = True
+                        break
+    finally:
+        sem.release()
 
-    topPath = os.path.join(predir, "TOP.txt")
+    topPath = find_top_marker(predir, TOP_CSDN)
     if os.path.exists(topPath):
         return JsonResponse( { "markdown" : markdown, 'path': pathkkk, "upvote":upvote, 'comment':comment, 'click':click, \
                             'clickshoucang':clickshoucang, 'kshoucang':kshoucang, 'title':title, 'isTop':True} , safe = False)

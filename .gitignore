@@ -7,7 +7,10 @@ __pycache__/
 *.so
 *.DS_Store
 .vscode
+dist
 node_modules
+tmp.py
+.screenshots
 # Distribution / packaging
 .Python
 build/
@@ -171,3 +174,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Django 密钥（发布检查清单：勿提交到仓库）
+mysite/secret_key.txt
+mysite/mysite/secret_key.txt

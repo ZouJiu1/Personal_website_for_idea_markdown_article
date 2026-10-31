@@ -9,7 +9,7 @@
         <!-- often used website <el-avatar shape="square" :size="30 + 10" src="/animal.JPG" style="align:right; margin-top: 2px" /> -->
         <!-- often used website <el-avatar shape="square" :size="30 + 10" src="/animal.JPG" style="align:right; margin-top: 2px" /> -->
         <span id='APPgeren' v-if="notrelease">
-          <img src="/article/imgbook/all/animal.jpg" style="width:3em; margin-bottom: -2.3vh; scale:0.76;"/>
+          <img :src="'/article/imgbook/all/animal.jpg'" style="width:3em; margin-bottom: -2.3vh; scale:0.76;"/>
         </span>
 
         <!-- <link rel="icon" href="/animal.png"> -->
@@ -22,44 +22,52 @@
         <button :hidden="dialogLogOutVisible" @click="logout" class="filter-item"
         style='margin-left:26%;text-align:center;background-color:#ffffff;border-color:#ffffff;'>
         logout</button> -->
-        <span style="margin-left:40vh;" :hidden="registerbutton">
-          <el-button
-            :hidden="registerVisible"
-            style="margin-left:0px;text-align:center;"
-            @click="register"
-            type="primary"
-            text
-            bg
-            >
-            注册
-          </el-button>   <!--bg-->
-        </span>
-        <span style="margin-left:1vh;" :hidden="loginbutton">
-          <el-button
-            :hidden="loginVisible"
-            style="margin-left:0px;text-align:center;"
-            @click="login"
-            type="primary"
-            text
-            bg
-            >
-            登录
-          </el-button>  <!--bg-->
-        </span>
-        <span style="margin-left:40vh;" :hidden="logoutbutton">
-          <el-button
-            :hidden="logoutVisible"
-            style="margin-left:0px;text-align:center;"
-            @click="logout"
-            type="info"
-            text
-            bg
-            >
-            登出
-          </el-button>  <!--bg-->
-        </span>
-        <span :hidden="returnback" style="margin-left:44vh;">
-          <el-button @click="returnbackhome" type="success">返回</el-button>
+        <!-- 右侧按钮组：注册/登录/登出/返回/铃铛统一 flex 排列靠右。
+             旧写法各 span 用 margin-left:40vh/44vh 硬凑，按钮组合一变
+             （如他人主页返回+登出同时显示）就换行错位 -->
+        <span class="header-actions">
+          <span :hidden="registerbutton">
+            <el-button
+              style="margin-left:0px;text-align:center;"
+              @click="register"
+              type="primary"
+              text
+              bg
+              >
+              注册
+            </el-button>   <!--bg-->
+          </span>
+          <span :hidden="loginbutton">
+            <el-button
+              style="margin-left:0px;text-align:center;"
+              @click="login"
+              type="primary"
+              text
+              bg
+              >
+              登录
+            </el-button>  <!--bg-->
+          </span>
+          <span :hidden="logoutbutton">
+            <el-button
+              style="margin-left:0px;text-align:center;"
+              @click="logout"
+              type="info"
+              text
+              bg
+              >
+              登出
+            </el-button>  <!--bg-->
+          </span>
+          <span :hidden="returnback">
+            <el-button @click="returnbackhome" type="success">返回</el-button>
+          </span>
+          <!-- 通知铃铛固定在按钮组最右 -->
+          <span style="cursor:pointer;" @click="openNotices" v-if="myMail" title="通知">
+            <el-badge :value="unreadCount" :hidden="unreadCount === 0">
+              <span style="font-size:20px;line-height:1;">🔔</span>
+            </el-badge>
+          </span>
         </span>
         <el-dialog v-model="dialogLoginVisible" title="登录" width="77%" height="90%">
           <el-form
@@ -74,7 +82,7 @@
               <el-input
                 v-model="LoginForm.username"
                 autocomplete="off"
-                placeholder="@ || username"
+                placeholder="邮箱 / 用户名"
                 @change="usernameChange"
                 @blur="usernameChange"
               />
@@ -183,15 +191,18 @@
               />
             </el-form-item>
             <el-form-item label="Email" prop="Email">
-              <el-input 
-                v-model="ruleForm.email" 
-                placeholder="@"
+              <el-input
+                v-model="ruleForm.email"
+                placeholder="用户名@example.com"
                 @change="mailChange"
                 @blur="mailChange"
                 style="width:60%"/>
                 <el-button type="primary" style="margin-left:10px;" @click="SendVerify" id="mailconfirmbutton">
                   点击发送邮箱验证
                 </el-button>
+              <div style="width:100%;font-size:12px;color:#909399;line-height:1.6;">
+                提示：用户名（@ 前的部分）至少需要 7 个字符，短于 7 个字符的账号将无法登录
+              </div>
             </el-form-item>
             <el-form-item label="Email Confirm" prop="emailConfirm" >
               <el-input 
@@ -229,6 +240,7 @@
           active-text-color="#ffd04b"
           class="el-menu-vertical-demo">
           <el-menu-item
+          index="1"
           id='el-menu-item-1'
           @click="clickhome"
           >
@@ -237,16 +249,18 @@
           <!-- </router-link> -->
           </el-menu-item>
 
-          <el-menu-item 
+          <el-menu-item
+            index="2"
             @click="clickbook"
-            id='el-menu-item-2' 
+            id='el-menu-item-2'
             >
             <!-- 本人看过的图书<router-link :to="{ name: 'book' }"> -->
               图书
             <!-- </router-link> -->
           </el-menu-item>
 
-          <el-menu-item 
+          <el-menu-item
+            index="3"
             @click="clickcsdn"
             id='el-menu-item-3'
             >
@@ -256,7 +270,8 @@
             <!-- </router-link> -->
           </el-menu-item>
 
-          <el-menu-item 
+          <el-menu-item
+            index="4"
             @click="clickvideo"
             id='el-menu-item-4'
             >
@@ -265,7 +280,8 @@
             <!-- </router-link> -->
           </el-menu-item>
           
-          <el-menu-item 
+          <el-menu-item
+            index="5"
             @click="clickzhihu"
             id='el-menu-item-5'
             v-if="zhihushow&&notrelease"
@@ -275,7 +291,8 @@
             <!-- </router-link> -->
           </el-menu-item>
 
-          <el-menu-item 
+          <el-menu-item
+            index="6"
             @click="clickthink"
             id='el-menu-item-6'
             >
@@ -283,7 +300,8 @@
               片段
             <!-- </router-link> -->
           </el-menu-item>
-          <el-menu-item 
+          <el-menu-item
+            index="7"
             @click="clicktravel"
             id='el-menu-item-7'
             >
@@ -291,7 +309,8 @@
               游客
             <!-- </router-link> -->
           </el-menu-item>
-          <el-menu-item 
+          <el-menu-item
+            index="8"
             @click="clickcommon"
             id='el-menu-item-8'
             >
@@ -299,7 +318,8 @@
               常用
             <!-- </router-link> -->
           </el-menu-item>
-          <el-menu-item 
+          <el-menu-item
+            index="9"
             @click="clickeverydayimg"
             id='el-menu-item-9'
             style="font-weight: 200;"
@@ -307,6 +327,22 @@
             <!-- <router-link :to="{ name: 'csdn' }"> -->
             图片
             <!-- </router-link> -->
+          </el-menu-item>
+          <el-menu-item
+            index="10"
+            @click="clickadmin"
+            id='el-menu-item-10'
+            v-if="isAdmin"
+            style="font-weight: 600;"
+            >
+            管理
+          </el-menu-item>
+          <el-menu-item
+            index="11"
+            @click="clickusers"
+            id='el-menu-item-11'
+            >
+            用户
           </el-menu-item>
         </el-menu>
         <el-text class="mx-1" type="success" style="color:#ffffff;">{{ TravelerStatistics }}</el-text>
@@ -416,12 +452,52 @@
             重置
           </el-button>
         </el-dialog>
+        <el-dialog v-model="usersVisible" title="其他用户" width="60%" style="max-height:80%;overflow:auto;">
+          <el-input
+            v-model="userSearch"
+            placeholder="搜索用户名或昵称"
+            clearable
+            style="margin-bottom:12px;"
+          />
+          <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            <el-button
+              v-for="u in filteredUsersList"
+              :key="u.mail"
+              :type="u.mail === myMail ? 'primary' : 'default'"
+              @click="gotoUserPage(u.mail)"
+            >
+              {{ u.nickname }}（{{ u.mail }}）{{ u.mail === myMail ? ' - 我' : '' }}
+            </el-button>
+          </div>
+          <div v-if="filteredUsersList.length === 0" style="color:#999;">没有匹配的用户</div>
+        </el-dialog>
+        <el-dialog v-model="noticeVisible" title="管理员通知" width="60%" style="max-height:80%;overflow:auto;">
+          <div style="font-size:12px;color:#999;margin-bottom:4px;">仅显示最近 {{ noticeMax }} 条通知</div>
+          <div v-if="notices.length === 0" style="color:#999;">暂无通知</div>
+          <div
+            v-for="(n, i) in notices"
+            :key="i"
+            style="border-bottom:1px solid #eee;padding:8px 0;"
+          >
+            <div style="font-size:12px;color:#888;">{{ n.time }} · 来自 {{ n.from }}</div>
+            <div style="white-space:pre-wrap;color:#222;">{{ n.content }}</div>
+          </div>
+          <template #footer>
+            <el-button @click="clearNotices" v-if="notices.length > 0">清空通知</el-button>
+            <el-button type="primary" @click="noticeVisible = false">关闭</el-button>
+          </template>
+        </el-dialog>
       </el-aside>
       <el-main id='elmain'>
-        <router-view />
+        <!-- 用 path 作为 key：/testuser 与 /homepage 虽然都匹配同一个路由组件，
+             但切换时必须重建组件，否则 mounted 不再执行、页面数据停留在上一个用户 -->
+        <router-view :key="$route.path" />
       </el-main>
     </el-container>
-    <div style="color:#666;padding:3px 0;width:100%;background-color: #f5f5f5;">
+    <!-- 回到顶部：站点为 body 整页滚动，用默认监听 -->
+    <!-- 回到顶部按钮上移到看板郎挂件上方，避免右下角重叠遮挡 -->
+    <el-backtop :right="30" :bottom="320" />
+    <div class="footer-bar" style="color:#666;padding:3px 0;width:100%;background-color: #f5f5f5;">
       <a 
       type="primary"
       href="https://beian.mps.gov.cn/#/query/webSearch?code=33078202002770" 
@@ -429,7 +505,7 @@
       target="_blank">
         <el-image 
         style="width:20px;"
-        src="/article/logobeian.png"
+        :src="'/article/logobeian.png'"
         :zoom-rate="1.0"
         :max-scale="10"
         :min-scale="0.1"
@@ -438,23 +514,28 @@
         fit="cover"
         />
       </a>
-      <a 
-        href="https://beian.mps.gov.cn/#/query/webSearch?code=33078202002770" 
+      <a
+        v-if="footerGonganCode || footerGonganText"
+        :href="'https://beian.mps.gov.cn/#/query/webSearch?code=' + footerGonganCode"
         style="margin-left:3px;line-height:20px;font-size:16px;"
         target="_blank"
       >
-        浙公网安备33078202002770号
+        {{ footerGonganText }}
       </a>
-      <span style="margin-left:20px;line-height:20px;font-size:16px;color:#000000;">
-        © 2024-2026 zoujiu.com.cn 版权所有
+      <span v-if="footerCopyright" style="margin-left:20px;line-height:20px;font-size:16px;color:#000000;">
+        {{ footerCopyright }}
       </span>
-      <span style="margin-left:20px;line-height:20px;font-size:16px;color:#000000;">
+      <span v-if="footerIcpText" style="margin-left:20px;line-height:20px;font-size:16px;color:#000000;">
         ICP证:
       </span>
-      <a type="primary" href="https://beian.miit.gov.cn/"
+      <a v-if="footerIcpText" type="primary" href="https://beian.miit.gov.cn/"
           style="margin-left:3px;line-height:20px;font-size:16px;" target="_blank" >
-        湘ICP备2024086536号-1
+        {{ footerIcpText }}
       </a>
+      <span v-if="footerReportEmail" style="margin-left:20px;line-height:20px;font-size:16px;color:#000000;">
+        举报邮箱：
+        <a :href="'mailto:' + footerReportEmail" style="color:#0000ee;">{{ footerReportEmail }}</a>
+      </span>
       <!-- <el-select
         v-model="Themecolor"
         placeholder="主题"
@@ -489,7 +570,8 @@ import axios from 'axios'
 // import FormRules from 'element-plus'
 // import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import getusername from '/src/common.js'
+import getusername, { getCookieDays, initCookieDays } from '/src/common.js'
+import { isAdminQuanxian } from '/src/common.js'
 import Cookies from 'js-cookie'
 import notrelease from "/src/main.js"
 export default {
@@ -499,12 +581,30 @@ export default {
       dialogRegisterVisible: false,
       postkey:"",
       checked1:true,
+      cookieDays: 30,   // 登录凭据 cookie 有效期（天），mounted 时经 /csdn/getSiteConfig 读取统一配置
+      mailCooldown: 60, // 验证码重发间隔（秒），同样来自统一配置
+      // 页脚备案信息：默认值为 site_config.json 的当前文案兜底（配置接口不可用时照常显示）
+      footerGonganCode: '33078202002770',
+      footerGonganText: '浙公网安备33078202002770号',
+      footerCopyright: '© 2024-2026 zoujiu.com.cn 版权所有',
+      footerIcpText: '湘ICP备2024086536号-1',
+      footerReportEmail: '1069679911@qq.com',
       themeChangevisible: false,
       ruleFormRef: "",
       sendret: true,
       notrelease: notrelease,
       dialogLoginVisible: false,
       forgetVisible: false,
+      // 其他用户列表
+      usersVisible: false,
+      usersList: [],
+      userSearch: '',
+      myMail: '',
+      // 通知
+      noticeVisible: false,
+      notices: [],
+      noticeMax: 200,
+      unreadCount: 0,
       color1: 'rgb(136, 187, 250)',
       color2: 'rgb(86, 92, 99)',
       color3: 'rgb(255, 255, 255)',
@@ -512,6 +612,8 @@ export default {
       input2: "",
       input3: "",
       returnback: true,
+      // 登录态三态：null=尚未向服务端确认，true=已登录，false=未登录/凭据失效
+      logined: null,
       TravelerStatistics:3900,
       predefineColors: [
         'rgb(136, 187, 250)',
@@ -878,19 +980,213 @@ export default {
       zhihushow: true,
       nicknamestart:"邹九",
       first:true,
+      isAdmin: false,
     }
   },
-  watch: {},
+  computed: {
+    // 用户列表按关键词过滤（用户名 / 昵称）
+    filteredUsersList() {
+      const s = (this.userSearch || '').trim().toLowerCase();
+      if (!s) {
+        return this.usersList;
+      }
+      return this.usersList.filter((u) =>
+        (u.mail && u.mail.toLowerCase().includes(s))
+        || (u.nickname && String(u.nickname).toLowerCase().includes(s)));
+    },
+  },
+  watch: {
+    // 路由切换（hash 变化）时刷新"返回"按钮状态，
+    // 否则从他人页面回到自己页面后按钮状态会残留
+    '$route'() {
+      this.updateReturnButton();
+      this.myMail = Cookies.get('mail') || '';
+      // 转发链等 <a> 链接跳转到其他用户空间时整页刷新，
+      // 避免 banner 标题/侧栏统计残留上一个用户的数据（与 gotoUserPage 强刷策略一致）
+      this.reloadIfUserChanged();
+    },
+  },
   mounted() {
     // if(this.first) {
     // let url = document.URL;
     // this.clickhome();
     this.loading();
     this.getColor();
+    this.loadCookieConfig();
+    this.myMail = Cookies.get('mail') || '';
+    this.updateReturnButton();
+    this.loadNotices(false);
     //   this.first = false;
     // }
   },
   methods: {
+    // 从后端统一配置读取浏览器侧可调参数；失败时保持缺省值
+    async loadCookieConfig() {
+      // cookie 有效期由 common.js 的 initCookieDays 统一拉取（localStorage + 模块级缓存），
+      // 全站组件经 getCookieDays() 读取，避免各处硬编码 30 天
+      const cfg = await initCookieDays();
+      if (cfg) {
+        const cd = parseInt(cfg.mail_resend_cooldown_seconds);
+        if (!isNaN(cd) && cd > 0) {
+          this.mailCooldown = cd;
+        }
+        // 页脚备案信息（site_config.json 配置，空值隐藏对应片段）
+        for (const [key, prop] of [
+          ['footer_gongan_code', 'footerGonganCode'],
+          ['footer_gongan_text', 'footerGonganText'],
+          ['footer_copyright', 'footerCopyright'],
+          ['footer_icp_text', 'footerIcpText'],
+          ['footer_report_email', 'footerReportEmail'],
+        ]) {
+          if (cfg[key] !== undefined && cfg[key] !== null && cfg[key] !== '') {
+            this[prop] = cfg[key];
+          }
+        }
+      }
+      this.cookieDays = getCookieDays();
+    },
+    // 根据"当前登录账号"与"当前页面主人"决定是否显示返回按钮
+    updateReturnButton() {
+      // loading() 已向服务端确认未登录/登录失效时，残留的 mail cookie 会让下面的
+      // cookie 判断误显返回按钮（点击后无处可回、表现为"点了没反应"），直接隐藏
+      if (this.logined === false) {
+        this.returnback = true;
+        return;
+      }
+      const myMail = Cookies.get('mail') || '';
+      const pathOnly = (window.location.pathname.replace(/\/+$/, '') || '/');
+      let urlmail = '';
+      if (pathOnly !== '/') {
+        urlmail = pathOnly.split('/')[1] || '';
+      } else {
+        const hash = window.location.hash.replace(/^#\/?/, '');
+        urlmail = hash.split('/').filter(Boolean)[0] || '';
+      }
+      // 未登录，或在看自己的页面：不需要返回按钮
+      this.returnback = !(myMail && urlmail && urlmail !== myMail);
+    },
+    // 解析当前 hash 路由中的"用户段"（跳过模块前缀），失败返回空串
+    findUrlUser() {
+      const segs = window.location.hash.replace(/^#\/?/, '').split('?')[0].split('/').filter(Boolean);
+      const skip = ['think', 'csdn', 'book', 'zhihu', 'video', 'travel', 'commonuse',
+        'everydayimg', 'admin', 'people', 'article', 'markdown_detail', 'post_article', 'detail'];
+      for (const s of segs) {
+        if (skip.indexOf(s) < 0) {
+          return s;
+        }
+      }
+      return '';
+    },
+    // 用户空间变化时整页刷新，保证 banner/侧栏与 URL 一致
+    reloadIfUserChanged() {
+      const user = this.findUrlUser();
+      const pre = Cookies.get('premail');
+      if (!user || !pre || user === pre) {
+        return;
+      }
+      // 先同步再刷新：旧 cookie（如历史前缀 'homepage'）与新全邮箱 URL 不一致时，
+      // 只触发一次 reload 而不是无限循环。
+      // expiresdate 必须在本方法内定义（与 login/logout 一致），
+      // 否则引用未定义变量抛 ReferenceError：premail 不再更新、reload 不执行，
+      // 强刷机制整体失效（表现为 URL 变了但页面数据停留在上一个用户空间）
+      const expiresdate = new Date(new Date().getTime() + this.cookieDays * 24 * 60 * 60 * 1000);
+      Cookies.set('premail', user, { expires: expiresdate });
+      window.location.reload();
+    },
+    // 打开"其他用户"列表
+    async clickusers() {
+      this.myMail = Cookies.get('mail') || '';
+      this.userSearch = '';
+      const instance = axios.create({ baseURL: '/csdn/userlist', timeout: 20000 });
+      await instance({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        data: {},
+      }).then((response) => {
+        if (response.data && response.data.ret === 1) {
+          this.usersList = response.data.users || [];
+          this.usersVisible = true;
+        } else {
+          ElMessage.error('获取用户列表失败！');
+        }
+      }).catch(() => {
+        ElMessage.error('网络错误，获取用户列表失败！');
+      });
+    },
+    // 跳转到指定用户的个人主页
+    async gotoUserPage(mail) {
+      if (!mail) {
+        return;
+      }
+      this.usersVisible = false;
+      // 已在目标主页时不重复跳转/刷新
+      if (this.$route.path === '/' + mail) {
+        this.updateReturnButton();
+        return;
+      }
+      await this.$router.push({ path: '/' + mail });
+      // 链接变化后强制整页刷新，确保页面内容与 URL 一致（整页刷新会按新路由重新挂载）
+      window.location.reload();
+    },
+    // 拉取自己的通知（时间倒序），并计算未读数
+    async loadNotices(markRead) {
+      const mail = Cookies.get('mail');
+      const password = Cookies.get('password');
+      if (!mail || !password) {
+        this.notices = [];
+        this.unreadCount = 0;
+        return;
+      }
+      const instance = axios.create({ baseURL: '/csdn/get_notice', timeout: 20000 });
+      await instance({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        data: { mail, password },
+      }).then((response) => {
+        if (response.data && response.data.ret === 1) {
+          // 后端已按时间倒序并按配置 notice_display_max 截取，这里再排一次保证稳定
+          const list = (response.data.notices || []).slice();
+          list.sort((a, b) => String(b.time).localeCompare(String(a.time)));
+          this.noticeMax = response.data.max || 200;
+          this.notices = list;
+          const seen = localStorage.getItem('noticeSeen_' + mail) || '';
+          this.unreadCount = list.filter((n) => String(n.time) > seen).length;
+          if (markRead) {
+            const newest = list.length ? String(list[0].time) : seen;
+            localStorage.setItem('noticeSeen_' + mail, newest);
+            this.unreadCount = 0;
+          }
+        }
+      }).catch(() => {});
+    },
+    async openNotices() {
+      this.noticeVisible = true;
+      await this.loadNotices(true);
+    },
+    async clearNotices() {
+      const instance = axios.create({ baseURL: '/csdn/clear_notice', timeout: 20000 });
+      try {
+        const response = await instance({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          data: { mail: Cookies.get('mail'), password: Cookies.get('password') },
+        });
+        if (response.data && response.data.ret === 1) {
+          this.notices = [];
+          this.unreadCount = 0;
+          // 临时清空（notice_clear_temporary=true）时磁盘数据保留，刷新后通知恢复
+          if (response.data.temporary) {
+            ElMessage('已清空本次显示，刷新页面后通知仍可见');
+          } else {
+            ElMessage('通知已清空');
+          }
+        } else {
+          ElMessage.error('清空失败，请重新登录后重试');
+        }
+      } catch (e) {
+        ElMessage.error('清空失败，请重试');
+      }
+    },
     pureColorChange(value) {
       // console.log(value);
       this.changeSelect(this.Themecolor);
@@ -1041,7 +1337,7 @@ export default {
     },
     async getColor(value) {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/getThemeColor',
+        baseURL: '/csdn/getThemeColor',
         timeout: 20000,
       });
       
@@ -1069,7 +1365,7 @@ export default {
     },
     async submitColorFormSecond() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/themeChange',
+        baseURL: '/csdn/themeChange',
         timeout: 20000,
       });
       
@@ -1096,7 +1392,7 @@ export default {
     },
     async submitColorForm() {
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/themeChange',
+        baseURL: '/csdn/themeChange',
         timeout: 20000,
       });
       
@@ -1144,7 +1440,7 @@ export default {
       if(this.mailChange() && this.pFirstChange() && this.pSecondChange() && this.sendret){
         ElMessage("passed!");
         const instance = axios.create({
-          baseURL: 'http://localhost:7009/csdn/register',
+          baseURL: '/csdn/register',
           timeout: 20000,
         });
         
@@ -1171,7 +1467,8 @@ export default {
     findmail(urlrul) {
       let mail = "";
       // let ind = urlrul.indexOf("/zj");
-      let ind = urlrul.indexOf("/homepage");
+      // 站长公共主页全邮箱标识；用全邮箱匹配可避免误伤前缀同名用户（如 homepage2@x.com）
+      let ind = urlrul.indexOf("/homepage@gmail.com");
       if(ind < 0) {
         let urlll = urlrul.substring(10);
         let fir = urlll.indexOf("/");
@@ -1202,10 +1499,39 @@ export default {
       await getusername(document.URL).then((response) => {
         gu = response;
       });
-      if(gu.mail!=gu.urlmail) {
-        // this.$router.push({ path: '/' + gu.mail});
-        location.replace('/' + Cookies.get("mail"))
+      // 登录态失效但 mail cookie 仍残留时，旧逻辑会试图跳回"自己主页"，
+      // 随即被 loading() 的未登录兜底弹回当前公共主页，表现为"点了返回没反应"。
+      // 这里显式识别失效：清掉残留凭据、复位按钮组并回公共主页，提示重新登录。
+      if(!gu || !(gu.ret > 0) || !gu.mail) {
+        this.logined = false;
+        Cookies.remove("mail");
+        Cookies.remove("password");
+        Cookies.remove("username");
+        Cookies.remove("quanxian");
+        this.isAdmin = false;
+        this.myMail = "";
+        this.returnback = true;
+        this.logoutbutton = true;
+        this.loginbutton = false;
+        this.registerbutton = false;
+        ElMessage.warning("登录状态已失效，请重新登录");
+        if(this.$route.path !== '/homepage@gmail.com') {
+          await this.$router.push({ path: '/homepage@gmail.com' });
+        }
+        return;
       }
+      // 优先用服务端解析出的登录账号，其次退回 Cookie；都没有则回公共主页。
+      // 原来直接用 Cookies.get("mail")，未登录/登录态失效时会跳到 /#/undefined
+      const myMail = gu.mail || Cookies.get('mail') || '';
+      const target = myMail ? '/' + myMail : '/homepage@gmail.com';
+      // 已在目标主页时不重复跳转/刷新
+      if (this.$route.path === target) {
+        this.updateReturnButton();
+        return;
+      }
+      await this.$router.push({ path: target });
+      // 链接变化后强制整页刷新，确保页面内容与 URL 一致（整页刷新会按新路由重新挂载）
+      window.location.reload();
     },
     async loading() {
       Cookies.remove("mailsend");
@@ -1228,7 +1554,7 @@ export default {
       let premail = undefined;
       premail = Cookies.get("premail");
       if(gu && gu.urlmail) {
-        let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+        let expiresdate = new Date(new Date().getTime() + this.cookieDays * 24 * 60 * 60 * 1000);
         if(gu.urlmail!=premail) {
           Cookies.remove("csdnReset");
           Cookies.set("csdnReset", 1, { expires: expiresdate });
@@ -1244,8 +1570,10 @@ export default {
         Cookies.set("premail", gu.urlmail, { expires: expiresdate });
       }
       if(gu && gu.ret > 0) {
+        this.logined = true;
         this.nicknamestart = gu.username;
         let username = gu.username;
+        this.isAdmin = isAdminQuanxian(gu.quanxian);
         // console.log('username: ', username, Cookies.get("mail"), Cookies.get("password"));
         // let headerTitle = document.getElementById("headerTitle");
         // headerTitle.innerHTML = username + "的个人页面";
@@ -1274,14 +1602,14 @@ export default {
         //   allchild.removeChild(allchild.children[4]);
         // }
         let idzhi = document.URL;
-        let zhi = idzhi.indexOf("/homepage")
+        let zhi = idzhi.indexOf("/homepage@gmail.com")
         if(zhi < 0) {
           this.zhihushow = false;
         }
 
         let img = document.getElementById("APPgeren");
         // console.log(img);
-        if(img && gu.urlmail != 'homepage') { 
+        if(img && gu.urlmail != 'homepage@gmail.com') {
           img.hidden = true;
         }
         // console.log(gu);
@@ -1289,16 +1617,18 @@ export default {
           // console.log(222222, gu);
           this.returnback = false;
           this.loginbutton = true;
-          this.logoutbutton = true;
+          // 有效登录（含 ret=2 看他人主页）必须显示登出：本分支是 ret=2 时
+          // 唯一会碰到 logoutbutton 的地方，缺了这行登出按钮保持初始隐藏，
+          // 造成"他人主页只有返回、没有登出"
+          this.logoutbutton = false;
           this.registerbutton = true;
         }
+        // 与主机无关的判断：当前地址是否为该用户的根页面（如 /<urlmail> 或 /#/<urlmail>#/）
+        let pathonly = window.location.pathname.replace(/\/+$/, '') || '/';
+        let hashnow = window.location.hash;
         if(
-          document.URL==("http://zoujiu.com.cn/" + gu.urlmail + "#/") || document.URL==("http://zoujiu.com.cn/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost/" + gu.urlmail + "#/") || document.URL==("http://localhost/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:9000/" + gu.urlmail + "#/") || document.URL==("http://localhost:7009/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:9000/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:7009/#/" + gu.urlmail + "#/")
-          || document.URL==("http://localhost:7009/" + gu.urlmail + "#/") || document.URL==("http://localhost:7009/#/" + gu.urlmail + "#/")
+          pathonly==('/' + gu.urlmail)
+          || (pathonly=='/' && (hashnow==('#/' + gu.urlmail + '#/') || hashnow==('#/' + gu.urlmail)))
         ) {
           this.$router.push({ path: '/' + gu.urlmail});
         }
@@ -1308,20 +1638,27 @@ export default {
         //   this.loginbutton = true;
         //   this.registerbutton = true;
         // }
-        if(
-          document.URL=="http://zoujiu.com.cn/" || document.URL=="http://zoujiu.com.cn/#/"
-          || document.URL=="http://localhost/" || document.URL=="http://localhost/#/"
-          || document.URL=="http://localhost:9000/" || document.URL=="http://localhost:7009/"
-          || document.URL=="http://localhost:9000/#/"
-          || document.URL=="http://localhost:7009/#/"
-          || document.URL=="http://localhost:7009/"|| document.URL=="http://localhost:7009/#/"
-        ) {
-          // this.$router.push({ path: '/zj'});
-          // this.$router.push({ path: '/homepage'});
-          location.replace("/homepage");
-        }
-        else {
-          location.replace("/homepage");
+        // 未登录/登录失效：复位按钮组（返回隐藏、登录/注册显示），清掉铃铛依赖的
+        // myMail。注意不能在这里清登录 cookie——短名守卫场景（如 #/zj）下
+        // getusername 不做鉴权直接返回 ret=0，误清会丢掉有效登录态；
+        // cookie 残留导致的失效清理放在 returnbackhome 的显式失效分支里。
+        this.logined = false;
+        this.returnback = true;
+        this.logoutbutton = true;
+        this.loginbutton = false;
+        this.registerbutton = false;
+        this.myMail = "";
+        // 未登录时统一跳转到公共主页 homepage。
+        // 本项目是 hash 路由，必须带上 "#"，否则每次加载都会再次触发本条跳转导致页面无限刷新闪烁。
+        // 线上部署时服务器会把 "/" 302 到 "/homepage"（且 URL 的 # 片段不会发给服务器）：
+        // 若这里写死 "/#/homepage@gmail.com"，浏览器会跨文档请求 "/"，被服务器再次 302 回
+        // "/homepage"，应用加载后本分支再次执行 —— 无限循环。
+        // 改为在「当前 pathname」上设置 hash（同文档导航，不经过服务器），本地（/）与线上（/homepage）都一次到位。
+        const curpath = window.location.pathname.replace(/\/+$/, '') || '/';
+        const onPublicHome = (curpath === '/' || curpath === '/homepage')
+          && window.location.hash === '#/homepage@gmail.com';
+        if(!onPublicHome) {
+          location.replace(curpath + '#/homepage@gmail.com');
         }
       }
       // console.log(document.URL);
@@ -1345,7 +1682,7 @@ export default {
         return;
       }
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/sendverify',
+        baseURL: '/csdn/sendverify',
         timeout: 20000,
       });
       
@@ -1407,10 +1744,11 @@ export default {
         ElMessage(n.toString() + "s后可以再次发送!");
         return;
       }
-      let expiresdate = new Date(new Date().getTime() + 63 * 1000);
-      Cookies.set("mailsendNum", 60, { expires: expiresdate });
+      // 重发间隔统一配置在 mysite/site_config.json 的 mail_resend_cooldown_seconds（+3s 缓冲）
+      let expiresdate = new Date(new Date().getTime() + (this.mailCooldown + 3) * 1000);
+      Cookies.set("mailsendNum", this.mailCooldown, { expires: expiresdate });
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/sendverify',
+        baseURL: '/csdn/sendverify',
         timeout: 20000,
       });
       
@@ -1484,15 +1822,11 @@ export default {
     },
     mailChange() {
       // console.log(this.ruleForm.email);
-      if(this.ruleForm.email.length < 7) {
-        ElMessage("邮箱格式不正确！");
-        return false;
-      }
       let r = this.ruleForm.email;
-      // console.log(r);
-      let ret = r.indexOf("@");
-      if( ret < 0) {                              // || r.indexOf(".com") < 0
-        ElMessage("邮箱格式不正确！");
+      // 用户名（@前的部分）至少7个字符：系统会把 <=6 的短名按匿名访客处理，短名注册后将无法登录
+      let at = r.indexOf("@");
+      if( at < 7 ) {
+        ElMessage("用户名（@前的部分）至少7个字符，且需包含@！");
         return false;
       }
       return true;
@@ -1503,7 +1837,7 @@ export default {
         && this.sendret){
         ElMessage("passed!");
         const instance = axios.create({
-          baseURL: 'http://localhost:7009/csdn/register',
+          baseURL: '/csdn/register',
           timeout: 20000,
         });
         
@@ -1534,8 +1868,15 @@ export default {
       }
     },
     async submitLoginForm() {
+      // 密码先做 sha256 再传输（与 member.txt 存储值一致；后端登录接口不再二次哈希）
+      const textEncoder = new TextEncoder();
+      const message = textEncoder.encode(this.LoginForm.password);
+      const messageDigest = await crypto.subtle.digest('SHA-256', message);
+      const hexDigest = Array.from(new Uint8Array(messageDigest))
+        .map((x) => x.toString(16).padStart(2, '0'))
+        .join('');
       const instance = axios.create({
-        baseURL: 'http://localhost:7009/csdn/login',
+        baseURL: '/csdn/login',
         timeout: 20000,
       });
       // console.log(this.search_param);
@@ -1545,20 +1886,25 @@ export default {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest'
         },
-        data: {'LoginForm' : this.LoginForm},
-      }).then((response) => {
+        data: {'LoginForm' : {'username': this.LoginForm.username, 'password': hexDigest}},
+      }).then(async (response) => {
         let result = response.data;
         if(result.ret) {
           let mail = result.mail;
           let password = result.password;
           let username = result.username;
           ElMessage("登录成功了的!");
-          // let expiresdate = new Date(new Date().getTime() + 60 * 24 * 60 * 60 * 1000);
-          let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+          // cookie 有效期统一配置在 mysite/site_config.json 的 cookie_login_days
+          let expiresdate = new Date(new Date().getTime() + this.cookieDays * 24 * 60 * 60 * 1000);
           // console.log('99999999999', document.cookie, mail, password);
           Cookies.set("mail", mail, { expires: expiresdate });
           Cookies.set("password", password, { expires: expiresdate });
           Cookies.set("username", username, { expires: expiresdate });
+          let qx = parseInt(result.quanxian);
+          if(!isNaN(qx)) {
+            Cookies.set("quanxian", qx, { expires: expiresdate });
+            this.isAdmin = isAdminQuanxian(qx);
+          }
 
           Cookies.remove("csdnReset");
           Cookies.set("csdnReset", 1, { expires: expiresdate });
@@ -1586,13 +1932,13 @@ export default {
           index.innerHTML = username + "的个人页面";
 
           this.dialogLoginVisible = false;
-          // this.dialogLogOutVisible = false;
-          // this.LOGINVisible = true;
+          // let LOGINVisible = true;
           // this.REGISTERVisible = true;
+          this.logined = true;
           this.logoutbutton = false;
           this.loginbutton = true;
           this.registerbutton = true;
-          
+
           this.nicknamestart = username;
           this.zhihushow = false;
 
@@ -1611,21 +1957,25 @@ export default {
           // if(ll > 0) {
           //   allchild.removeChild(allchild.children[4]);
           // }
-          // location.reload();
-          // this.$router.push({ path: '/' + mail});
-          window.location.replace("/" + mail);
-          // location.reload();
+          // 仅改 hash 的 location.replace 不会整页刷新：会先走 SPA 导航，
+          // 再被 $route 监听里的 reloadIfUserChanged 强制 reload，双重导航卡死页面。
+          // 改为纯 SPA 跳转并提前同步 premail，避免触发强制 reload
+          Cookies.set("premail", mail, { expires: expiresdate });
+          await this.$router.push({ path: '/' + mail });
           this.returnback = true;
+          window.location.reload();
         } else {
           ElMessage("登录失败了的！");
         }
       });
       // this.$alert("登录以后请点击上方的【重置】按钮，获取个人资料！");
     },
-    logout() {
+    async logout() {
       Cookies.remove("mail");
       Cookies.remove("password");
       Cookies.remove("username");
+      Cookies.remove("quanxian");
+      this.isAdmin = false;
       Cookies.remove("csdndetail_reload");
       Cookies.remove("csdn");
       Cookies.remove("csdnpage");
@@ -1638,7 +1988,8 @@ export default {
       Cookies.remove("zhihusearch");
       Cookies.remove("videosearch");
 
-      let expiresdate = new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      this.logined = false;
+      let expiresdate = new Date(new Date().getTime() + getCookieDays() * 24 * 60 * 60 * 1000);
       Cookies.remove("csdnReset");
       Cookies.set("csdnReset", 1, { expires: expiresdate });
       Cookies.remove("thinkReset");
@@ -1658,7 +2009,8 @@ export default {
 
       let index = document.getElementById("indexHtmlTitle")
       index.innerHTML = "邹九的个人页面";
-      // this.nicknamestart = "邹九";
+      // 恢复 banner 标题，避免登出后仍显示上一用户的昵称
+      this.nicknamestart = "邹九";
       this.zhihushow = true;
       
       // let zhihu = "<el-menu-item @click=\"clickzhihu\" id=\'el-menu-item-6\'> 知乎文篇 </el-menu-item>";
@@ -1669,12 +2021,15 @@ export default {
       if(img) {
         img.hidden = false;
       }
-      // this.$router.push({ path: '/'});
-      // location.reload();
       this.returnback = true;
-      window.location.replace("/");
-      // location.reload();
-      // this.$router.push({ path: '/'});
+      // 登出后回到公共主页：纯 SPA 跳转并同步 premail，
+      // 避免 hash 导航后再被 reloadIfUserChanged 强制 reload 卡死
+      Cookies.set("premail", "homepage@gmail.com", { expires: expiresdate });
+      await this.$router.push({ path: '/homepage@gmail.com' });
+      // 背景配色/主题等页面状态是按登录用户渲染的，SPA 路由切换不会重置；
+      // premail 已同步为公共主页，这里整页刷新一次即可恢复公共默认外观
+      // window.location.replace(window.location.href);
+      window.location.reload();
     },
     resetForm() {
       this.ruleForm.pass = '';
@@ -1703,7 +2058,7 @@ export default {
         this.$router.push({ path: '/zhihu/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}})
       } else {
         // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/zhihu/homepage'}); //, query:{"currentpage": 1, "pagesize":20}
+        this.$router.push({ path: '/zhihu/homepage@gmail.com'}); //, query:{"currentpage": 1, "pagesize":20}
       }
     },
     async clickhome() {
@@ -1723,7 +2078,7 @@ export default {
         this.$router.push({ path: '/'+gu.urlmail});
       } else {  
         // this.$router.push("/zj");
-        this.$router.push("/homepage");
+        this.$router.push("/homepage@gmail.com");
       }
     },
     async clickbook() {
@@ -1743,7 +2098,7 @@ export default {
         this.$router.push({ path: '/book/'+gu.urlmail});
       } else {
         // this.$router.push({ path: '/book/zj'});
-        this.$router.push({ path: '/book/homepage'});
+        this.$router.push({ path: '/book/homepage@gmail.com'});
       }
     },
     async clickcsdn() {
@@ -1764,7 +2119,7 @@ export default {
         this.$router.push({ path: '/csdn/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}})
       } else {
         // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/csdn/homepage'}); //, query:{"currentpage": 1, "pagesize":20}
+        this.$router.push({ path: '/csdn/homepage@gmail.com'}); //, query:{"currentpage": 1, "pagesize":20}
       }
     },
     async clickthink() {
@@ -1784,7 +2139,7 @@ export default {
         this.$router.push({ path: '/think/'+gu.urlmail, query:{"currentpage": 1, "pagesize":9}});
       } else {
         // this.$router.push({ path: '/think/zj'});
-        this.$router.push({ path: '/think/homepage'});
+        this.$router.push({ path: '/think/homepage@gmail.com'});
       }
     },
     async clickvideo() {
@@ -1804,7 +2159,7 @@ export default {
         this.$router.push({ path: '/video/'+gu.urlmail, query:{"currentpage": 1, "pagesize":6}});
       } else {
         // this.$router.push({ path: '/video/zj'});
-        this.$router.push({ path: '/video/homepage'});
+        this.$router.push({ path: '/video/homepage@gmail.com'});
       }
     },
     async clicktravel() {
@@ -1824,7 +2179,7 @@ export default {
         this.$router.push({ path: '/travel/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}});
       } else {
         // this.$router.push({ path: '/travel/zj'});
-        this.$router.push({ path: '/travel/homepage'});
+        this.$router.push({ path: '/travel/homepage@gmail.com'});
       }
     },
     async clickcommon() {
@@ -1844,7 +2199,7 @@ export default {
         this.$router.push({ path: '/commonuse/'+gu.urlmail});
       } else {
         // this.$router.push({ path: '/commonuse/zj'});
-        this.$router.push({ path: '/commonuse/homepage'});
+        this.$router.push({ path: '/commonuse/homepage@gmail.com'});
       }
     },
     async clickeverydayimg() {
@@ -1853,18 +2208,21 @@ export default {
       await getusername(document.URL).then((response) => {
         gu = response;
       });
-      // let urlrul = document.URL;
-      // if(gu && gu.ret > 0) {
-      //   index = urlrul.indexOf(gu.mail);
-      // }
-      // if(gu && gu.ret > 0 && index < 0) {
-      //   this.$router.push({ path: '/everydayimg/' + this.findmail(urlrul)});
-      // }
       if(gu && gu.ret > 0) {
         this.$router.push({ path: '/everydayimg/'+gu.urlmail});
       } else {
-        // this.$router.push({ path: '/everydayimg/zj'});
-        this.$router.push({ path: '/everydayimg/homepage'});
+        this.$router.push({ path: '/everydayimg/homepage@gmail.com'});
+      }
+    },
+    async clickadmin() {
+      let gu;
+      await getusername(document.URL).then((response) => {
+        gu = response;
+      });
+      if(gu && gu.ret > 0 && isAdminQuanxian(gu.quanxian)) {
+        this.$router.push({ path: '/admin/' + gu.urlmail });
+      } else {
+        ElMessage("只有管理员才能访问管理页面！");
       }
     },
   },
@@ -1907,7 +2265,10 @@ html,body,#app{
   /* linear-gradient(rgba(0, 0, 255, 0.5), rgba(255, 255, 0, 0.5)), */
   /* background-image: url('/article/shengdan.png'); */
   /* background-image: url('/article/themeImg/anhei/csdn_anHei.png'); */
-  height: 50px;
+  /* 高度自适应：窄视口 toolbar 换行时 header 跟着变高，
+     避免固定 50px 导致第二行按钮溢出、遮挡下方内容 */
+  height: auto;
+  min-height: 50px;
 }
 .layout-container-demo .el-aside {
   /* color: var(--el-text-color-primary); */
@@ -1956,6 +2317,20 @@ html,body,#app{
 }
 .layout-container-demo .toolbar{
   color: #ffffff;
+  /* 任意视口宽度下允许换行，配合 header 自适应高度，不再遮挡按钮行 */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+}
+/* 顶栏右侧按钮组：注册/登录/登出/返回/铃铛一行靠右、间距一致 */
+.layout-container-demo .header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-right: 12px;
 }
 /*https://developer.mozilla.org/zh-CN/docs/Web/CSS/:active#%E8%A7%84%E8%8C%83*/
 a:link {
@@ -1997,5 +2372,94 @@ a:active {
 p:active {
   /* 激活段落 */
   background: #eee;
+}
+
+/* ============ 移动端 / 窄屏适配（手机、浏览器拖窄、窗口大小变化） ============ */
+.footer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .layout-container-demo {
+    height: auto;
+    min-height: 99vh;
+  }
+  .layout-container-demo .el-header {
+    height: auto;
+    min-height: 44px;
+    font-size: 16px;
+    padding: 0 4px;
+  }
+  .layout-container-demo .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 4px;
+  }
+  #headerTitle {
+    font-size: 16px !important;
+    margin-left: 4px !important;
+    margin-right: 4px !important;
+    margin-top: 4px !important;
+    flex: 1 1 auto;
+  }
+  /* 顶栏按钮（注册/登录/登出/返回）在窄屏下取消 40vh 的大 margin */
+  .layout-container-demo .toolbar > span {
+    margin-left: 4px !important;
+  }
+  /* 按钮组保持靠右，组内间距在窄屏下收紧 */
+  .layout-container-demo .toolbar > span.header-actions {
+    margin-left: auto !important;
+    gap: 6px;
+    padding-right: 6px;
+  }
+  /* 侧边栏收窄，菜单字号缩小 */
+  .layout-container-demo .el-aside {
+    width: 64px !important;
+    font-size: 14px;
+  }
+  .layout-container-demo .el-menu-item {
+    font-size: 13px !important;
+    height: 44px !important;
+    padding: 0 4px !important;
+    text-align: center;
+  }
+  /* 主题按钮上移，避免小屏下 23vh 留白过大 */
+  .layout-container-demo .el-aside .el-button {
+    margin-top: 8px !important;
+    margin-left: 4px !important;
+  }
+  /* 页脚备案信息小字号、可换行 */
+  .footer-bar,
+  .footer-bar a,
+  .footer-bar span {
+    font-size: 12px !important;
+    line-height: 18px !important;
+  }
+  .footer-bar > span,
+  .footer-bar > a {
+    margin-left: 6px !important;
+  }
+}
+@media (max-width: 480px) {
+  .layout-container-demo .el-aside {
+    width: 52px !important;
+  }
+  .layout-container-demo .el-menu-item {
+    font-size: 12px !important;
+  }
+}
+</style>
+
+<style>
+/* 全局（非 scoped）兜底：el-dialog 会 teleport 到 body，scoped 样式够不到；
+   手机端所有弹窗统一接近全屏宽，避免固定像素/百分比宽度溢出屏幕。
+   桌面端（>768px）不受影响，各视图自带的 min(…) 宽度依旧生效。 */
+@media (max-width: 768px) {
+  .el-dialog {
+    width: 95% !important;
+    max-width: 95% !important;
+  }
 }
 </style>
