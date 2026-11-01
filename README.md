@@ -8,6 +8,9 @@ A personal website built on **Vue 3 + Element Plus + Django**. Live demo: [http:
 - Book and video upload & playback (hls.js), Zhihu articles, idea fragments, guestbook, quick links, daily images
 - No database: users, articles, and settings are all stored in plain text files (txt / markdown)
 - Multi-user isolation: every registered user gets an independent `people/<username>/` data directory
+- **URL privacy**: emails never appear in URLs — every account is mapped to a random 36-digit numeric
+  uid (e.g. `/#/165984218734184801318416830165629911`), old email-form links are completely dead,
+  and all generated links use the uid (see 4.8)
 - Session persistence via js-cookie (30 days); registration, login, logout, and email-verification password reset
 - Built-in draft box on the article publishing page: save drafts, list drafts, re-edit, delete; drafts auto-cleared after publishing (see 4.4)
 - Article editor extras (see 4.5/4.6): **image management** — list/delete the images of an article or a fragment;
@@ -37,6 +40,7 @@ Personal_website_for_idea_markdown_article/
 ├── mysite/                 # Django backend
 │   ├── mysite/projectpaths.py  # Auto-locates the project root (no hardcoded absolute paths)
 │   ├── csdn/               # Articles + user registration/login/admin APIs
+│   ├── uidmap.py           # Email ↔ 36-digit uid mapping for URL privacy (persisted in uid_map.txt)
 │   ├── zhihu/ think/ video/ travel/ commonuse/ markdown_detail/ upload_video/
 │   └── manage.py
 ├── article/                # Shared data (member.txt user table, register.txt codes, articles, etc.)
@@ -158,7 +162,7 @@ The role field is an integer: `999999999` = site owner, `1000000` = super admin,
 
 ### 4.2 Admin Panel (admins)
 
-After logging in, admins see a **Manage** entry in the left menu (route `/admin/<username>`), which provides:
+After logging in, admins see a **Manage** entry in the left menu (route `/admin/<uid>`), which provides:
 
 - View all registered users (username, email, nickname, role, whether the data directory exists)
 - Create users (site owner / super admin only: create directly in the panel with email, username, and password)
@@ -211,6 +215,8 @@ The editor page (`src/views/csdn/post.vue`) offers two management dialogs for th
 Backend APIs: `/csdn/img_list`, `/csdn/img_delete`, `/csdn/history_list`, `/csdn/history_get`,
 `/csdn/history_delete`; auth uses the request's own login identity (mail + password), paths are
 realpath-confined to `people/`/`article/`, and regular users may only operate on their own directories.
+Deleting an article (or a fragment, see 4.6) from the detail page returns to the list and reloads the
+whole page, so the deleted entry disappears immediately instead of lingering in a stale list.
 
 ### 4.6 Fragment Detail Page: Image Management
 
@@ -238,6 +244,49 @@ editor scrolls the right preview in sync:
   finished loading (pending images awaited via `load`/`error` events); window resizes also rebuild
 - **Performance**: source-side pixels are measured with an off-screen mirror div styled exactly like
   the textarea; block splitting is a plain string scan
+
+### 4.8 URL Privacy: Email → UID Mapping
+
+URLs never expose emails (or phone-like prefixes). Every account is mapped to a random
+**36-digit numeric uid**, so user-space URLs look like `/#/165984218734184801318416830165629911`
+or `/#/think/<uid>?currentpage=1&pagesize=9` instead of containing the email.
+
+- Mapping module: `mysite/uidmap.py`, persisted in `mysite/uid_map.txt` (auto-created, thread-safe,
+  idempotent — a mapped email always gets the same uid back). On-disk layout is unchanged:
+  directories stay `people/<email>/`; only the URL layer is mapped, so all existing ownership checks
+  and statistics keep working
+- Uids are generated at **registration** and **admin user creation**; existing accounts are mapped on
+  first access (getusername / login / userlist). To map all existing accounts at once on the server
+  (optional, same Python env as Django):
+
+  ```bash
+  cd mysite
+  python3 manage.py shell -c '
+  import os, uidmap
+  from csdn import views as cv
+  member = os.path.join(os.path.abspath(cv.__file__ + "/../../"), "..", "article", "member.txt")
+  n = 0
+  for parts in cv._read_members(member)[1]:
+      mail = parts[1]
+      if mail and "@" in mail:
+          print(mail, "->", uidmap.mail_to_uid(mail))
+          n += 1
+  print("done:", n, "members mapped")
+  '
+  ```
+
+- `POST /csdn/getusername` returns three extra fields: `urluid` (the raw URL segment — the frontend
+  builds all links with it), `uid` (the logged-in user's own uid), `owneruid` (the site owner's uid,
+  used for anonymous/bare-domain fallback jumps)
+- **Old email-form URLs are completely dead**: the backend resolves an `@`-containing segment to
+  anonymous (no user data is returned), and the frontend redirects such links to the site owner's
+  homepage; user-space write guards compare the page owner (uid resolved to email) with the logged-in
+  identity, so ownership of articles / images / settings / think / video / travel is unaffected
+- Bare domain (`http://site/`, `/#`, `/#/`) jumps straight to the site owner's uid homepage — an
+  inline script in `index.html` (before the app boots, backed by a localStorage-cached uid) plus a
+  router-level redirect fallback
+- The site owner account is configurable via `site_owner_mail` in `mysite/site_config.json`
+  (default `homepage@gmail.com`)
 
 ## 5. Concurrency & Multi-user Notes
 

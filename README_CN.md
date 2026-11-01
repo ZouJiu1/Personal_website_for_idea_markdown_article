@@ -8,6 +8,9 @@
 - 支持图书、视频上传与播放（hls.js）、知乎文章、想法片段、游客留言、常用网站、每日图片
 - 不使用数据库：用户、文章、设置等全部保存在 txt / markdown 等文本文件中
 - 多用户隔离：每个注册用户拥有独立的 `people/<用户名>/` 数据目录，互不影响
+- **网址隐私**：网址中永不出现邮箱——每个账号映射为一个随机 36 位纯数字 uid
+  （如 `/#/165984218734184801318416830165629911`），旧邮箱形态链接彻底失效，
+  站内所有生成的链接均使用 uid（见 4.8）
 - js-cookie 维持登录态（30 天），支持注册、登录、登出、邮箱验证码改密
 - 文篇发布页内置草稿箱：保存草稿、草稿箱列表、再次编辑、删除，发布成功自动清稿（见 4.4）
 - 文篇编辑页附加能力（见 4.5/4.6）：**图片管理**——列出/删除文篇或片段的配图，删除时自动剥离
@@ -36,6 +39,7 @@ Personal_website_for_idea_markdown_article/
 ├── mysite/                 # Django 后端
 │   ├── mysite/projectpaths.py  # 项目根目录自动定位（无需硬编码绝对路径）
 │   ├── csdn/               # 文篇 + 用户注册/登录/管理接口
+│   ├── uidmap.py           # 邮箱 ↔ 36 位 uid 映射（网址隐私，持久化在 uid_map.txt）
 │   ├── zhihu/ think/ video/ travel/ commonuse/ markdown_detail/ upload_video/
 │   └── manage.py
 ├── article/                # 公共数据（member.txt 用户表、register.txt 验证码、文章等）
@@ -156,7 +160,7 @@ nginx -s stop                  # 停止
 
 ### 4.2 注册管理页面（管理员）
 
-管理员登录后，左侧菜单会出现 **管理** 入口（路由 `/admin/<用户名>`），功能包括：
+管理员登录后，左侧菜单会出现 **管理** 入口（路由 `/admin/<uid>`），功能包括：
 
 - 查看全部注册用户（用户名、邮箱、昵称、权限、数据目录是否存在）
 - 新建用户（仅站长 / 超级管理员：直接在管理页面创建，需提供邮箱、用户名与密码）
@@ -208,6 +212,8 @@ python3 genpassword.py --pw 新密码
 后端接口：`/csdn/img_list`、`/csdn/img_delete`、`/csdn/history_list`、`/csdn/history_get`、
 `/csdn/history_delete`；鉴权使用请求自带的登录身份（mail + password），路径 realpath 限制在
 `people/`/`article/` 内，普通用户仅能操作本人目录。
+在详情页删除整篇文篇（或片段，见 4.6）后会返回列表并整页刷新，被删条目立即消失，
+不会残留在旧列表里。
 
 ### 4.6 片段详情页：图片管理
 
@@ -228,6 +234,45 @@ python3 genpassword.py --pw 新密码
 - **时机**：渲染完成、KaTeX 渲染完、图片全部加载完成后重建锚点（未加载完的图片等
   `load/error` 事件）；窗口 resize 也会重建
 - **性能**：源侧像素用与 textarea 同样式的离屏镜像 div 测量，块划分纯字符串扫描
+
+### 4.8 网址隐私：邮箱 → uid 映射
+
+网址中永不出现邮箱（或形似手机号的前缀）。每个账号映射为一个随机 **36 位纯数字 uid**，
+用户空间网址形如 `/#/165984218734184801318416830165629911` 或
+`/#/think/<uid>?currentpage=1&pagesize=9`，不再包含邮箱。
+
+- 映射模块：`mysite/uidmap.py`，持久化在 `mysite/uid_map.txt`（自动创建、线程安全、
+  幂等——已映射的邮箱永远返回同一个 uid）。磁盘布局不变：目录仍是 `people/<邮箱>/`，
+  仅在 URL 层做映射，既有的归属校验与统计全部沿用
+- **注册**与**管理员新建用户**时即生成 uid；存量账号在首次被访问时
+  （getusername / login / userlist）自动补建。要在服务器上一次性为全部存量账号建映射
+  （可选，用与 Django 相同的 Python 环境执行）：
+
+  ```bash
+  cd mysite
+  python3 manage.py shell -c '
+  import os, uidmap
+  from csdn import views as cv
+  member = os.path.join(os.path.abspath(cv.__file__ + "/../../"), "..", "article", "member.txt")
+  n = 0
+  for parts in cv._read_members(member)[1]:
+      mail = parts[1]
+      if mail and "@" in mail:
+          print(mail, "->", uidmap.mail_to_uid(mail))
+          n += 1
+  print("done:", n, "members mapped")
+  '
+  ```
+
+- `POST /csdn/getusername` 新增三个字段：`urluid`（URL 原始用户段——前端建链接一律用它）、
+  `uid`（登录者自己的 uid）、`owneruid`（站长 uid，匿名/裸域回退跳转用）
+- **旧邮箱形态网址彻底失效**：后端把含 `@` 的段按匿名处理（不返回任何该用户数据），
+  前端把这类链接重定向到站长主页；用户空间写守卫按「页面主人（uid 还原为邮箱）与登录者
+  身份比对」判定，文篇/图片/设置/think/视频/旅行等的归属权限不受影响
+- 裸域名（`http://站点/`、`/#`、`/#/`）直达站长 uid 主页——`index.html` 内联脚本
+  （应用启动前，localStorage 缓存 uid 兜底）+ 路由层 redirect 兜底
+- 站长账号可在 `mysite/site_config.json` 的 `site_owner_mail` 配置
+  （默认 `homepage@gmail.com`）
 
 ## 5. 并发与多用户说明
 
