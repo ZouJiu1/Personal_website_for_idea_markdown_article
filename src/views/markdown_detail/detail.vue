@@ -252,7 +252,9 @@ export default {
         owner = m[1];
       }
       if (!owner && this.$route.params.id) {
-        owner = this.$route.params.id;
+        // uid URL 下 params.id 是 36 位 uid：等于自己的 uid 时视 owner 为自己
+        owner = this.$route.params.id === (localStorage.getItem('my_uid') || '')
+          ? (Cookies.get("mail") || '') : this.$route.params.id;
       }
       const my = Cookies.get("mail");
       this.canManage = (owner && my === owner) || isAdminQuanxian(Cookies.get("quanxian"));
@@ -714,10 +716,11 @@ export default {
         // }
         if(gu && gu.ret > 0) {
           // this.$router.push({ path: '/csdn/'+gu.urlmail}); // query:{"currentpage": 1, "pagesize":20}
-          this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+          // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
+          this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         } else {
           // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
-          this.$router.push({ path: '/csdn/homepage@gmail.com'}); //, query:{"currentpage": 1, "pagesize":20}
+          this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')}); //, query:{"currentpage": 1, "pagesize":20}
         }
         // this.$router.go(-1);
       }
@@ -753,6 +756,9 @@ export default {
         if(response.data.ret > 0) {
           ElMessage.warning("已经删除了的！");
           this.PrePage();
+          // 先切回列表再整页刷新：SPA 内导航不会重新拉取列表数据，
+          // 删除后必须 reload 才能立即反映结果
+          setTimeout(() => { window.location.reload(); }, 300);
         } else if(response.data.ret == 0) {
           ElMessage.warning("删除报错了的！");
           return false;

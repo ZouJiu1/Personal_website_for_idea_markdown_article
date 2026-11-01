@@ -7,7 +7,7 @@
     "隐私提醒：smtp_password 是邮箱授权码/密码，明文存放于本文件，请勿把本文件提交到公开仓库。"
   ],
   "_traveler_dedup_window_seconds": "访客统计去重窗口（秒）。含义：同一访客 IP 在窗口内重复访问同一用户主页，访客数只加 1。怎么改：改数字，保存即生效。后果：改大（如 86400=一整天）→ 同 IP 一天内反复来访只计 1 次，增长变慢；改小（如 10）→ 刷新几次就计一次，访客数虚高且写文件变频繁。",
-  "traveler_dedup_window_seconds": 600,
+  "traveler_dedup_window_seconds": 300,
   "_traveler_cleanup_seconds": "内存访客表清理阈值（秒）。含义：内存里记录的「IP:最后访问时间」超过该时长即被清掉。怎么改：改数字，保存即生效。后果：改大 → 内存占用略增（无功能影响）；改小 → 内存更省，但同一 IP 在去重窗口结束后仍可能被提前遗忘。必须不小于 traveler_dedup_window_seconds，否则去重窗口部分失效。",
   "traveler_cleanup_seconds": 3600,
   "_traveler_baseline": "访客数展示下限。含义：无论文件里存多少，对外显示最低也是这个数（新用户首次被访问时也会直接跳到该值起步）。怎么改：改数字，保存即生效。后果：改大 → 所有用户访客数显得更多；改小 → 已被撑到高值的用户不受影响（只抬不压），新用户从低值起步。",
@@ -29,7 +29,7 @@
   "_smtp_user": "发件邮箱账号。含义：邮件的「发件人」，同时用于 SMTP 登录。怎么改：改字符串，保存即生效。后果：改成新邮箱后必须同步修改 smtp_password 为该邮箱的授权码，否则登录失败、邮件发不出；历史通知邮件的发件人显示也会随之改变。",
   "smtp_user": "1069679911@qq.com",
   "_smtp_password": "SMTP 授权码（数据下载邮件通知 mailsend 使用，QQ 邮箱 smtp.qq.com）。怎么改：QQ 邮箱设置-账号-POP3/SMTP 生成新授权码后替换。后果：配置错误时数据下载请求仍会记录到 download.txt，仅邮件发送失败。敏感配置：不对外公开。",
-  "smtp_password": "1234567890",
+  "smtp_password": "12312312312",
   "_site_domain": "站点对外链接。含义：写在验证码邮件正文里的网站地址，供收件人点击。怎么改：改字符串，保存即生效。后果：填错域名 → 邮件里的链接打不开正确的站点；建议带协议头（http:// 或 https://）。仅影响邮件文案，不影响站点实际运行。",
   "site_domain": "http://zoujiu.com.cn",
   "_site_name": "站点名称（邮件主题前缀）。含义：验证码/通知邮件的标题前缀，如「zoujiu.com.cn注册验证数字串」。怎么改：改字符串，保存即生效。后果：改成新站名后，用户收到的邮件标题随之变化；仅影响展示，不影响功能。",
@@ -66,6 +66,8 @@
   "short_name_guard_max_length": 6,
   "_min_username_prefix_length": "注册用户名最小长度。含义：注册时邮箱 @ 前缀的长度下限，短于该值注册被拒（返回 ret=-6 及提示文案）。怎么改：改数字，保存即生效（提示文案中的数字会自动跟随）。后果：改大 → 注册门槛提高，更短的邮箱无法注册；改小 → 短名可注册，但若短于 short_name_guard_max_length，将永远无法登录（被短名守卫按匿名处理），因此该值必须始终大于 short_name_guard_max_length。",
   "min_username_prefix_length": 7,
+  "_site_owner_mail": "站长邮箱。含义：URL uid 化方案中，站长（homepage@gmail.com）的 uid 用于裸域名重定向和匿名用户回退跳转（getusername 返回 owneruid 字段）。怎么改：换站长账号时改成新站长完整邮箱，保存即生效。后果：改错 → 匿名回退会跳到不存在的用户页（按匿名兜底处理）。",
+  "site_owner_mail": "homepage@gmail.com",
   "_server_request_queue_size": "开发服务器并发等待队列长度（listen backlog）。含义：Django 开发服务器同时可挂起的未 accept 连接数，高并发（压测）下防止内核直接重置连接。怎么改：改数字；本项仅在服务启动时读取，修改后必须重启 Django 才生效。后果：改大 → 高并发下连接被拒更少、内存略增；改小 → 100 并发以上场景约有百分比级的连接被内核 reset。注意：这是 runserver 开发服务器的参数，生产部署（gunicorn/nginx）时无效。",
   "server_request_queue_size": 128,
   "_default_currentpage": "列表页默认页码。含义：csdn/think/travel/video 四个列表接口在请求未带 currentpage 时使用的页码。怎么改：改数字，保存即生效。后果：改大 → 不带页码参数的请求直接从后面页开始展示（一般保持 1；前端总是显式传参，此项只是后端兜底）。",
@@ -91,6 +93,12 @@
   "music_enabled": true,
   "_music_api": "Meting 协议 API 地址。含义：把歌单/歌曲解析成可播放音频链接的后端接口。怎么改：改字符串，保存即生效（下次进站生效）。后果：公共 API 不可用时可在服务器自建 Meting API 并把地址换成本站；填错 → 歌单加载不出，页面其余功能不受影响。",
   "music_api": "https://api.i-meto.com/meting/api",
+  "_music_apis": "Meting 协议 API 端点列表（多端点容灾）。含义：后端 /csdn/meting 代理按数组顺序逐个尝试这些解析 API，某端点挂掉/超时/返回异常自动换下一个，全部失效才报错（前端再切换播放源）。怎么改：增删数组元素或调整顺序（第一个为默认端点），保存即生效；删除整个键则回退 siteconfig.py 内置 3 端点默认值，列表为空数组时回退旧的单端点 music_api。后果：公共 API 都不稳定时可在服务器自建 Meting API 放到首位；填错地址只会导致该端点被跳过。",
+  "music_apis": [
+    "https://api.injahow.cn/meting/",
+    "https://api.i-meto.com/meting/api",
+    "https://meting.qjqq.cn/api"
+  ],
   "_music_server": "音乐平台。含义：歌单来源平台：netease（网易云）、tencent（QQ 音乐）、kugou（酷狗）、kuwo（酷我）。怎么改：改字符串，刷新生效。后果：换平台时 music_id 也要换成该平台的编号，否则歌单加载失败。",
   "music_server": "netease",
   "_music_type": "曲目类型。含义：music_id 的解析方式：playlist（歌单）、song（单曲）、album（专辑）、search（按关键字搜索）。怎么改：改字符串，刷新生效。后果：类型与 music_id 不匹配时歌单加载失败。",
@@ -104,6 +112,24 @@
       "server": "netease",
       "type": "playlist",
       "id": "3778678"
+    },
+    {
+      "name": "QQ音乐·歌单一",
+      "server": "tencent",
+      "type": "playlist",
+      "id": "7256910913"
+    },
+    {
+      "name": "酷狗·歌单一",
+      "server": "kugou",
+      "type": "playlist",
+      "id": "888877"
+    },
+    {
+      "name": "酷我·歌单一",
+      "server": "kuwo",
+      "type": "playlist",
+      "id": "1068499"
     },
     {
       "name": "网易云·新歌榜",

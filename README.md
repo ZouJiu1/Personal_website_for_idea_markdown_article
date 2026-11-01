@@ -10,9 +10,15 @@ A personal website built on **Vue 3 + Element Plus + Django**. Live demo: [http:
 - Multi-user isolation: every registered user gets an independent `people/<username>/` data directory
 - Session persistence via js-cookie (30 days); registration, login, logout, and email-verification password reset
 - Built-in draft box on the article publishing page: save drafts, list drafts, re-edit, delete; drafts auto-cleared after publishing (see 4.4)
+- Article editor extras (see 4.5/4.6): **image management** — list/delete the images of an article or a fragment;
+  deleting an image strips its references from the body and re-renders the preview; **historical documents** —
+  every publish keeps a timestamped copy, readable (rendered), restorable into the editor, and deletable,
+  with the current version protected
+- Login dialog: press Enter in either input to log in (same as clicking the login button)
 - Built-in admin panel: view user list, create users, reset passwords, change roles, delete users
 - Built-in Live2D widget: 23 open-source characters in 9 categories, per-account memory (works across devices),
-  automatic holiday greetings on lunar-calendar festivals (Spring Festival / Mid-Autumn / New Year's Eve, etc.)
+  all-day greetings + full-screen mouse-interactive particle effects on 29 Chinese & international festivals,
+  plus everyday effects on normal days (900 shape families / 10000 variants)
 - Built-in music player (APlayer + Meting NetEase playlist, proxied by Django), floating above the widget on desktop
 - Both the widget and the music player are draggable and dockable: drag to reposition (persisted in
   localStorage and restored on reload); double-click the widget / the player cover to reset
@@ -117,6 +123,8 @@ DJANGO_DEBUG=0 python3 manage.py runserver localhost:7009
 - Passwords are only stored in salted format (`sha256s$<salt>$<digest>`); the legacy bare-sha256 format is fully
   deprecated and always fails verification — legacy users must re-register (see 4.1)
 - Upload APIs only accept image extensions (jpg/jpeg/png/bmp/gif) and file names are stripped of path components
+- nginx serves `/article` and `/people` with `Cache-Control: no-cache` (revalidation): unchanged files still
+  hit a cheap 304, while images deleted via image management turn 404 immediately — no stale browser cache
 - Delete APIs and admin proxy-edit/proxy-upload are confined to the project's `people/` and `article/` directories to prevent path traversal
 - In production, run Django with multiple gunicorn/uwsgi workers and apply rate limiting at nginx (see "Concurrency & Multi-user Notes")
 
@@ -186,6 +194,51 @@ Backend APIs: `/csdn/save_draft`, `/csdn/draft_list`, `/csdn/draft_get`, `/csdn/
 auth is identical to other write APIs (mail + password verified against member.txt);
 draft directories are isolated per user and draft IDs accept digits only to prevent path injection.
 
+### 4.5 Article Editor: Image Management & Historical Documents
+
+The editor page (`src/views/csdn/post.vue`) offers two management dialogs for the article owner (admins too):
+
+- **Image management**: lists the images in the current article directory (thumbnail, size, upload time);
+  deleting an image warns first if it is referenced by the body, then automatically strips the references
+  (`<img src=...>` / `![...](...)`) from the editor content and re-renders the preview, so a deleted image
+  disappears immediately instead of lingering via browser cache; re-publish to apply to the live article
+- **Historical documents**: every publish keeps a timestamped Markdown copy in the article directory;
+  the dialog lists all versions (the current one is tagged "current" and cannot be deleted) and supports:
+  - **Read**: renders the chosen version in a dialog with the same preview pipeline (KaTeX, image paths rewritten)
+  - **Restore**: loads that version's content back into the editor; re-publish to make it live
+  - **Delete**: removes old versions after confirmation (the backend always rejects the current one)
+
+Backend APIs: `/csdn/img_list`, `/csdn/img_delete`, `/csdn/history_list`, `/csdn/history_get`,
+`/csdn/history_delete`; auth uses the request's own login identity (mail + password), paths are
+realpath-confined to `people/`/`article/`, and regular users may only operate on their own directories.
+
+### 4.6 Fragment Detail Page: Image Management
+
+The fragment detail page (`src/views/think_detail/tkdetail.vue`) offers the same image management dialog
+(fragment owner / admins): list and delete the images of the current fragment directory; deleting an image
+that is referenced by the fragment body warns first and strips the reference (submit the modification to
+apply). Backend APIs: `/think/img_list`, `/think/img_delete`, with the same realpath confinement and
+per-user isolation.
+
+### 4.7 Editor Page: Editor/Preview Scroll Sync
+
+On the editor page (`src/views/csdn/post.vue`), with the "跟随" (follow) checkbox on, scrolling the left
+editor scrolls the right preview in sync:
+
+- **Per-block paired anchors**: the source Markdown is split into blocks (paragraphs / headings /
+  fenced code / `$$` math blocks / lists / quotes / tables / rules), and the preview's top-level
+  rendered blocks are paired one-by-one in order, producing a "source scrollTop px → preview
+  scrollTop px" anchor table with piecewise-linear interpolation; height mismatches from headings,
+  image loading, LaTeX formula rendering, and code highlighting are all corrected by the next block
+  anchor instead of a naive whole-page ratio
+- **Reliability fallbacks**: if source and preview block counts diverge too much (renderer
+  merging/splitting blocks), it falls back to heading-only anchors, and failing that to the
+  whole-page proportional mapping; anchors must be strictly monotonic to avoid jumps
+- **Timing**: anchors rebuild after rendering, after KaTeX rendering, and after all images have
+  finished loading (pending images awaited via `load`/`error` events); window resizes also rebuild
+- **Performance**: source-side pixels are measured with an off-screen mirror div styled exactly like
+  the textarea; block splitting is a plain string scan
+
 ## 5. Concurrency & Multi-user Notes
 
 - Design targets: up to 1,000 concurrent users and 100 requests per second
@@ -204,23 +257,64 @@ draft directories are isolated per user and draft IDs accept digits only to prev
   (all / male / female / cats / dogs / birds / panda / anime / history & deities)
 - Widget toolbar: 🎵 music / 💬 chat / ⚙️ choose character / 🔄 switch / 📷 photo / ✖️ hide
 - **Draggable & dockable**: drag anywhere on the widget to move it (toolbar buttons excluded); the position is
-  persisted in localStorage and survives reloads; double-click resets it to the default bottom-right corner
+  persisted in localStorage and survives reloads; double-click resets it to the default bottom-right corner;
+  on window resize / browser zoom a dragged position is clamped back into the viewport (the remembered spot
+  is restored when the window grows again)
 - Character priority: account setting (`/csdn/get_widget`) > local record (localStorage) >
   day/night default (izumi from 20:00–8:00 next day, haruto otherwise)
 - Adding a custom character: put the model directory in `public/live2d/model/<id>/` (entry named `index.json`),
   then register `{id, name, category, desc}` in `model_list.json`
-- Lunar festival greetings: on load, the lunar date is derived from the solar date; when it hits a festival
-  (Spring Festival / Lantern / Longtaitou / Shangsi / Duanwu / Qixi / Zhongyuan / Mid-Autumn / Chongyang / Laba / Xiaonian / New Year's Eve, dynamically detected),
-  the greeting replaces the time-of-day welcome and joins the widget's random chat pool; leap months are excluded
+- **Festival system (29 Chinese & international festivals, all-day)**: lunar festivals (Renri / Lantern /
+  Shangsi / Duanwu / Qixi / Zhongyuan / Mid-Autumn / Chongyang / Xiayuan / Laba / Xiaonian / New Year's Eve /
+  Spring Festival; she-ri and sanfu derived from ganzhi) + solar festivals (New Year's Day / Labor Day /
+  National Day / Qingming) + international ones (Valentine's / Halloween / Thanksgiving / Christmas /
+  US Independence Day); greetings fire multiple times a day — one random line on load plus a 50% chance to
+  join each idle-chat batch; festival windows: Spring Festival day 1–9, National Day 7 days, Labor Day 5 days,
+  most others 3 days, Qixi / Valentine's / Chongyang / New Year's Eve single-day; 2020 deduplicated lines
+  (200 each for Spring Festival & National Day)
+- **Festival full-screen effects**: each festival has its own effect pool (12+ for regular festivals, 20 for
+  New Year's Day & Mid-Autumn, 40 for Spring Festival & National Day); effects stay all day across the
+  viewport, one random effect on load and a new random one every 10 minutes; luminous elements are drawn
+  additively so overlaps glow; festival effects are always on and cannot be disabled
+- **Everyday effects (non-festival, 10000 variants)**: 7032 base elements (900 shape families — the
+  first 20 hand-drawn families keep the old g1~g1000 numbering, the other 880 are procedural curve
+  families: Gielis superformula, rose curves, star polygons, hypo/epicycloids, Lissajous figures,
+  Maurer roses, spirals, golden-angle seed heads, plus themed shapes such as lightning bolts, DNA
+  double helices, benzene rings & molecules, atomic orbits, wave packets, constellations, pixel grids,
+  butterfly curves, Cassini ovals, lemniscates, knots, teardrops, clocks & gears, arch bridges,
+  circuit traces, abacuses, function plots, prisms, apples, galaxies, compasses, honeycombs, snow
+  crystals, mandalas, pinwheels, sprouts and cells; 109 families carry a nested two-layer param) ×
+  8 palettes × 5 speeds × 3 sizes × 4 densities; curves are baked into cached Path2D objects and
+  28 luminous families blend additively; all-day, one random variant on load, rotating every
+  10 minutes; 94 memorable days (Newton / Tesla / Maxwell / Marie Curie / Einstein / von Neumann /
+  Yuan Longping / Tu Youyou etc. scientist anniversaries and world days like World Water Day) bias
+  the element choice semantically — Tesla → lightning, chemists → benzene, physicists → atoms,
+  mathematicians → function plots / abacuses / pixel grids, Mao Yisheng → arch bridges, Newton →
+  prism & apple, astronomers → constellations & galaxies, biologists → cells / DNA / butterflies;
+  can be toggled in the theme panel
+- **Mouse interaction**: particles are gently pushed away as the cursor sweeps by (the faster the
+  cursor moves, the stronger the push), nearby particles light up and spin faster; clicking sends
+  out a ripple push-wave (with the firework effect, a burst explodes right at the click point)
+- **Theme panel config**: festival-effect size slider (0.5–4×, default 1.9); everyday-effects toggle; manual
+  selection of the everyday effect's element / palette / speed / size / density (any of them can stay
+  random); settings persist in localStorage and apply instantly
+- **Hide & restore**: click ✖️ to collapse the widget and a fully visible vertical 【看 板 郎】 tab appears
+  at the bottom-right; click the tab to bring it back
+- **Robustness**: the 600K-char tips corpus is preloaded into memory on page load and re-fetched
+  automatically if it ever goes missing; if the browser reclaims the WebGL context after long idling,
+  the model reloads itself so the character never disappears; idle chat shows 3 random lines at a time,
+  with the bubble duration scaled to the text length
 
 ### 6.2 Music Player (APlayer + Meting multi-source failover)
 
 - Player module `src/music.js` (invoked by `initMusic()` in `src/main.js`); APlayer fixed mode floats above the widget
 - **Draggable & dockable**: drag the player cover to move the whole player; the position is persisted in
-  localStorage and survives reloads; double-click the cover to reset to the default bottom-right corner
+  localStorage and survives reloads; double-click the cover to reset to the default bottom-right corner;
+  on window resize / browser zoom a dragged position is clamped back into the viewport, and the default
+  position/width adapt on narrow viewports (no overflowing the screen left edge)
 - Multi-source failover: the `music_sources` list in `mysite/site_config.json` forms an ordered failover chain — **the first working source is used by default**; when a playlist fetch fails (502/empty/unplayable) or playback errors mid-stream (e.g. 403), the frontend automatically switches to the next source and resumes playing; if all sources fail it stops and logs a console warning
-- Sources are configurable: edit the `music_sources` array (fields `name`/`server`/`type`/`id`; netease/tencent/kugou/kuwo supported) — takes effect after a refresh; deleting the key falls back to the 3 built-in NetEase playlists in `siteconfig.py`, and an empty array falls back to the legacy single-source fields `music_server`/`music_type`/`music_id`
-- Meting requests are proxied through the Django endpoint `/csdn/meting` (with retries) to avoid direct-browser blocking/cors issues
+- Sources are configurable: edit the `music_sources` array (fields `name`/`server`/`type`/`id`; netease/tencent/kugou/kuwo supported) — takes effect after a refresh; the defaults span 4 platforms (NetEase / QQ Music / Kugou / Kuwo) so a single platform outage does not kill playback; deleting the key falls back to the built-in cross-platform list in `siteconfig.py`, and an empty array falls back to the legacy single-source fields `music_server`/`music_type`/`music_id`
+- Multi-endpoint API failover: the Django proxy `/csdn/meting` tries the `music_apis` endpoints in order (each with retries; timeouts / error pages / non-JSON responses cause a skip to the next endpoint) before returning 502 — the frontend then switches to the next playback source; deleting `music_apis` falls back to the single legacy `music_api`
 - The widget's 🎵 button toggles play/pause; when a song starts, the widget announces it in a speech bubble
 
 See [readme.txt](./readme.txt) for more details (customizations relative to the upstream crowya/live2d, scripts, easter eggs, etc.).

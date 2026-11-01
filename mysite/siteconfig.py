@@ -65,6 +65,9 @@ DEFAULTS = {
     'short_name_guard_max_length': 6,       # @前缀长度 <= 该值按匿名访客处理
     'min_username_prefix_length': 7,        # 注册时 @前缀最小长度
 
+    # URL uid 化（csdn/views.py getusername / uidmap.py）
+    'site_owner_mail': 'homepage@gmail.com',  # 站长邮箱：裸域名重定向/匿名回退跳转到站长 uid
+
     # 开发服务器并发队列（manage.py）
     'server_request_queue_size': 128,       # socketserver listen backlog
 
@@ -81,15 +84,25 @@ DEFAULTS = {
 
     # 音乐播放器（src/music.js，APlayer fixed 模式 + Meting 协议在线歌单）
     'music_enabled': True,
-    'music_api': 'https://api.i-meto.com/meting/api',  # Meting 协议 API（可换自建）
+    'music_api': 'https://api.i-meto.com/meting/api',  # Meting 协议 API 单端点（music_apis 未配置时回退用）
+    # Meting 协议 API 多端点容灾列表：后端 meting_proxy 按顺序逐个尝试，
+    # 某端点挂掉/返回异常自动换下一个，全部失效才报 502（前端再切换播放源）
+    'music_apis': [
+        'https://api.injahow.cn/meting/',
+        'https://api.i-meto.com/meting/api',
+        'https://meting.qjqq.cn/api',
+    ],
     'music_server': 'netease',        # 音乐平台：netease/tencent/kugou/kuwo
     'music_type': 'playlist',         # music_id 解析类型：playlist/song/album/search
     'music_id': '3778678',            # 默认：网易云音乐热歌榜（旧单源字段，music_sources 为空时兜底）
     # 多播放源容灾列表：按顺序尝试，默认用第一个；某源失效自动切换下一个（前端 src/music.js）
+    # 跨平台配置，单一平台接口故障不影响整体播放
     'music_sources': [
         {'name': '网易云·热歌榜', 'server': 'netease', 'type': 'playlist', 'id': '3778678'},
+        {'name': 'QQ音乐·歌单一', 'server': 'tencent', 'type': 'playlist', 'id': '7256910913'},
+        {'name': '酷狗·歌单一', 'server': 'kugou', 'type': 'playlist', 'id': '888877'},
+        {'name': '酷我·歌单一', 'server': 'kuwo', 'type': 'playlist', 'id': '1068499'},
         {'name': '网易云·新歌榜', 'server': 'netease', 'type': 'playlist', 'id': '3779629'},
-        {'name': '云音乐·经典榜', 'server': 'netease', 'type': 'playlist', 'id': '60198'},
     ],
     # SMTP 授权码（downloadall 数据下载邮件通知用）；敏感配置，不进 PUBLIC_KEYS 公开白名单
     'smtp_password': 'qqaymrpfctvlbcif',

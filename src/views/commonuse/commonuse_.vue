@@ -121,6 +121,7 @@ shiyanlou===https://www.shiyanlou.com/
 动手学RL===https://hrl.boyuai.com/chapter/ending
 LLM===https://www.nvidia.com/en-us/learn/learning-path/generative-ai-llm/?deeplink=courses--4#courses-item-7757ba5d77
 生成式人工智能（AIGC）之备案要求===https://mp.weixin.qq.com/s?__biz=MzkxMjYwMzMxMA==&mid=2247490590&idx=1&sn=6c7903c4fe11c6b3ee72fd4f6c5f5330&chksm=c0bb5752aefec38a64c30f9de1336dbff9760453d3b3735fcc63181cb11542f126a841843f67&mpshare=1&scene=23&srcid=1225RTXuAFdlUFvs7iGar1b4&sharer_shareinfo=9846e8a96b02f30dab883da3cf6ed782&sharer_shareinfo_first=9846e8a96b02f30dab883da3cf6ed782#rd
+音视频开发中文===https://avmedia.0voice.com/?id=311
 
 AI智能
 pytorch===https://pytorch.org/
@@ -141,6 +142,35 @@ tensorflow-github===https://github.com/tensorflow/tensorflow
 拼多多===https://www.pinduoduo.com/
 当当图书===https://www.dangdang.com
 阿里1688===https://www.1688.com/
+
+在线书籍
+鸟哥的Linux私房菜===https://vbird.org.cn/
+动手学Reinforce Learning===https://hrl.boyuai.com/
+
+论文阅读工具
+Zotero===https://www.zotero.org/
+scholaread===https://www.scholaread.cn/
+论文辅助阅读===https://aiplat.shanghaitech.edu.cn/16326/list.htm
+Scholarcy===https://library.scholarcy.com/try
+苏米笔记===https://suminote.com/zh
+EasyReader===https://easyreader.com.cn/
+GPT 学术优化===https://academic.chatpaper.top/
+Moonlight===https://www.themoonlight.io/zh
+司马阅===https://smartread.cc/?from=aigc.cn
+AI阅读AIGC工具导航===https://www.aigc.cn/favorites/ai-reading
+有道速读===https://read.youdao.com/#/home
+海鲸AI===https://www.atalk-ai.com/talk/docs
+
+AI打工人大模型-编程CAD做项目等_codex_claude_code
+trae===https://www.trae.cn/
+codex===https://openai.com/codex/get-started/
+codex===https://developers.openai.ac.cn/codex
+claude-code===https://claude.com/product/claude-code
+letaicode===https://letaicode.cn/keys
+88api===https://api.88api.shop/login
+opencode_github===https://github.com/anomalyco/opencode
+opencode===https://opencode.ai/go
+让大模型给你打工，写代码写论文复现论文画CAD做项目-AI打工人===---
 
 高中本科生研究生
 隆回县第二中学===http://www.lhez.net/index.asp
@@ -167,7 +197,10 @@ tsinghua===https://mirrors.tuna.tsinghua.edu.cn
 iMyShare-Google国内镜像网站===https://imyshare.com/site/551/
 
 软件
+今日水印相机APP===https://www.jinrishuiyinxiangji.com/
+Git===https://git-scm.com
 QQ===https://im.qq.com
+向日葵===https://sunlogin.oray.com/
 vscode===https://code.visualstudio.com
 win10===https://www.microsoft.com/zh-cn/software-download/windows10ISO
 Microsoft帐户===https://account.microsoft.com/?ref=MeControl
@@ -178,6 +211,8 @@ CMakeDocument===https://cmake.org/cmake/help/git-stage
 CMake===https://cmake.org
 Docker===https://docs.docker.com/desktop/setup/install
 qemu===https://www.qemu.org/documentation
+COCO_Dataset===https://cocodataset.org/#download
+pascal_VOC_Dataset===http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html#data
 raspberrypi===https://www.raspberrypi.com/software
 GNU-Make===https://www.gnu.org/software/make/
 Clang===https://clang.llvm.org/docs/CrossCompilation.html
@@ -198,6 +233,18 @@ weixin===https://weixin.qq.com/
 360===https://www.360.cn/
 VMware-FusionDoc===https://docs.vmware.com/cn/VMware-Fusion/13/com.vmware.fusion.using.doc/GUID-F2874B79-A32A-4B83-914F-9838372D47CD.html
 VMware-Fusion===https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware+Fusion
+Vmware-workstation===https://www.vmware.com/products/desktop-hypervisor/workstation-and-fusion
+tightvnc===https://www.tightvnc.com/
+ultravnc===https://uvnc.com/downloads/ultravnc.html
+obs-studio===https://obsproject.com/
+VLC-Video===https://get.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.exe
+7z===https://www.7-zip.org/download.html
+virtualbox===https://www.virtualbox.org/wiki/Downloads
+Linux常用命令的===https://gnu-linux.readthedocs.io/zh/latest/Chapter01/00_systemctl.html
+todesk===https://www.todesk.com/
+anydesk===https://anydesk.com/zhs
+tensorrt===https://developer.nvidia.com/tensorrt-getting-started
+wireshark===https://www.wireshark.org
 
 邮箱
 QQ邮箱===https://mail.qq.com
@@ -214,6 +261,7 @@ tieba===https://tieba.baidu.com/index.html
 QQ空间===http://qzone.qq.com/
 
 企业
+国家知识产权局===https://www.cnipa.gov.cn/
 天眼查===https://www.tianyancha.com/
 企查查===https://www.qcc.com/
 国家企业信用信息公示系统===http://www.gsxt.gov.cn/index.html
@@ -292,9 +340,7 @@ CCTV5===http://sports.cntv.cn/
 血液
 长沙血液中心===https://www.csxyzx.org
 上海市血液中心===https://www.sbc.org.cn
-无偿献血注意事项===https://www.17donor.com/changsha/wechat/micro/detail?aid=6042
-献血须知===https://www.17donor.com/changsha/wechat/micro/detail?aid=6041
-献血前应做哪些准备？===https://www.17donor.com/changsha/wechat/micro/detail?aid=6044
+无偿献血科普知识===https://www.bjredcross.org.cn/contents/gxbgzdwywjs/2023112918560.html
 夏季献血应注意的事项===https://www.csxyzx.org/index.php/site/page/index/3325/category_id/10858/news_id/18339/ct_id/276/okcode/be0f94dcaff7be04ade79f87b0a33cbc0023d02e6a4f7aff3d2b27ac3ff74678
 献血的人须知===https://www.sbc.org.cn/portal/article/index/id/9380/cid/25.html
 献血注意事项及流程===https://www.sbc.org.cn/portal/article/index/id/9381/cid/25.html
@@ -302,6 +348,9 @@ CCTV5===http://sports.cntv.cn/
 二十四节气之寒露：献血前应该喝糖水还是盐水？===https://www.sbc.org.cn/portal/article/index/id/10002/cid/25.html
 二十四节气之秋分：X医生谈血液丨献血后补充哪种食物才能快速恢复元气？===https://www.sbc.org.cn/portal/article/index/id/10001/cid/25.html
 献血常识 上海市血液中心===https://www.sbc.org.cn/portal/list/index/id/25.html?fuid=19&page=2
+献血前后应注意些什么？===https://www.sbc.org.cn/portal/article/index/id/6969/cid/25.html
+献血丢失的血液需要多久能恢复?需要“静养”、“进补”吗？===https://www.sbc.org.cn/portal/article/index/id/6968/cid/25.html
+二十四节气之秋分：X医生谈血液丨献血后补充哪种食物才能快速恢复元气？===https://www.sbc.org.cn/portal/article/index/id/10001/cid/25.html
 瘦子要如何健康地增重？|丁香医生===https://dxy.com/article/6262
 苦恼，怎么吃都长不胖？！瘦子如何成功增重20斤？|丁香医生===https://dxy.com/article/79507
 想增肌增重？瘦子们看过来|丁香医生===https://dxy.com/article/3426

@@ -22,8 +22,9 @@ sys.path.append(addpath)
 sys.path.append(os.path.abspath(__file__ + "/../../"))
 from manage import timezone, kseamutex
 from markdown_detail.views import remove_code, addback_code, remove_katex, addback_katex
-from mysite.projectpaths import web_dir_of, find_top_marker, TOP_CSDN
+from mysite.projectpaths import web_dir_of, web_relative_path, find_top_marker, TOP_CSDN
 import siteconfig   # 站点统一配置（mysite/site_config.json，修改即时生效）
+import uidmap       # 邮箱 <-> 36 位数字 uid 映射（URL 隐私方案）
 # from commonuse.views import parseTxt
 from django.views.decorators.csrf import csrf_exempt
 from copy import deepcopy
@@ -498,6 +499,11 @@ def writeYonghu(password, member, email, nickname):
         fp.write(f"{ret}<》!=$)(=$@{email}<》!=$)(=$@{nickname}<》!=$)(=$@1\n")
     memmute.release()
 
+    # URL 隐私：账号创建（注册 / 管理员新建）即生成 uid 映射，
+    # 不等首次登录/被访问才补——新用户从第一个链接起就是 uid 形态。
+    # 已有映射时 mail_to_uid 幂等返回旧值，不影响既有账号
+    uidmap.mail_to_uid(email)
+
     prepa = os.path.abspath(__file__ + "/../../../")
     # 全邮箱直接作为 people/ 目录名与身份标识（register 入口已做邮箱格式校验防穿越）
     ml = email
@@ -716,7 +722,9 @@ def login(request):
     member = os.path.join(addpa, "..", "article", 'member.txt')
     ret, passw, ml, usern, quanxian = checklogin(password, username, member)
     if ret:
-        return JsonResponse({"ret":ret,'password':passw, 'mail':ml, 'username':usern, 'quanxian':quanxian}, safe = False)
+        # 登录成功即返回该用户 uid，前端跳转 /<uid>，URL 不再暴露邮箱
+        return JsonResponse({"ret":ret,'password':passw, 'mail':ml, 'username':usern, 'quanxian':quanxian,
+                             'uid':uidmap.mail_to_uid(ml)}, safe = False)
     else:
         return JsonResponse({"ret":ret}, safe=False)
 
@@ -827,6 +835,8 @@ def userlist(request):
         ml = parts[1]
         users.append({
             "mail": ml,
+            # uid 供用户切换面板跳转：URL 只出现 uid，不暴露邮箱
+            "uid": uidmap.mail_to_uid(ml),
             "nickname": parts[2] or ml,
             "hasdata": os.path.isdir(os.path.join(prepa, 'people', ml)),
         })
@@ -863,6 +873,7 @@ def admin_userlist(request):
         users.append({
             "mail": ml,
             "truemail": parts[1],
+            "uid": uidmap.mail_to_uid(ml),
             "nickname": parts[2],
             "quanxian": qx,
             "is_admin": is_admin(qx),
@@ -1273,8 +1284,8 @@ _URL_MODULE_PREFIX = {
     "markdown_detail", "post_article", "detail",
 }
 
-def findurlmail(urlrul:str):
-    """从页面 URL 中解析出 urlmail（路由里代表用户的那一段）。
+def findurlsegment(urlrul:str):
+    """从页面 URL 中解析出路由里的原始用户段（可能是邮箱，也可能是 uid）。
 
     前端各页面都直接上报 document.URL，因此需要同时兼容两种路由形态：
       1) history 模式：https://host/think/homepage
@@ -1298,6 +1309,26 @@ def findurlmail(urlrul:str):
     while segs and segs[0].lower() in _URL_MODULE_PREFIX:
         segs.pop(0)
     return segs[0] if segs else ""
+
+def findurlmail(urlrul:str):
+    """从页面 URL 解析出 urlmail（用户邮箱）。
+
+    URL 层隐私方案：前端 URL 中用户段已改为 36 位纯数字 uid，
+    这里把 uid 段还原成邮箱后返回，使所有既有后端逻辑
+    （people/<邮箱>/ 路径拼接、归属校验、统计）零改动。
+    旧邮箱形态 URL 已彻底失效（含 @ 的段返回空串，按匿名处理）；
+    无法还原（伪造 uid / 未知邮箱）同样返回空串。
+    """
+    seg = findurlsegment(urlrul)
+    if not seg:
+        return ""
+    if uidmap.is_uid(seg):
+        return uidmap.uid_to_mail(seg) or ""
+    # 邮箱形态 URL 已彻底失效（隐私要求）：不再解析为用户段，
+    # 前端会把邮箱 URL 重定向到站长 uid 主页
+    if '@' in seg:
+        return ""
+    return seg
 
 # @csrf_exempt
 # 跨用户共享的全局变量 —— 已全部移除，改为 per-urlmail 独立存储
@@ -1328,10 +1359,20 @@ def getusername(request):
     if not os.path.exists(member):
         os.system("touch \"%s\""%member)
     urlmail = findurlmail(req['url'])
+    # URL 原始用户段：uid 形态原样透传，旧邮箱形态升级为 uid，
+    # 前端据此重建链接，避免把邮箱再拼回 URL
+    rawurl = findurlsegment(req['url'])
+    if rawurl and not uidmap.is_uid(rawurl):
+        # 只有命中会员的邮箱段才生成 uid，避免为无关字符串污染映射表
+        rawurl = uidmap.get_uid(rawurl) or rawurl
+    # 登录者自己的 uid / 站长 uid：前端登录跳转与匿名回退用
+    myuid = uidmap.get_uid(mailaddr) if mailaddr else None
+    owneruid = uidmap.mail_to_uid(str(siteconfig.get('site_owner_mail') or 'homepage@gmail.com'))
     # if urlmail=='zj' or len(urlmail)<=6:
     if urlmail=='zj' or len(urlmail)<=int(siteconfig.get('short_name_guard_max_length')):
         getStatisticTravelerCount(request, urlmail)
-        return JsonResponse({"ret":0, 'mail':None, 'username':None, 'urlmail':urlmail, 'quanxian':-1, 'truemail':-1}, safe = False)
+        return JsonResponse({"ret":0, 'mail':None, 'username':None, 'urlmail':urlmail, 'quanxian':-1, 'truemail':-1,
+                             'urluid':rawurl, 'uid':myuid, 'owneruid':owneruid}, safe = False)
     quanxian = -1
     nickname = ""
     with open(member, 'r', encoding='utf-8') as fp:
@@ -1357,7 +1398,8 @@ def getusername(request):
                 if urlmail == mail or mail in req['url']:
                     getStatisticTravelerCount(request, urlmail)
                     return JsonResponse({"ret":1, 'mail':mailaddr, 'username':usern, \
-                                         'urlmail':urlmail, 'quanxian':quanxian, 'truemail':mail, 'nickname':nickname}, \
+                                         'urlmail':urlmail, 'quanxian':quanxian, 'truemail':mail, 'nickname':nickname, \
+                                         'urluid':uidmap.mail_to_uid(urlmail) or rawurl, 'uid':myuid, 'owneruid':owneruid}, \
                                         safe = False)
                 else:
                     findone = False
@@ -1384,7 +1426,8 @@ def getusername(request):
                     if findone:
                         getStatisticTravelerCount(request, urlmail)
                         return JsonResponse({"ret":2, 'mail':mailaddr, 'username':usern, \
-                                             'urlmail':urlmail, 'quanxian':quanxian, 'truemail':mail, 'nickname':nickname},\
+                                             'urlmail':urlmail, 'quanxian':quanxian, 'truemail':mail, 'nickname':nickname, \
+                                             'urluid':uidmap.mail_to_uid(urlmail) or rawurl, 'uid':myuid, 'owneruid':owneruid},\
                                             safe = False)
         if not findmember:
             for i in fpline:
@@ -1398,11 +1441,13 @@ def getusername(request):
                     nickname = i[2]
                     getStatisticTravelerCount(request, urlmail)
                     return JsonResponse({"ret":3, 'mail':mailaddr, 'username':nickname, \
-                                             'urlmail':urlmail, 'quanxian':-1, 'truemail':None, 'nickname':nickname},\
+                                             'urlmail':urlmail, 'quanxian':-1, 'truemail':None, 'nickname':nickname, \
+                                             'urluid':uidmap.mail_to_uid(urlmail) or rawurl, 'uid':myuid, 'owneruid':owneruid},\
                                             safe = False)
     getStatisticTravelerCount(request, urlmail)
     return JsonResponse({"ret":0, 'mail':None, 'username':None, \
-                         'urlmail':urlmail, 'quanxian':-1, 'truemail':-1, 'nickname':nickname}, safe = False)
+                         'urlmail':urlmail, 'quanxian':-1, 'truemail':-1, 'nickname':nickname, \
+                         'urluid':rawurl, 'uid':myuid, 'owneruid':owneruid}, safe = False)
 
 # https://docs.djangoproject.com/zh-hans/5.1/ref/csrf/
 @csrf_exempt
@@ -1465,7 +1510,8 @@ def postArticle(request):
         if not auth['passed']:
             return JsonResponse( { "ret" : -100} , safe = False)
         basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-        if f"{get['mail']}" not in req['url']:
+        # uid 化后 URL 不含邮箱，页面主人判定改用还原出的 urlmail（子串判断会误拒本人）
+        if get['urlmail'] != get['mail']:
             return JsonResponse( { "ret" : -100} , safe = False)
 
         dirp = basepath
@@ -3052,7 +3098,8 @@ def themeChange(request):
     if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
     basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-    if f"{get['mail']}" not in req['url']:
+    # uid 化后 URL 不含邮箱，页面主人判定改用还原出的 urlmail（子串判断会误拒本人）
+    if get['urlmail'] != get['mail']:
         return JsonResponse( { "ret" : -100} , safe = False)
 
     file = os.path.join(basepath, 'themeColor.txt')
@@ -3145,28 +3192,41 @@ def getSiteConfig(request):
 def meting_proxy(request):
     """Meting 协议服务端代理（音乐播放器用）。
 
-    浏览器直连公共 Meting API 会被断连/跨域拦截，改由 Django 服务器端转发，
-    目标地址取配置 music_api，参数 server/type/id 可选透传（缺省用配置值）。
+    浏览器直连公共 Meting API 会被断连/跨域拦截，改由 Django 服务器端转发。
+    目标地址按 music_apis 端点列表逐个尝试（多端点容灾：某端点挂掉/返回异常
+    自动换下一个），未配置 music_apis 时回退单端点 music_api；
+    参数 server/type/id 可选透传（缺省用配置值）。
     """
     import urllib.parse
     import urllib.request
-    base = str(siteconfig.get('music_api')).rstrip('/')
+    import time
+    apis = siteconfig.get('music_apis') or [siteconfig.get('music_api')]
+    if isinstance(apis, str):
+        apis = [apis]
+    apis = [str(a).rstrip('/') for a in apis if a]
     params = {
         'server': request.GET.get('server') or str(siteconfig.get('music_server')),
         'type': request.GET.get('type') or str(siteconfig.get('music_type')),
         'id': request.GET.get('id') or str(siteconfig.get('music_id')),
     }
-    url = f"{base}?{urllib.parse.urlencode(params)}"
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    # 公共 Meting API 间歇性断连，重试 3 次提高成功率
-    import time
-    for _ in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                return HttpResponse(resp.read(), content_type='application/json')
-        except Exception:
-            time.sleep(1)
-    return JsonResponse({"ret": -1, "msg": "音乐接口请求失败"}, status=502)
+    query = urllib.parse.urlencode(params)
+    last_err = '无可用端点'
+    for base in apis:
+        url = f"{base}?{query}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        # 每个端点重试 2 次提高成功率（公共 API 间歇性断连）
+        for _ in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    body = resp.read()
+                    # Meting 正常返回是 JSON 数组；错误页/空响应/{"error":..} 视为该端点失效
+                    if body and body.lstrip()[:1] == b'[':
+                        return HttpResponse(body, content_type='application/json')
+                    last_err = body[:120].decode('utf-8', 'ignore') if body else '空响应'
+            except Exception as e:
+                last_err = str(e)
+            time.sleep(0.5)
+    return JsonResponse({"ret": -1, "msg": f"音乐接口请求失败：{last_err}"}, status=502)
 
 WIDGET_FILE = 'widget.json'
 _widget_mutex = Semaphore(value=1)
@@ -3205,7 +3265,8 @@ def get_widget(request):
 
 @csrf_exempt
 def set_widget(request):
-    """当前登录用户保存自己的看板郎形象配置（如 {"model": "miku"}）。"""
+    """当前登录用户保存自己的看板郎配置（形象 model / 多组自定义台词 lines）。
+    合并式更新：只覆盖请求里出现的字段，保存形象不会清掉台词，反之亦然。"""
     try:
         req = json.loads(request.body)
     except Exception:
@@ -3217,17 +3278,44 @@ def set_widget(request):
         return JsonResponse({"ret": -100}, safe=False)
     if not isinstance(widget, dict):
         return JsonResponse({"ret": -1, "msg": "widget 必须是对象"}, safe=False)
-    # 只保留 model 字段（形象目录名），防止写入意外内容
-    widget = {'model': str(widget.get('model', ''))}
+    # 读取现有配置做字段级合并；只保留 model/lines 两个白名单字段，防止写入意外内容
+    merged = _read_widget(mail) or {}
+    if 'model' in widget:
+        merged['model'] = str(widget.get('model', ''))
+    if 'lines' in widget:
+        lines = widget.get('lines')
+        if not isinstance(lines, list):
+            return JsonResponse({"ret": -1, "msg": "lines 必须是数组（多组台词）"}, safe=False)
+        clean = []
+        for group in lines[:20]:                      # 最多 20 组
+            if not isinstance(group, list):
+                continue
+            # 每组最多 100 句，每句截到 200 字；空句丢弃
+            clean.append([str(s)[:200] for s in group[:100] if str(s).strip()])
+        merged['lines'] = clean
     p = _widget_path(mail)
     os.makedirs(os.path.dirname(p), exist_ok=True)
     _widget_mutex.acquire()
     try:
         with open(p, 'w', encoding='utf-8') as obj:
-            json.dump(widget, obj, ensure_ascii=False)
+            json.dump(merged, obj, ensure_ascii=False)
     finally:
         _widget_mutex.release()
     return JsonResponse({"ret": 1}, safe=False)
+
+@csrf_exempt
+def get_widget_public(request):
+    """公开读取任意用户的看板郎配置（形象 + 自定义台词）。
+    用于访客打开某用户主页时展示该主页主人的形象与台词，无需登录。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        req = request.POST.dict()
+    mail = str(req.get('mail', '') or '')
+    if not mail:
+        return JsonResponse({"ret": -1, "widget": None}, safe=False)
+    widget = _read_widget(mail)
+    return JsonResponse({"ret": 1, "widget": widget}, safe=False)
 
 
 def getThemeColor(request):
@@ -3250,8 +3338,13 @@ def getThemeColor(request):
     # kk = deepcopy(path).split(get['urlmail'])
     basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
     # basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
-    if get['ret'] > 0:
-        basepath = basepath.replace("/article/", f"/people/{get['urlmail']}/")
+    # 主题应用不要求登录：任何访客打开某用户页面都应用该用户的主题（读 people/<urlmail>/）。
+    # urlmail 来自 URL 解析、可能任意，只有用户目录真实存在才切换，否则回退 article 全局默认，
+    # 同时避免下方"缺文件自动创建"在不存在的目录里 open(w) 直接 500
+    if get.get('urlmail'):
+        people_base = basepath.replace("/article/", f"/people/{get['urlmail']}/")
+        if os.path.isdir(people_base):
+            basepath = people_base
 
     file = os.path.join(basepath, 'themeColor.txt')
     if not os.path.exists(file):
@@ -4164,6 +4257,178 @@ def draft_delete(request):
             os.remove(p)
     finally:
         _draft_mutex.release()
+    return JsonResponse({"ret": 1}, safe=False)
+
+# ==================== 编辑页：文章配图管理 ====================
+# 配图与文章 md 同目录存放（people/<mail>/<文章目录>/，nginx 以 /people/ 静态伺服）。
+# 鉴权沿用 delete_directory 的模式：登录/管理员校验 + realpath 归属校验，防穿越删他人文件。
+_editfile_mutex = Semaphore(value=1)
+_IMG_TAILS = ('.jpg', '.png', '.jpeg', '.bmp', '.gif')
+
+def _edit_article_auth(request, req):
+    """配图/历史版本接口统一鉴权：通过返回 (dirpath, '')，失败返回 ('', 原因)。
+    dirpath 由文章 md 路径推导：仅允许 people/ 或 article/ 内；普通用户仅限本人目录，管理员不限。"""
+    auth = check_identity(request, req, admin_bypass=True)
+    get = auth['get']
+    if not auth['passed']:
+        return '', '未登录或校验失败'
+    root = os.path.realpath(os.path.abspath(__file__ + "/../../../"))
+    mdpath = str(req.get('path', ''))
+    if mdpath and not mdpath.startswith('/'):
+        # 相对路径按项目根解析（与站点 /people/... 静态路径一致），避免受 Django 进程 cwd 影响
+        mdpath = os.path.join(root, mdpath)
+    real = os.path.realpath(mdpath) if mdpath else ""
+    allowed_roots = [os.path.join(root, 'people') + os.sep, os.path.join(root, 'article') + os.sep]
+    if not real.endswith('.md') or not any(real.startswith(a) for a in allowed_roots):
+        return '', '非法文章路径'
+    # 身份取「请求自带且已通过 check_logined 校验的 mail」，
+    # 不能用 getusername 从 URL 解析的 get['mail']——编辑页 URL 为 post_article/* 等
+    # 短 urlmail 形态时它会被匿名化成 None，导致本人操作自己的文章也被误判越权。
+    mail = str(req.get('mail', ''))
+    if not (is_admin(get.get('quanxian', -1)) or is_admin(_member_level(req))):
+        own_root = os.path.join(root, 'people', mail) + os.sep
+        if not mail or not real.startswith(own_root):
+            return '', '只能操作自己的文章'
+    return os.path.dirname(real), ''
+
+def _safe_name(name, tails):
+    """校验客户端传来的文件名：必须是纯文件名（无路径成分、无 ..）且扩展名在白名单内。"""
+    name = str(name or '')
+    if not name or name != os.path.basename(name) or '..' in name:
+        return ''
+    if not any(name.lower().endswith(t) for t in tails):
+        return ''
+    return name
+
+def img_list(request):
+    """文章配图列表。req: {mail, password, path}；返回 [{name,url,size,mtime}] 按时间倒序。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    dirpath, err = _edit_article_auth(request, req)
+    if err:
+        return JsonResponse({"ret": -100, "msg": err}, safe=False)
+    images = []
+    try:
+        for f in os.listdir(dirpath):
+            if not any(f.lower().endswith(t) for t in _IMG_TAILS):
+                continue
+            p = os.path.join(dirpath, f)
+            try:
+                st = os.stat(p)
+            except Exception:
+                continue
+            images.append({"name": f,
+                           "url": web_relative_path(p),
+                           "size": st.st_size,
+                           "mtime": datetime.fromtimestamp(st.st_mtime + timezone).strftime('%Y-%m-%d %H:%M:%S')})
+        images.sort(key=lambda x: x["mtime"], reverse=True)
+    except Exception:
+        return JsonResponse({"ret": -2, "msg": "文章目录不存在或已删除"}, safe=False)
+    return JsonResponse({"ret": 1, "images": images}, safe=False)
+
+def img_delete(request):
+    """删除文章配图。req: {mail, password, path, name}。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    dirpath, err = _edit_article_auth(request, req)
+    if err:
+        return JsonResponse({"ret": -100, "msg": err}, safe=False)
+    name = _safe_name(req.get('name', ''), _IMG_TAILS)
+    if not name:
+        return JsonResponse({"ret": -100, "msg": "非法图片文件名"}, safe=False)
+    p = os.path.join(dirpath, name)
+    if not os.path.realpath(p).startswith(dirpath + os.sep):
+        return JsonResponse({"ret": -100, "msg": "非法图片路径"}, safe=False)
+    _editfile_mutex.acquire()
+    try:
+        if not os.path.exists(p):
+            return JsonResponse({"ret": -2, "msg": "图片不存在或已删除"}, safe=False)
+        os.remove(p)
+    finally:
+        _editfile_mutex.release()
+    return JsonResponse({"ret": 1}, safe=False)
+
+# ==================== 编辑页：文章历史版本 ====================
+# 每次发布都会在文章目录里留下带时间戳的 *_markdown.md，findlatest 取最新一篇展示。
+# 这里提供旧版的列表/读取/删除接口，编辑页「历史文档」用它做旧版阅读、恢复、清理。
+
+def history_list(request):
+    """文章历史版本列表。req: {mail, password, path}；返回按修改时间倒序的
+    [{name,size,mtime}]，并带 current=当前版本文件名（path 指向的 md）。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    dirpath, err = _edit_article_auth(request, req)
+    if err:
+        return JsonResponse({"ret": -100, "msg": err}, safe=False)
+    mdpath = str(req.get('path', ''))
+    versions = []
+    try:
+        for f in os.listdir(dirpath):
+            if not f.endswith('.md'):
+                continue
+            p = os.path.join(dirpath, f)
+            try:
+                st = os.stat(p)
+            except Exception:
+                continue
+            versions.append({"name": f, "size": st.st_size,
+                             "mtime": datetime.fromtimestamp(st.st_mtime + timezone).strftime('%Y-%m-%d %H:%M:%S')})
+        versions.sort(key=lambda x: x["mtime"], reverse=True)
+    except Exception:
+        return JsonResponse({"ret": -2, "msg": "文章目录不存在或已删除"}, safe=False)
+    return JsonResponse({"ret": 1, "versions": versions,
+                         "current": os.path.basename(mdpath) if mdpath else ""}, safe=False)
+
+def history_get(request):
+    """读取历史版本内容。req: {mail, password, path, name}。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    dirpath, err = _edit_article_auth(request, req)
+    if err:
+        return JsonResponse({"ret": -100, "msg": err}, safe=False)
+    name = _safe_name(req.get('name', ''), ('.md',))
+    if not name:
+        return JsonResponse({"ret": -100, "msg": "非法文件名"}, safe=False)
+    p = os.path.join(dirpath, name)
+    if not os.path.exists(p):
+        return JsonResponse({"ret": -2, "msg": "版本不存在或已删除"}, safe=False)
+    try:
+        with open(p, 'r', encoding='utf-8') as obj:
+            markdown = obj.read()
+    except Exception:
+        return JsonResponse({"ret": -2, "msg": "版本文件读取失败"}, safe=False)
+    return JsonResponse({"ret": 1, "name": name, "markdown": markdown}, safe=False)
+
+def history_delete(request):
+    """删除历史版本。req: {mail, password, path, name}；当前版本（path 指向的文件）不允许删。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    dirpath, err = _edit_article_auth(request, req)
+    if err:
+        return JsonResponse({"ret": -100, "msg": err}, safe=False)
+    name = _safe_name(req.get('name', ''), ('.md',))
+    if not name:
+        return JsonResponse({"ret": -100, "msg": "非法文件名"}, safe=False)
+    if name == os.path.basename(str(req.get('path', ''))):
+        return JsonResponse({"ret": -2, "msg": "当前版本不能删除，请先发布新版本"}, safe=False)
+    p = os.path.join(dirpath, name)
+    _editfile_mutex.acquire()
+    try:
+        if not os.path.exists(p):
+            return JsonResponse({"ret": -2, "msg": "版本不存在或已删除"}, safe=False)
+        os.remove(p)
+    finally:
+        _editfile_mutex.release()
     return JsonResponse({"ret": 1}, safe=False)
 
 if __name__=="__main__":

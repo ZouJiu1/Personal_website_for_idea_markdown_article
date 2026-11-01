@@ -5,6 +5,22 @@
     <link rel="icon" href="/article/imgbook/all/animal.jpg" id="linkicon">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="indexHtmlTitle">邹九的个人页面</title>
+    <script>
+      // URL 隐私：裸域名三种形态（/、/#、/#/）在应用启动前就直跳站长 uid 主页，
+      // 避免先闪一帧 /#/homepage@gmail.com 再被 App.vue 升级为 uid。
+      // site_owner_uid 由 App.vue loading()（getusername 的 owneruid）写入缓存；
+      // 无缓存（首次访问）不拦截，交给路由 redirect + loading() 完成首跳并补缓存。
+      (function () {
+        try {
+          var uid = localStorage.getItem("site_owner_uid");
+          if (!uid || !/^\d{36}$/.test(uid)) return;
+          // 仅处理根 pathname 且 hash 为空 / '#' / '#/' 的形态
+          if ((location.pathname !== "/" && location.pathname !== "") ) return;
+          if (location.hash && location.hash !== "#" && location.hash !== "#/") return;
+          location.replace(location.pathname + "#/" + uid);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
@@ -29,6 +45,7 @@
 
       // 看板郎可拖拽停靠：按住拖动改变位置（localStorage 记忆，刷新恢复），双击复位到默认右下角。
       // 5px 拖拽阈值避免干扰原有的点击触发文案；工具按钮区（#waifu-tool）不参与拖拽。
+      // 音乐播放器已与看板郎分离（src/music.js 独立挂载与拖拽），二者互不依赖。
       function attachWaifuDrag() {
         var waifu = document.getElementById("waifu");
         if (!waifu) return;
@@ -43,6 +60,7 @@
             waifu.style.bottom = "auto";
             waifu.style.left = p.left + "px";
             waifu.style.top = p.top + "px";
+            syncPicker();
             setTimeout(function () { waifu.style.transition = ""; }, 60);
           }
         }
@@ -66,6 +84,7 @@
           var top = Math.min(Math.max(e.clientY - drag.oy, 0), window.innerHeight - drag.h);
           waifu.style.left = left + "px";
           waifu.style.top = top + "px";
+          syncPicker();
         });
         document.addEventListener("mouseup", function () {
           if (!drag) return;
@@ -84,8 +103,33 @@
           waifu.style.left = "auto";
           waifu.style.top = "auto";
           waifu.style.right = "0";
-          waifu.style.bottom = "0";
+          waifu.style.bottom = "58px";   // 默认停靠上抬 58px，给页脚日期时间和音乐播放器留空间
+          syncPicker();
           setTimeout(function () { waifu.style.transition = ""; }, 60);
+        });
+
+        // 形象选择面板跟随看板郎：拖动/复位时重新定位（实现在 waifu-tips.js syncPickerPos）
+        function syncPicker() {
+          if (window.waifuSyncPicker) window.waifuSyncPicker();
+        }
+
+        // 浏览器窗口缩放/改变大小时，位置同步变化：
+        // 默认右下角停靠（无 left/top）由 fixed 锚点自动跟随，无需处理；
+        // 拖拽过的（left/top 定位）拉回可视区内，不改写记忆位置，恢复大窗口自动回原位。
+        window.addEventListener("resize", function () {
+          if (!waifu.style.left && !waifu.style.top) return;
+          var w = waifu.offsetWidth, h = waifu.offsetHeight;
+          var left = parseFloat(waifu.style.left) || 0;
+          var top = parseFloat(waifu.style.top) || 0;
+          var nl = Math.min(Math.max(left, 0), Math.max(window.innerWidth - w, 0));
+          var nt = Math.min(Math.max(top, 0), Math.max(window.innerHeight - h, 0));
+          if (nl !== left || nt !== top) {
+            waifu.style.transition = "none";
+            waifu.style.left = nl + "px";
+            waifu.style.top = nt + "px";
+            syncPicker();
+            setTimeout(function () { waifu.style.transition = ""; }, 60);
+          }
         });
       }
     </script>

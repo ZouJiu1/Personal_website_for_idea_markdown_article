@@ -1,9 +1,51 @@
-// 站点音乐播放器：APlayer（fixed 模式，悬浮在看板郎上方）+ Meting 协议在线歌单
+// 站点音乐播放器：APlayer（fixed 模式）+ Meting 协议在线歌单。
+// 与看板郎（Live2D）完全分离、互不依赖：播放器直接挂 document.body，自带独立的
+// 拖拽移动（按住封面/歌名区拖动，≥5px 生效）、双击封面复位默认位置、
+// localStorage(aplayer_pos) 位置记忆；看板郎的移动/停靠在 index.html attachWaifuDrag，各自独立。
 // 播放源多源容灾：源列表来自 mysite/site_config.json 的 music_sources（可手动配置），
 // 默认用列表第一个可用源；某源歌单拉取失败/返回为空/播放中音频报错时自动切换下一个源。
 // 播放时广播 window 事件 'waifu-song'，看板郎（public/live2d/waifu-tips.js）据此报幕。
 import APlayer from 'aplayer'
 import 'aplayer/dist/APlayer.min.css'
+
+// 播放器独立样式：默认贴屏幕右下（right 让出看板郎默认占位 250px + 20px 间距，二者不重叠）。
+// 底部上抬 34px，避开页脚右下角的日期时间。
+// APlayer 自带的 body/lrc 是 position:fixed 锚定视口，这里改为 absolute 锚定容器，
+// 拖拽容器 left/top 时整体跟随。仅作用于播放器自身，与 #waifu 无任何关联。
+const PLAYER_CSS = `
+.aplayer * { color: #666; }
+.aplayer.aplayer-fixed {
+	position: fixed; left: auto; right: 270px; bottom: 34px;
+	/* 宽度上限跟随视口：浏览器放大/窗口缩窄后不会超出屏幕左侧 */
+	width: 400px; max-width: calc(100vw - 16px); margin: 0;
+	/* 播放器压在页脚与看板郎之上会遮挡内容：降级到看板郎(#waifu z-index:1)之下，
+	   二者即使碰在一起也由看板郎居上，不再出现“播放器跑到 live2d 上面”。 */
+	z-index: 0;
+}
+.aplayer.aplayer-fixed .aplayer-body {
+	position: absolute; left: auto; right: 0; bottom: 0;
+	width: 400px; max-width: calc(100vw - 16px); margin: 0;
+	z-index: 0;
+}
+.aplayer.aplayer-fixed .aplayer-lrc {
+	position: absolute; left: 0; right: 0; bottom: 0; margin: 0;
+	z-index: 0;
+}
+.aplayer.aplayer-fixed.aplayer-narrow .aplayer-lrc { opacity: 0; }
+/* 窄视口（浏览器放大后视口 <720px）：右下让位缩小，避免与屏幕边缘/看板郎挤压出屏 */
+@media (max-width: 720px) {
+	.aplayer.aplayer-fixed { right: 8px; bottom: 8px; }
+}
+`
+
+let styleInjected = false
+function injectStyle() {
+	if (styleInjected) return
+	styleInjected = true
+	const s = document.createElement('style')
+	s.textContent = PLAYER_CSS
+	document.head.appendChild(s)
+}
 
 // 读取多源配置：优先 music_sources（过滤缺 server/id 的无效项），为空时回退旧单源字段
 async function loadSources() {
@@ -34,63 +76,95 @@ async function fetchPlaylist(source) {
   }))
 }
 
-// 音乐播放器可拖拽停靠：按住封面图拖动整个悬浮播放器（localStorage 记忆，刷新恢复），
-// 双击封面复位到默认右下角。封面（.aplayer-pic）本身无播放交互，作拖拽把手不与按钮冲突。
-function attachAplayerDrag(aplayerEl) {
-  if (!aplayerEl || aplayerEl.dataset.dragBound === '1') return
-  aplayerEl.dataset.dragBound = '1'
-  const KEY = 'aplayer_pos'
-  const pic = aplayerEl.querySelector('.aplayer-pic')
-  if (!pic) return
-  const pin = (left, top) => {
-    aplayerEl.style.right = 'auto'
-    aplayerEl.style.bottom = 'auto'
-    aplayerEl.style.left = left + 'px'
-    aplayerEl.style.top = top + 'px'
+// —— 播放器独立拖拽/停靠（与看板郎的 attachWaifuDrag 各自独立）——
+// 拖拽手柄限定为封面（.aplayer-pic）与歌名/歌手文本（.aplayer-music），
+// 不碰进度条/音量/播放按钮等交互控件，避免拖动误触。
+// 位置存 localStorage(aplayer_pos)，刷新恢复；双击手柄清除记忆复位默认右下角。
+const POS_KEY = 'aplayer_pos'
+let dragEl = null      // 当前拖拽绑定的播放器容器（换源会重建容器，指向最新实例）
+let dragState = null   // { sx, sy, ox, oy, w, h, moved }
+let docHooksBound = false
+
+function applySavedPos(el) {
+  let p = null
+  try { p = JSON.parse(localStorage.getItem(POS_KEY) || 'null') } catch (e) {}
+  if (p && typeof p.left === 'number' && typeof p.top === 'number') {
+    el.style.right = 'auto'
+    el.style.bottom = 'auto'
+    el.style.left = p.left + 'px'
+    el.style.top = p.top + 'px'
   }
-  // 恢复记忆位置（等 APlayer 完成初始布局后应用）
-  try {
-    const p = JSON.parse(localStorage.getItem(KEY) || 'null')
-    if (p && typeof p.left === 'number' && typeof p.top === 'number') {
-      requestAnimationFrame(() => pin(p.left, p.top))
-    }
-  } catch (e) { /* 忽略脏数据 */ }
-  let drag = null
-  pic.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return
-    const r = aplayerEl.getBoundingClientRect()
-    drag = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top,
-             w: r.width, h: r.height, moved: false }
-    e.preventDefault() // 阻止封面默认图片拖拽
-  })
+}
+
+function bindDocHooks() {
+  if (docHooksBound) return
+  docHooksBound = true
   document.addEventListener('mousemove', (e) => {
-    if (!drag) return
-    if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return
-    drag.moved = true
-    const left = Math.min(Math.max(e.clientX - drag.ox, 0), window.innerWidth - drag.w)
-    const top = Math.min(Math.max(e.clientY - drag.oy, 0), window.innerHeight - drag.h)
-    pin(left, top)
+    if (!dragState || !dragEl) return
+    if (!dragState.moved && Math.hypot(e.clientX - dragState.sx, e.clientY - dragState.sy) < 5) return
+    dragState.moved = true
+    const el = dragEl
+    el.style.right = 'auto'
+    el.style.bottom = 'auto'
+    const left = Math.min(Math.max(e.clientX - dragState.ox, 0), window.innerWidth - dragState.w)
+    const top = Math.min(Math.max(e.clientY - dragState.oy, 0), window.innerHeight - dragState.h)
+    el.style.left = left + 'px'
+    el.style.top = top + 'px'
   })
   document.addEventListener('mouseup', () => {
-    if (!drag) return
-    if (drag.moved) {
-      const left = parseInt(aplayerEl.style.left, 10) || 0
-      const top = parseInt(aplayerEl.style.top, 10) || 0
-      try { localStorage.setItem(KEY, JSON.stringify({ left, top })) } catch (e) { /* 忽略 */ }
+    if (!dragState) return
+    if (dragState.moved && dragEl) {
+      const left = parseInt(dragEl.style.left, 10) || 0
+      const top = parseInt(dragEl.style.top, 10) || 0
+      try { localStorage.setItem(POS_KEY, JSON.stringify({ left, top })) } catch (e) {}
     }
-    drag = null
+    dragState = null
   })
-  pic.addEventListener('dblclick', () => {
-    try { localStorage.removeItem(KEY) } catch (e) { /* 忽略 */ }
-    aplayerEl.style.left = 'auto'
-    aplayerEl.style.top = 'auto'
-    aplayerEl.style.right = ''
-    aplayerEl.style.bottom = ''
+  // 浏览器窗口缩放/改变大小时，位置同步变化：
+  // 默认停靠（无 left/top）由 CSS 的 right/bottom 锚点自动跟随；
+  // 拖拽过的拉回可视区内（不改写记忆位置，恢复大窗口自动回原位）。
+  window.addEventListener('resize', () => {
+    const el = dragEl
+    if (!el || (!el.style.left && !el.style.top)) return
+    const w = el.offsetWidth, h = el.offsetHeight
+    const left = parseFloat(el.style.left) || 0
+    const top = parseFloat(el.style.top) || 0
+    const nl = Math.min(Math.max(left, 0), Math.max(window.innerWidth - w, 0))
+    const nt = Math.min(Math.max(top, 0), Math.max(window.innerHeight - h, 0))
+    if (nl !== left || nt !== top) {
+      el.style.left = nl + 'px'
+      el.style.top = nt + 'px'
+    }
+  })
+}
+
+function attachPlayerDrag(el) {
+  applySavedPos(el)   // 换源重建容器后同样恢复记忆位置
+  dragEl = el
+  bindDocHooks()
+  el.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return
+    if (!e.target.closest || !e.target.closest('.aplayer-pic, .aplayer-music')) return
+    const r = el.getBoundingClientRect()
+    dragState = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top,
+                  w: r.width, h: r.height, moved: false }
+  })
+  // 双击封面/歌名：清除记忆并复位到默认右下角（right:270px 让出看板郎默认占位，bottom:34px 避开页脚时间）
+  el.addEventListener('dblclick', (e) => {
+    if (!e.target.closest || !e.target.closest('.aplayer-pic, .aplayer-music')) return
+    try { localStorage.removeItem(POS_KEY) } catch (err) {}
+    el.style.transition = 'none'
+    el.style.left = 'auto'
+    el.style.top = 'auto'
+    el.style.right = '270px'
+    el.style.bottom = '34px'
+    setTimeout(() => { el.style.transition = '' }, 60)
   })
 }
 
 export function initMusic() {
   if (window.innerWidth < 768) return
+  injectStyle()
   loadSources()
     .then(sources => {
       if (!sources.length) return
@@ -116,7 +190,8 @@ export function initMusic() {
               container.parentNode.removeChild(container)
             }
             container = document.createElement('div')
-            document.body.appendChild(container)
+            document.body.appendChild(container)   // 独立挂载，与看板郎无关
+            attachPlayerDrag(container)            // 独立拖拽/复位/位置记忆
             ap = new APlayer({
               container,
               fixed: true,
@@ -144,11 +219,6 @@ export function initMusic() {
             if (wasPlaying) {
               ap.play()
             }
-            // 每次重建播放器实例后重新挂拖拽（src/music.js 顶部定义）
-            requestAnimationFrame(() => {
-              const el = container.querySelector('.aplayer.aplayer-fixed')
-              if (el) attachAplayerDrag(el)
-            })
           })
           .catch(err => {
             console.warn(`[music] 播放源「${s.name || s.server}:${s.id}」失效：${err.message}`)

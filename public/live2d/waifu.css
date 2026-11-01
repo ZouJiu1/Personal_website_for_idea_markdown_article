@@ -6,33 +6,33 @@
 	margin-bottom: 0 !important;
 }
 
-.aplayer * {
-	color: #666;
-}
-
-/*折叠时小标签（右挂式：负 margin 藏到屏幕外右侧，active 时露出一半）*/
+/*折叠时小标签（右挂式：平时收到屏幕外右侧，看板郎收起后完整露出"看 板 郎"）*/
 #waifu-toggle {
 	background-color: #206051; /*折叠时小标签背景颜色*/
 	border-radius: 5px;
 	bottom: 66px;
 	color: #fff; /*折叠时小标签文本颜色*/
 	cursor: pointer;
-	font-size: 12px;
+	font-size: 13px;
 	right: 7px;
 	margin-right: -100px;
-	padding: 5px 5px 5px 0px;
+	padding: 10px 6px;
 	position: fixed;
 	transition: margin-right 1s;
-	width: 60px;
+	width: 42px;
 	writing-mode: vertical-rl;
+	letter-spacing: 2px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
 }
 
+/*收起后整个标签完整显示，"看 板 郎"三个字都能看到*/
 #waifu-toggle.waifu-toggle-active {
-	margin-right: -50px;
+	margin-right: 0;
 }
 
 #waifu-toggle.waifu-toggle-active:hover {
-	margin-right: -30px;
+	margin-right: 0;
+	background-color: #2a7a67;
 }
 
 /*挂件本体固定在右下角：左侧是导航菜单与访客数，左下角会遮挡访客数*/
@@ -43,6 +43,7 @@
 	position: fixed;
 	transform: translateY(3px);
 	transition: transform .3s ease-in-out, bottom 3s ease-in-out;
+	width: 250px;   /* 固定宽度：提示框再长也不会把容器撑出屏幕右侧被裁掉 */
 	z-index: 1;
 }
 
@@ -62,6 +63,7 @@
 	background-color: rgb(255, 255, 255, .62);
 	border-radius: 12px;
 	box-shadow: 0 0px 15px 0px #ffffff;
+	box-sizing: border-box;   /* 宽度把左右内边距算进去，避免最后一两个字被裁掉 */
 	font-size: 15px;
 /* 	font-weight: bold; */
 	line-height: 24px;
@@ -82,6 +84,71 @@
 #waifu-tips.waifu-tips-active {
 	opacity: 1;
 	transition: opacity .2s;
+}
+
+/*一次展示 3 条闲聊台词：分行排版，条与条之间用细分隔线（宽度与看板郎一致，避免右侧被裁）*/
+#waifu-tips.waifu-tips-multi {
+	max-width: 250px;
+	padding: 7px 12px;
+	text-align: left;
+	text-overflow: clip;
+	width: max-content;
+}
+
+#waifu-tips.waifu-tips-multi .waifu-tips-line {
+	align-items: flex-start;
+	animation: waifu-line-in .45s ease-out both;
+	display: flex;
+	opacity: 0;
+	transform: translateY(3px);
+}
+
+#waifu-tips.waifu-tips-multi .waifu-tips-line::before {
+	background-color: #4a174d;
+	border-radius: 50%;
+	content: "";
+	flex: 0 0 auto;
+	height: 5px;
+	margin: 9px 7px 0 0;
+	opacity: .4;
+	width: 5px;
+}
+
+#waifu-tips.waifu-tips-multi .waifu-tips-text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+#waifu-tips.waifu-tips-multi .waifu-tips-line + .waifu-tips-line {
+	border-top: 1px dashed rgba(74, 23, 77, .16);
+	margin-top: 5px;
+	padding-top: 5px;
+}
+
+@keyframes waifu-line-in {
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#waifu-tips.waifu-tips-multi .waifu-tips-line {
+		animation: none;
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/*节日特效层：全屏粒子，纯展示，不拦截鼠标*/
+.waifu-festival-fx {
+	height: 100%;
+	left: 0;
+	pointer-events: none;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: 9999;
 }
 
 #waifu-tips span {
@@ -128,10 +195,7 @@
 	color: #0684bd; /* #34495e */
 }
 
-/* 音乐播放器（APlayer fixed 模式）：整体抬升到看板郎上方，避免遮挡 */
-.aplayer.aplayer-fixed, .aplayer.aplayer-fixed .aplayer-body, .aplayer.aplayer-fixed .aplayer-lrc {
-	bottom: 265px;
-}
+/*音乐播放器已与看板郎分离：样式与拖拽/停靠由 src/music.js 自带（独立挂载），此处不再有任何播放器规则。*/
 
 /* ===== 形象选择器（⚙️ 按钮）===== */
 #waifu-picker {
@@ -257,6 +321,89 @@
 	line-height: 1.7;
 	margin-top: 8px;
 	padding-top: 6px;
+}
+
+/* 设置面板页签（形象/台词）与多组台词编辑器 */
+#waifu-picker .waifu-picker-views {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+#waifu-picker .waifu-picker-view {
+	border: 1px solid #d5e3df;
+	border-radius: 6px;
+	cursor: pointer;
+	padding: 3px 14px;
+	user-select: none;
+}
+
+#waifu-picker .waifu-picker-view-active,
+#waifu-picker .waifu-picker-view-active:hover {
+	background: #206051;
+	border-color: #206051;
+	color: #fff;
+}
+
+#waifu-picker .waifu-lines {
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+#waifu-picker .waifu-lines-group {
+	border: 1px solid #e3eeea;
+	border-radius: 8px;
+	margin-bottom: 8px;
+	padding: 6px 8px;
+}
+
+#waifu-picker .waifu-lines-group-head {
+	color: #206051;
+	display: flex;
+	font-size: 12px;
+	justify-content: space-between;
+	margin-bottom: 4px;
+}
+
+#waifu-picker .waifu-lines-del {
+	cursor: pointer;
+}
+
+#waifu-picker .waifu-lines-group textarea {
+	border: 1px solid #d5e3df;
+	border-radius: 6px;
+	box-sizing: border-box;
+	font-family: inherit;
+	font-size: 12px;
+	line-height: 1.6;
+	padding: 4px 6px;
+	resize: vertical;
+	width: 100%;
+}
+
+#waifu-picker .waifu-lines-ops {
+	display: flex;
+	justify-content: space-between;
+	margin: 6px 0;
+}
+
+#waifu-picker .waifu-lines-ops span {
+	border: 1px solid #206051;
+	border-radius: 6px;
+	color: #206051;
+	cursor: pointer;
+	padding: 3px 12px;
+}
+
+#waifu-picker .waifu-lines-save {
+	background: #206051;
+	color: #fff !important;
+}
+
+#waifu-picker .waifu-lines-tip {
+	color: #999;
+	font-size: 11px;
+	line-height: 1.7;
 }
 
 @keyframes shake {

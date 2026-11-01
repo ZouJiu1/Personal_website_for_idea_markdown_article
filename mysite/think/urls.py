@@ -14,4 +14,6 @@ urlpatterns = [
     path("comment_add", views.comment_add, name="comment_add"),
     path("kshoucang", views.kshoucang, name="kshoucang"),
     path("modify", views.modify, name="modify"),
+    path("img_list", views.img_list, name="img_list"),
+    path("img_delete", views.img_delete, name="img_delete"),
 ]

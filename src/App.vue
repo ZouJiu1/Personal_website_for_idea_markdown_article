@@ -85,16 +85,18 @@
                 placeholder="邮箱 / 用户名"
                 @change="usernameChange"
                 @blur="usernameChange"
+                @keyup.enter="submitLoginForm"
               />
             </el-form-item>
             <el-form-item label="Password" prop="pass">
-              <el-input 
-                v-model="LoginForm.password" 
-                type="password" 
-                autocomplete="off" 
+              <el-input
+                v-model="LoginForm.password"
+                type="password"
+                autocomplete="off"
                 placeholder="*"
                 @change="loginPassChange"
                 @blur="loginPassChange"
+                @keyup.enter="submitLoginForm"
                 />
             </el-form-item>
             <el-form-item>
@@ -236,17 +238,17 @@
     </el-header>
     <el-container>
       <el-aside class="el-aside" id='elaside'>
+          <!-- 左侧栏目：图标 + 文案两行居中的胶囊菜单，底色跟随主题系统（#elaside 动态换色） -->
           <el-menu
-          active-text-color="#ffd04b"
+          active-text-color="#337ecc"
           class="el-menu-vertical-demo">
           <el-menu-item
           index="1"
           id='el-menu-item-1'
           @click="clickhome"
           >
-          <!-- <router-link :to="{ name: 'home' }"> -->
-            首页
-          <!-- </router-link> -->
+            <span class="menu-ico">🏠</span>
+            <span class="menu-label">首页</span>
           </el-menu-item>
 
           <el-menu-item
@@ -254,9 +256,8 @@
             @click="clickbook"
             id='el-menu-item-2'
             >
-            <!-- 本人看过的图书<router-link :to="{ name: 'book' }"> -->
-              图书
-            <!-- </router-link> -->
+              <span class="menu-ico">📚</span>
+              <span class="menu-label">图书</span>
           </el-menu-item>
 
           <el-menu-item
@@ -264,31 +265,27 @@
             @click="clickcsdn"
             id='el-menu-item-3'
             >
-            <!-- <router-link :to="{ name: 'csdn' }"> -->
-              <!-- <span v-if="zhihushow">CSDN<br></span> -->
-              文篇
-            <!-- </router-link> -->
+              <span class="menu-ico">📝</span>
+              <span class="menu-label">文篇</span>
           </el-menu-item>
 
           <el-menu-item
             index="4"
             @click="clickvideo"
             id='el-menu-item-4'
+            class="menu-plain"
             >
-            <!-- <router-link :to="{ name: 'csdn' }"> -->
-              视频
-            <!-- </router-link> -->
+              <span class="menu-label">视频</span>
           </el-menu-item>
-          
+
           <el-menu-item
             index="5"
             @click="clickzhihu"
             id='el-menu-item-5'
             v-if="zhihushow&&notrelease"
             >
-            <!-- <router-link :to="{ name: 'zhihu' }"> -->
-              知乎
-            <!-- </router-link> -->
+              <span class="menu-ico">💡</span>
+              <span class="menu-label">知乎</span>
           </el-menu-item>
 
           <el-menu-item
@@ -296,63 +293,64 @@
             @click="clickthink"
             id='el-menu-item-6'
             >
-            <!-- <router-link :to="{ name: 'csdn' }"> -->
-              片段
-            <!-- </router-link> -->
+              <span class="menu-ico">🧩</span>
+              <span class="menu-label">片段</span>
           </el-menu-item>
           <el-menu-item
             index="7"
             @click="clicktravel"
             id='el-menu-item-7'
+            class="menu-plain"
             >
-            <!-- <router-link :to="{ name: 'csdn' }"> -->
-              游客
-            <!-- </router-link> -->
+              <span class="menu-label">游客</span>
           </el-menu-item>
           <el-menu-item
             index="8"
             @click="clickcommon"
             id='el-menu-item-8'
             >
-            <!-- <router-link :to="{ name: 'csdn' }"> -->
-              常用
-            <!-- </router-link> -->
+              <span class="menu-ico">🧰</span>
+              <span class="menu-label">常用</span>
           </el-menu-item>
           <el-menu-item
             index="9"
             @click="clickeverydayimg"
             id='el-menu-item-9'
-            style="font-weight: 200;"
+            class="menu-plain"
             >
-            <!-- <router-link :to="{ name: 'csdn' }"> -->
-            图片
-            <!-- </router-link> -->
+              <span class="menu-label">图片</span>
           </el-menu-item>
           <el-menu-item
             index="10"
             @click="clickadmin"
             id='el-menu-item-10'
             v-if="isAdmin"
-            style="font-weight: 600;"
+            class="menu-plain"
             >
-            管理
+              <span class="menu-label">管理</span>
           </el-menu-item>
           <el-menu-item
             index="11"
             @click="clickusers"
             id='el-menu-item-11'
+            class="menu-plain"
             >
-            用户
+              <span class="menu-label">用户</span>
           </el-menu-item>
         </el-menu>
-        <el-text class="mx-1" type="success" style="color:#ffffff;">{{ TravelerStatistics }}</el-text>
-        <el-button
-          style="text-align:center;margin-top:23vh;"
-          @click="themeChangevisible = true"
-          type='primary'
-        >
-          主题
-        </el-button>
+        <!-- 访客数量：紧跟【用户】下方显示 -->
+        <el-text class="visitor-stat">{{ TravelerStatistics }}</el-text>
+        <!-- 底部工具组：主题按钮，flex 自动沉底 -->
+        <div class="aside-footer">
+          <el-button
+            class="theme-btn"
+            @click="themeChangevisible = true"
+            type='primary'
+            round
+          >
+            主题
+          </el-button>
+        </div>
         <el-dialog v-model="themeChangevisible" title="配置" width="70%" height="auto">
           <span hidden>
             <el-input
@@ -406,6 +404,48 @@
           >
             提交
           </el-button>
+          <div style="margin-top:12px;border-top:1px solid #eee;padding-top:10px;">
+            <span style="font-size:16px;font-weight: 600;">节日特效</span>
+            <el-switch :model-value="true" disabled style="margin-left:12px;" />
+            <span style="font-size:13px;font-weight: 300;color:#888;margin-left:8px;">节日期间默认开启，不可关闭</span>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:13px;color:#666;white-space:nowrap;">节日特效大小</span>
+              <el-slider v-model="fxFestivalBoost" :min="0.5" :max="4" :step="0.1"
+                show-input :show-input-controls="false" input-size="small"
+                style="width:220px;margin-right:8px;" @change="applyFestivalBoost" />
+              <span style="font-size:12px;color:#999;">倍，默认 1.9</span>
+            </div>
+            <div style="margin-top:8px;">
+              <span style="font-size:16px;font-weight: 600;">平日特效</span>
+              <el-switch v-model="weekdayFxEnabled" @change="toggleWeekdayFx" style="margin-left:12px;" />
+              <span style="font-size:13px;font-weight: 300;color:#888;margin-left:8px;">非节日期间的全屏特效，可关闭</span>
+            </div>
+            <div v-if="weekdayFxEnabled" style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+              <el-switch v-model="fxCustom.enabled" @change="applyFxCustom" active-text="手动指定特效" />
+              <template v-if="fxCustom.enabled">
+                <span style="font-size:13px;color:#666;">元素</span>
+                <el-input-number v-model="fxCustom.element" :min="0" :max="7032" :step="1"
+                  controls-position="right" size="small" style="width:110px;" @change="applyFxCustom" />
+                <span style="font-size:12px;color:#999;">0=随机</span>
+                <span style="font-size:13px;color:#666;margin-left:6px;">配色</span>
+                <el-select v-model="fxCustom.palette" size="small" style="width:86px;" @change="applyFxCustom">
+                  <el-option v-for="o in fxPaletteOptions" :key="o.value" :label="o.label" :value="o.value" />
+                </el-select>
+                <span style="font-size:13px;color:#666;">速度</span>
+                <el-select v-model="fxCustom.speed" size="small" style="width:86px;" @change="applyFxCustom">
+                  <el-option v-for="o in fxSpeedOptions" :key="o.value" :label="o.label" :value="o.value" />
+                </el-select>
+                <span style="font-size:13px;color:#666;">尺寸</span>
+                <el-select v-model="fxCustom.size" size="small" style="width:80px;" @change="applyFxCustom">
+                  <el-option v-for="o in fxSizeOptions" :key="o.value" :label="o.label" :value="o.value" />
+                </el-select>
+                <span style="font-size:13px;color:#666;">密度</span>
+                <el-select v-model="fxCustom.density" size="small" style="width:86px;" @change="applyFxCustom">
+                  <el-option v-for="o in fxDensityOptions" :key="o.value" :label="o.label" :value="o.value" />
+                </el-select>
+              </template>
+            </div>
+          </div>
           <br>
           <div style='margin-top:10px;'>
             <span style="font-size:16px;font-weight: 600;">方式二：</span>
@@ -455,7 +495,7 @@
         <el-dialog v-model="usersVisible" title="其他用户" width="60%" style="max-height:80%;overflow:auto;">
           <el-input
             v-model="userSearch"
-            placeholder="搜索用户名或昵称"
+            placeholder="输入完整邮箱或用户名精确查找"
             clearable
             style="margin-bottom:12px;"
           />
@@ -464,12 +504,12 @@
               v-for="u in filteredUsersList"
               :key="u.mail"
               :type="u.mail === myMail ? 'primary' : 'default'"
-              @click="gotoUserPage(u.mail)"
+              @click="gotoUserPage(u.uid || u.mail)"
             >
-              {{ u.nickname }}（{{ u.mail }}）{{ u.mail === myMail ? ' - 我' : '' }}
+              {{ u.nickname }}（{{ maskMail(u.mail) }}）{{ u.mail === myMail ? ' - 我' : '' }}
             </el-button>
           </div>
-          <div v-if="filteredUsersList.length === 0" style="color:#999;">没有匹配的用户</div>
+          <div v-if="userSearch && filteredUsersList.length === 0" style="color:#999;">没有匹配的用户</div>
         </el-dialog>
         <el-dialog v-model="noticeVisible" title="管理员通知" width="60%" style="max-height:80%;overflow:auto;">
           <div style="font-size:12px;color:#999;margin-bottom:4px;">仅显示最近 {{ noticeMax }} 条通知</div>
@@ -536,6 +576,8 @@
         举报邮箱：
         <a :href="'mailto:' + footerReportEmail" style="color:#0000ee;">{{ footerReportEmail }}</a>
       </span>
+      <!-- 右下角日期时间：按 site_config.json 的 display_timezone_offset_seconds 换算 -->
+      <span class="footer-clock" v-if="nowText">{{ nowText }}</span>
       <!-- <el-select
         v-model="Themecolor"
         placeholder="主题"
@@ -589,6 +631,33 @@ export default {
       footerCopyright: '© 2024-2026 zoujiu.com.cn 版权所有',
       footerIcpText: '湘ICP备2024086536号-1',
       footerReportEmail: '1069679911@qq.com',
+      // 页脚右下角日期时间：偏移量来自 site_config.json 的 display_timezone_offset_seconds（28800 = UTC+8）
+      displayTimezoneOffset: 28800,
+      nowText: '',
+      clockTimer: null,
+      // 平日（非节日）特效开关，存 localStorage；节日特效始终开启
+      weekdayFxEnabled: true,
+      // 节日特效整体放大倍数（存 localStorage，看板郎脚本读取），默认 1.9
+      fxFestivalBoost: 1.9,
+      // 平日特效手动配置：元素 1~7032（0=随机）、配色/速度/尺寸/密度留空=随机
+      fxCustom: { enabled: false, element: 0, palette: '', speed: '', size: '', density: '' },
+      fxPaletteOptions: [
+        { value: '', label: '随机' }, { value: 'red', label: '红' }, { value: 'gold', label: '金' },
+        { value: 'pink', label: '粉' }, { value: 'blue', label: '蓝' }, { value: 'green', label: '绿' },
+        { value: 'purple', label: '紫' }, { value: 'warm', label: '暖' }, { value: 'white', label: '白' },
+      ],
+      fxSpeedOptions: [
+        { value: '', label: '随机' }, { value: 'xslow', label: '极慢' }, { value: 'slow', label: '慢' },
+        { value: 'normal', label: '标准' }, { value: 'fast', label: '快' }, { value: 'xfast', label: '极快' },
+      ],
+      fxSizeOptions: [
+        { value: '', label: '随机' }, { value: 'small', label: '小' },
+        { value: 'normal', label: '中' }, { value: 'large', label: '大' },
+      ],
+      fxDensityOptions: [
+        { value: '', label: '随机' }, { value: 'sparse', label: '稀疏' },
+        { value: 'normal', label: '普通' }, { value: 'dense', label: '密集' }, { value: 'xdense', label: '超密' },
+      ],
       themeChangevisible: false,
       ruleFormRef: "",
       sendret: true,
@@ -600,6 +669,8 @@ export default {
       usersList: [],
       userSearch: '',
       myMail: '',
+      // 登录者自己的 uid（URL 隐私方案：URL 只出现 uid，不出现邮箱）
+      myUid: '',
       // 通知
       noticeVisible: false,
       notices: [],
@@ -984,15 +1055,16 @@ export default {
     }
   },
   computed: {
-    // 用户列表按关键词过滤（用户名 / 昵称）
+    // 用户列表过滤：隐私保护——仅支持「完整邮箱」或「完整用户名」精确匹配，
+    // 不做模糊/包含匹配；默认（无关键词）不展示任何账号
     filteredUsersList() {
       const s = (this.userSearch || '').trim().toLowerCase();
       if (!s) {
-        return this.usersList;
+        return [];
       }
       return this.usersList.filter((u) =>
-        (u.mail && u.mail.toLowerCase().includes(s))
-        || (u.nickname && String(u.nickname).toLowerCase().includes(s)));
+        (u.mail && u.mail.toLowerCase() === s)
+        || (u.nickname && String(u.nickname).toLowerCase() === s));
     },
   },
   watch: {
@@ -1011,13 +1083,33 @@ export default {
     // let url = document.URL;
     // this.clickhome();
     this.loading();
-    this.getColor();
+    // 主题不要求登录，按"页面主人"应用：裸域名进入时路由初始跳转（/ → /#/homepage@gmail.com）
+    // 尚未完成，document.URL 还不包含主人段，此时上报会被后端按匿名兜底返回默认主题；
+    // 必须等路由就绪（isReady）后再取主题
+    this.$router.isReady().then(() => { this.getColor(); });
     this.loadCookieConfig();
+    this.startClock();
+    // 恢复平日特效开关（默认开启）与手动配置
+    try { this.weekdayFxEnabled = localStorage.getItem('waifu-fx-weekday') !== '0' } catch (e) {}
+    try {
+      const boost = parseFloat(localStorage.getItem('waifu-fx-festival-boost'));
+      if (boost >= 0.5 && boost <= 4) this.fxFestivalBoost = boost;
+    } catch (e) {}
+    try {
+      const raw = localStorage.getItem('waifu-fx-custom');
+      if (raw) this.fxCustom = Object.assign({}, this.fxCustom, JSON.parse(raw));
+    } catch (e) {}
     this.myMail = Cookies.get('mail') || '';
     this.updateReturnButton();
     this.loadNotices(false);
     //   this.first = false;
     // }
+  },
+  beforeUnmount() {
+    if (this.clockTimer) {
+      clearInterval(this.clockTimer);
+      this.clockTimer = null;
+    }
   },
   methods: {
     // 从后端统一配置读取浏览器侧可调参数；失败时保持缺省值
@@ -1042,8 +1134,43 @@ export default {
             this[prop] = cfg[key];
           }
         }
+        // 页脚时钟的显示时区偏移（秒），改配置后刷新页面即生效
+        const tz = parseInt(cfg.display_timezone_offset_seconds);
+        if (!isNaN(tz)) {
+          this.displayTimezoneOffset = tz;
+          this.nowText = this.formatClock();
+        }
       }
       this.cookieDays = getCookieDays();
+    },
+    // 页脚右下角的时间：服务器时间戳 + 配置时区偏移，按 24 小时制输出【2026-11-01 10 周日】
+    formatClock() {
+      const t = new Date(Date.now() + this.displayTimezoneOffset * 1000);
+      const pad = n => String(n).padStart(2, '0');
+      const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][t.getUTCDay()];
+      return `【${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())} ${pad(t.getUTCHours())} ${week}】`;
+    },
+    startClock() {
+      // 右下角只显示到小时，每 60 分钟刷新一次即可；刷新页面会重新计算并重置计时
+      if (this.clockTimer) clearInterval(this.clockTimer);
+      this.nowText = this.formatClock();
+      this.clockTimer = setInterval(() => { this.nowText = this.formatClock(); }, 60 * 60 * 1000);
+    },
+    // 平日特效开关：写入 localStorage 并通知看板郎脚本立即生效（节日特效不受影响）
+    toggleWeekdayFx(val) {
+      try { localStorage.setItem('waifu-fx-weekday', val ? '1' : '0') } catch (e) {}
+      window.dispatchEvent(new CustomEvent('waifu-fx-config'));
+    },
+    // 保存节日特效放大倍数并立即生效
+    applyFestivalBoost(val) {
+      const v = Math.min(4, Math.max(0.5, parseFloat(val) || 1.9));
+      try { localStorage.setItem('waifu-fx-festival-boost', String(v)) } catch (e) {}
+      window.dispatchEvent(new CustomEvent('waifu-fx-config'));
+    },
+    // 保存手动特效配置（元素/配色/速度/尺寸/密度）并立即生效
+    applyFxCustom() {
+      try { localStorage.setItem('waifu-fx-custom', JSON.stringify(this.fxCustom)) } catch (e) {}
+      window.dispatchEvent(new CustomEvent('waifu-fx-config'));
     },
     // 根据"当前登录账号"与"当前页面主人"决定是否显示返回按钮
     updateReturnButton() {
@@ -1062,8 +1189,11 @@ export default {
         const hash = window.location.hash.replace(/^#\/?/, '');
         urlmail = hash.split('/').filter(Boolean)[0] || '';
       }
-      // 未登录，或在看自己的页面：不需要返回按钮
-      this.returnback = !(myMail && urlmail && urlmail !== myMail);
+      // 未登录，或在看自己的页面：不需要返回按钮。
+      // uid 化后 URL 用户段是 36 位数字 uid，需同时与邮箱和 uid 比较
+      // （myUid 首帧可能为空，用 localStorage 缓存兜底，避免闪烁误显）
+      const myUid = this.myUid || localStorage.getItem('my_uid') || '';
+      this.returnback = !(myMail && urlmail && urlmail !== myMail && urlmail !== myUid);
     },
     // 解析当前 hash 路由中的"用户段"（跳过模块前缀），失败返回空串
     findUrlUser() {
@@ -1114,6 +1244,12 @@ export default {
       });
     },
     // 跳转到指定用户的个人主页
+    // 用户切换面板隐私保护：仅展示层把邮箱前缀（@ 之前的部分，含数字与字母）
+    // 整体替换为 ****，只保留 @域名；搜索匹配、点击跳转、key 绑定仍用真实邮箱；
+    // 管理员页面不受影响
+    maskMail(mail) {
+      return String(mail || '').replace(/[^@]+/, '****');
+    },
     async gotoUserPage(mail) {
       if (!mail) {
         return;
@@ -1515,15 +1651,19 @@ export default {
         this.loginbutton = false;
         this.registerbutton = false;
         ElMessage.warning("登录状态已失效，请重新登录");
-        if(this.$route.path !== '/homepage@gmail.com') {
-          await this.$router.push({ path: '/homepage@gmail.com' });
+        // 回公共主页：站长 uid，取不到回退站长邮箱
+        const ownerhome = '/' + ((gu && gu.owneruid) || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com');
+        if(this.$route.path !== ownerhome) {
+          await this.$router.push({ path: ownerhome });
         }
         return;
       }
       // 优先用服务端解析出的登录账号，其次退回 Cookie；都没有则回公共主页。
-      // 原来直接用 Cookies.get("mail")，未登录/登录态失效时会跳到 /#/undefined
+      // 原来直接用 Cookies.get("mail")，未登录/登录态失效时会跳到 /#/undefined。
+      // uid 化后跳转目标用自己的 uid（后端 login/getusername 返回），避免 URL 泄漏邮箱
       const myMail = gu.mail || Cookies.get('mail') || '';
-      const target = myMail ? '/' + myMail : '/homepage@gmail.com';
+      const target = myMail ? '/' + (gu.uid || this.myUid || localStorage.getItem('my_uid') || myMail)
+                            : '/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com');
       // 已在目标主页时不重复跳转/刷新
       if (this.$route.path === target) {
         this.updateReturnButton();
@@ -1553,9 +1693,21 @@ export default {
       }
       let premail = undefined;
       premail = Cookies.get("premail");
-      if(gu && gu.urlmail) {
+      // URL 隐私方案：premail 存 URL 原始用户段（uid 形态存 uid），
+      // 与 reloadIfUserChanged 比较的 findUrlUser() 语义一致，否则会无限刷新。
+      // 旧邮箱形态 URL 由后端 urluid 升级为 uid 后再比较，推动 premail 自然迁移
+      let rawseg = gu.urluid || gu.urlmail;
+      // 同步缓存：登录者自己的 uid / 站长 uid（裸域名 redirect 用）
+      if (gu && gu.uid) {
+        this.myUid = gu.uid;
+        localStorage.setItem('my_uid', gu.uid);
+      }
+      if (gu && gu.owneruid) {
+        localStorage.setItem('site_owner_uid', gu.owneruid);
+      }
+      if(gu && rawseg) {
         let expiresdate = new Date(new Date().getTime() + this.cookieDays * 24 * 60 * 60 * 1000);
-        if(gu.urlmail!=premail) {
+        if(rawseg!=premail) {
           Cookies.remove("csdnReset");
           Cookies.set("csdnReset", 1, { expires: expiresdate });
           Cookies.remove("thinkReset");
@@ -1567,7 +1719,24 @@ export default {
           Cookies.remove("zhihuReset");
           Cookies.set("zhihuReset", 1, { expires: expiresdate });
         }
-        Cookies.set("premail", gu.urlmail, { expires: expiresdate });
+        Cookies.set("premail", rawseg, { expires: expiresdate });
+      }
+      // URL 隐私：邮箱形态 URL（如 /#/homepage@gmail.com）已彻底失效——
+      // 后端不再把邮箱段解析为用户（findurlmail 返回空），这里直接同文档
+      // replace 到站长 uid 主页，旧邮箱链接不再进入对应用户的页面。
+      // uid 形态不含 @，不会再次触发本分支（无循环）
+      const curseg = this.findUrlUser()
+        || (window.location.pathname.replace(/^\/+/, '').split('/')[0] || '');
+      if (gu && curseg && String(curseg).indexOf('@') >= 0) {
+        const target = gu.owneruid || localStorage.getItem('site_owner_uid') || '';
+        if (target) {
+          const curpath = window.location.pathname.replace(/\/+$/, '') || '/';
+          location.replace(curpath + '#/' + target);
+          return;
+        }
+        // 拿不到站长 uid（后端未升级到 uid 方案/接口异常）：不再跳转，
+        // 避免与路由 redirect 形成 /#/zj ↔ /#/邮箱 的无限循环；
+        // 页面按匿名继续渲染，等后端正常后自然恢复
       }
       if(gu && gu.ret > 0) {
         this.logined = true;
@@ -1601,9 +1770,8 @@ export default {
         // if(ll > 0) {
         //   allchild.removeChild(allchild.children[4]);
         // }
-        let idzhi = document.URL;
-        let zhi = idzhi.indexOf("/homepage@gmail.com")
-        if(zhi < 0) {
+        // uid 化后 URL 不再含邮箱文本，改用后端还原的页面主人邮箱判定
+        if(gu.urlmail != 'homepage@gmail.com') {
           this.zhihushow = false;
         }
 
@@ -1623,14 +1791,16 @@ export default {
           this.logoutbutton = false;
           this.registerbutton = true;
         }
-        // 与主机无关的判断：当前地址是否为该用户的根页面（如 /<urlmail> 或 /#/<urlmail>#/）
+        // 与主机无关的判断：当前地址是否为该用户的根页面（如 /<uid> 或 /#/<uid>#/）。
+        // uid 化后用 URL 原始段（uid 形态）比较与跳转，避免把邮箱写回地址栏
+        let rootseg = gu.urluid || gu.urlmail;
         let pathonly = window.location.pathname.replace(/\/+$/, '') || '/';
         let hashnow = window.location.hash;
         if(
-          pathonly==('/' + gu.urlmail)
-          || (pathonly=='/' && (hashnow==('#/' + gu.urlmail + '#/') || hashnow==('#/' + gu.urlmail)))
+          pathonly==('/' + rootseg)
+          || (pathonly=='/' && (hashnow==('#/' + rootseg + '#/') || hashnow==('#/' + rootseg)))
         ) {
-          this.$router.push({ path: '/' + gu.urlmail});
+          this.$router.push({ path: '/' + rootseg});
         }
       } else {
         // if(gu.ret==0 && gu.urlmail=='zj' && Cookies.get("mail")) {
@@ -1648,17 +1818,18 @@ export default {
         this.loginbutton = false;
         this.registerbutton = false;
         this.myMail = "";
-        // 未登录时统一跳转到公共主页 homepage。
+        // 未登录时统一跳转到公共主页（站长 uid，取不到回退站长邮箱）。
         // 本项目是 hash 路由，必须带上 "#"，否则每次加载都会再次触发本条跳转导致页面无限刷新闪烁。
         // 线上部署时服务器会把 "/" 302 到 "/homepage"（且 URL 的 # 片段不会发给服务器）：
-        // 若这里写死 "/#/homepage@gmail.com"，浏览器会跨文档请求 "/"，被服务器再次 302 回
+        // 若这里写死固定串，浏览器会跨文档请求 "/"，被服务器再次 302 回
         // "/homepage"，应用加载后本分支再次执行 —— 无限循环。
         // 改为在「当前 pathname」上设置 hash（同文档导航，不经过服务器），本地（/）与线上（/homepage）都一次到位。
+        const owneruid = (gu && gu.owneruid) || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com';
         const curpath = window.location.pathname.replace(/\/+$/, '') || '/';
         const onPublicHome = (curpath === '/' || curpath === '/homepage')
-          && window.location.hash === '#/homepage@gmail.com';
+          && window.location.hash === '#/' + owneruid;
         if(!onPublicHome) {
-          location.replace(curpath + '#/homepage@gmail.com');
+          location.replace(curpath + '#/' + owneruid);
         }
       }
       // console.log(document.URL);
@@ -1959,9 +2130,15 @@ export default {
           // }
           // 仅改 hash 的 location.replace 不会整页刷新：会先走 SPA 导航，
           // 再被 $route 监听里的 reloadIfUserChanged 强制 reload，双重导航卡死页面。
-          // 改为纯 SPA 跳转并提前同步 premail，避免触发强制 reload
-          Cookies.set("premail", mail, { expires: expiresdate });
-          await this.$router.push({ path: '/' + mail });
+          // 改为纯 SPA 跳转并提前同步 premail，避免触发强制 reload。
+          // uid 化后跳转目标用登录响应里的 uid，URL 不再暴露邮箱
+          const myuid = result.uid || localStorage.getItem('my_uid') || mail;
+          if (result.uid) {
+            localStorage.setItem('my_uid', result.uid);
+            this.myUid = result.uid;
+          }
+          Cookies.set("premail", myuid, { expires: expiresdate });
+          await this.$router.push({ path: '/' + myuid });
           this.returnback = true;
           window.location.reload();
         } else {
@@ -2023,9 +2200,13 @@ export default {
       }
       this.returnback = true;
       // 登出后回到公共主页：纯 SPA 跳转并同步 premail，
-      // 避免 hash 导航后再被 reloadIfUserChanged 强制 reload 卡死
-      Cookies.set("premail", "homepage@gmail.com", { expires: expiresdate });
-      await this.$router.push({ path: '/homepage@gmail.com' });
+      // 避免 hash 导航后再被 reloadIfUserChanged 强制 reload 卡死。
+      // uid 化后回站长 uid 页面，并清掉自己的 uid 缓存
+      localStorage.removeItem('my_uid');
+      this.myUid = '';
+      const owneruid = localStorage.getItem('site_owner_uid') || 'homepage@gmail.com';
+      Cookies.set("premail", owneruid, { expires: expiresdate });
+      await this.$router.push({ path: '/' + owneruid });
       // 背景配色/主题等页面状态是按登录用户渲染的，SPA 路由切换不会重置；
       // premail 已同步为公共主页，这里整页刷新一次即可恢复公共默认外观
       // window.location.replace(window.location.href);
@@ -2054,11 +2235,11 @@ export default {
       //   this.$router.push({ path: '/csdn/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        // this.$router.push({ path: '/csdn/'+gu.urlmail}); // query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/zhihu/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}})
+        // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
+        this.$router.push({ path: '/zhihu/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":30}})
       } else {
         // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/zhihu/homepage@gmail.com'}); //, query:{"currentpage": 1, "pagesize":20}
+        this.$router.push({ path: '/zhihu/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')}); //, query:{"currentpage": 1, "pagesize":20}
       }
     },
     async clickhome() {
@@ -2075,10 +2256,10 @@ export default {
       //   this.$router.push({ path: '/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/'+gu.urlmail});
-      } else {  
+        this.$router.push({ path: '/'+(gu.urluid || gu.urlmail)});
+      } else {
         // this.$router.push("/zj");
-        this.$router.push("/homepage@gmail.com");
+        this.$router.push('/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'));
       }
     },
     async clickbook() {
@@ -2095,10 +2276,10 @@ export default {
       //   this.$router.push({ path: '/book/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/book/'+gu.urlmail});
+        this.$router.push({ path: '/book/'+(gu.urluid || gu.urlmail)});
       } else {
         // this.$router.push({ path: '/book/zj'});
-        this.$router.push({ path: '/book/homepage@gmail.com'});
+        this.$router.push({ path: '/book/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
     async clickcsdn() {
@@ -2116,10 +2297,10 @@ export default {
       // }
       if(gu && gu.ret > 0) {
         // this.$router.push({ path: '/csdn/'+gu.urlmail}); // query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/csdn/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}})
+        this.$router.push({ path: '/csdn/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":30}})
       } else {
         // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
-        this.$router.push({ path: '/csdn/homepage@gmail.com'}); //, query:{"currentpage": 1, "pagesize":20}
+        this.$router.push({ path: '/csdn/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')}); //, query:{"currentpage": 1, "pagesize":20}
       }
     },
     async clickthink() {
@@ -2136,10 +2317,10 @@ export default {
       //   this.$router.push({ path: '/think/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/think/'+gu.urlmail, query:{"currentpage": 1, "pagesize":9}});
+        this.$router.push({ path: '/think/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":9}});
       } else {
         // this.$router.push({ path: '/think/zj'});
-        this.$router.push({ path: '/think/homepage@gmail.com'});
+        this.$router.push({ path: '/think/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
     async clickvideo() {
@@ -2156,10 +2337,10 @@ export default {
       //   this.$router.push({ path: '/video/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/video/'+gu.urlmail, query:{"currentpage": 1, "pagesize":6}});
+        this.$router.push({ path: '/video/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":6}});
       } else {
         // this.$router.push({ path: '/video/zj'});
-        this.$router.push({ path: '/video/homepage@gmail.com'});
+        this.$router.push({ path: '/video/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
     async clicktravel() {
@@ -2176,10 +2357,10 @@ export default {
       //   this.$router.push({ path: '/travel/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/travel/'+gu.urlmail, query:{"currentpage": 1, "pagesize":30}});
+        this.$router.push({ path: '/travel/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":30}});
       } else {
         // this.$router.push({ path: '/travel/zj'});
-        this.$router.push({ path: '/travel/homepage@gmail.com'});
+        this.$router.push({ path: '/travel/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
     async clickcommon() {
@@ -2196,10 +2377,10 @@ export default {
       //   this.$router.push({ path: '/commonuse/' + this.findmail(urlrul)});
       // }
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/commonuse/'+gu.urlmail});
+        this.$router.push({ path: '/commonuse/'+(gu.urluid || gu.urlmail)});
       } else {
         // this.$router.push({ path: '/commonuse/zj'});
-        this.$router.push({ path: '/commonuse/homepage@gmail.com'});
+        this.$router.push({ path: '/commonuse/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
     async clickeverydayimg() {
@@ -2209,9 +2390,9 @@ export default {
         gu = response;
       });
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/everydayimg/'+gu.urlmail});
+        this.$router.push({ path: '/everydayimg/'+(gu.urluid || gu.urlmail)});
       } else {
-        this.$router.push({ path: '/everydayimg/homepage@gmail.com'});
+        this.$router.push({ path: '/everydayimg/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
     async clickadmin() {
@@ -2220,7 +2401,7 @@ export default {
         gu = response;
       });
       if(gu && gu.ret > 0 && isAdminQuanxian(gu.quanxian)) {
-        this.$router.push({ path: '/admin/' + gu.urlmail });
+        this.$router.push({ path: '/admin/' + (gu.urluid || gu.urlmail) });
       } else {
         ElMessage("只有管理员才能访问管理页面！");
       }
@@ -2274,27 +2455,114 @@ html,body,#app{
   /* color: var(--el-text-color-primary); */
   /* background: var(--el-color-primary-light-3); */
   width:10vh;
+  min-width:76px;
   font-size:30px;
   background-color:rgb(136, 187, 250);
   /* background-image: url('/article/themeImg/anhei/csdn_anHei_vertical.png'); */
+  /* flex 纵向布局：菜单在上、底部工具组自动沉底；矮屏可滚动不溢出 */
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+  overflow-x:hidden;
+  transition:background-color .3s;
 }
 .layout-container-demo .el-menu {
-  --el-menu-bg-color: #545c64;
+  /* 菜单容器透明，让主题系统给 #elaside 换的底色透出来 */
+  --el-menu-bg-color: transparent;
   --el-menu-text-color: #ffffff;
-  --el-menu-active-color: #000000;
+  --el-menu-active-color: #337ecc;
+  --el-menu-hover-bg-color: rgba(255,255,255,0.28);
   border-right: none;
+  background: transparent;
+  padding-top:10px;
 }
 .layout-container-demo .el-main {
   padding: 0;
   background-color: #ffffff;
 }
+/* 菜单项：主题色上的半透明胶囊（毛玻璃感），图标在上文案在下 */
 .layout-container-demo .el-menu-item {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:2px;
+  height:52px;
+  margin:5px 8px;
+  padding:0 !important;
+  border-radius:12px;
   font-size:16px;
-  color:#ffffff; 
-  height:6vh;
-  background-color: rgb(86,92, 99);
-  font-weight: 600;
-  margin-left:-0.3vh;
+  color:#ffffff;
+  /* !important：主题系统会用 JS 行内样式给菜单项上纯色，这里统一为半透明胶囊，
+     让 #elaside 的主题底色透出来（纯色/节日/自定义三套主题都一致生效） */
+  background-color:rgba(255,255,255,0.14) !important;
+  font-weight: 700;
+  line-height:1.2;
+  text-shadow:0 1px 2px rgba(0,0,0,0.18);
+  transition:background-color .25s, transform .25s, box-shadow .25s;
+}
+.layout-container-demo .el-menu-item .menu-ico {
+  font-size:22px;
+  line-height:1;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+.layout-container-demo .el-menu-item .menu-label {
+  letter-spacing:2px;
+  margin-left:2px; /* 抵消 letter-spacing 造成的视觉偏移 */
+}
+/* 纯文字菜单项：不要图标、不要胶囊容器，直接文字显示（视频/游客/图片/管理/用户）
+   压缩占用高度紧挨上下项；悬浮/激活时底部出现色条 */
+.layout-container-demo .el-menu-item.menu-plain {
+  background-color:transparent !important;
+  text-shadow:none;
+  color:rgba(255,255,255,0.88);
+  height:30px;
+  margin:0 8px;
+  font-size:15px;
+  font-weight:700;
+  border-radius:0;
+  box-shadow:inset 0 -2px 0 transparent; /* 占位，避免悬浮时跳动 */
+  transition:box-shadow .2s, color .2s;
+}
+.layout-container-demo .el-menu-item.menu-plain:hover {
+  background-color:transparent !important;
+  transform:none;
+  color:#ffffff !important;
+  text-shadow:0 0 10px rgba(255,255,255,0.75); /* 悬浮：文字发光 */
+  box-shadow:inset 0 -2px 0 #67c23a; /* 悬浮：底部绿色条 */
+}
+.layout-container-demo .el-menu-item.menu-plain.is-active {
+  background-color:transparent !important;
+  color:#ffffff !important;
+  text-shadow:0 0 12px rgba(255,255,255,0.95); /* 激活：文字常亮发光 */
+  box-shadow:inset 0 -2px 0 #67c23a;
+}
+/* 访客数量：紧跟【用户】菜单项下方，字号与菜单协调并加粗 */
+.layout-container-demo .visitor-stat {
+  display:block;
+  font-size:14px;
+  font-weight:700;
+  color:rgba(255,255,255,0.92);
+  text-align:center;
+  line-height:1.5;
+  margin-top:4px;
+  padding:0 4px;
+  text-shadow:0 1px 2px rgba(0,0,0,0.25);
+  word-break:break-all;
+}
+/* 底部工具组：主题按钮，flex 自动沉底 */
+.layout-container-demo .aside-footer {
+  margin-top:auto;
+  padding:10px 8px 14px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.layout-container-demo .theme-btn {
+  width:82%;
+  margin:0;
+  font-weight:600;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
 }
 .image-slot {
   display: flex;
@@ -2307,13 +2575,15 @@ html,body,#app{
   font-size: 20px;
 }
 .layout-container-demo .el-menu-item:hover { /*https://blog.csdn.net/lannieZ/article/details/124007821*/
-  outline: 1 !important;
-  color: #6681fa !important;
-  background: #eeffff !important;
+  color:#ffffff !important;
+  background-color:rgba(255,255,255,0.30) !important;
+  transform:translateY(-1px);
 }
 .layout-container-demo .el-menu-item.is-active { /*https://blog.csdn.net/lannieZ/article/details/124007821*/
-  color: #6681fa !important;
-  background: #ff0000 !important;
+  color:#337ecc !important;
+  background-color:rgba(255,255,255,0.92) !important;
+  text-shadow:none;
+  box-shadow:0 2px 10px rgba(0,0,0,0.25);
 }
 .layout-container-demo .toolbar{
   color: #ffffff;
@@ -2380,6 +2650,15 @@ p:active {
   flex-wrap: wrap;
   align-items: center;
 }
+/* 页脚右下角日期时间：靠右对齐，移动端另起一行 */
+.footer-clock {
+  color: #000000;
+  font-size: 16px;
+  line-height: 20px;
+  margin-left: auto;
+  margin-right: 20px;
+  white-space: nowrap;
+}
 @media (max-width: 768px) {
   .layout-container-demo {
     height: auto;
@@ -2417,18 +2696,31 @@ p:active {
   /* 侧边栏收窄，菜单字号缩小 */
   .layout-container-demo .el-aside {
     width: 64px !important;
+    min-width: 64px !important;
     font-size: 14px;
   }
   .layout-container-demo .el-menu-item {
-    font-size: 13px !important;
+    font-size: 12px !important;
     height: 44px !important;
-    padding: 0 4px !important;
-    text-align: center;
+    margin: 4px 5px !important;
+    padding: 0 !important;
   }
-  /* 主题按钮上移，避免小屏下 23vh 留白过大 */
-  .layout-container-demo .el-aside .el-button {
-    margin-top: 8px !important;
-    margin-left: 4px !important;
+  /* 纯文字项在窄屏下保持紧凑 */
+  .layout-container-demo .el-menu-item.menu-plain {
+    height: 22px !important;
+    margin: 0 5px !important;
+    font-size: 11px !important;
+  }
+  .layout-container-demo .el-menu-item .menu-ico {
+    font-size: 16px;
+  }
+  /* 底部工具组紧凑化（flex 沉底后无需再留 23vh） */
+  .layout-container-demo .aside-footer {
+    padding: 8px 4px 10px;
+  }
+  .layout-container-demo .theme-btn {
+    width: 88% !important;
+    margin: 0 !important;
   }
   /* 页脚备案信息小字号、可换行 */
   .footer-bar,
@@ -2445,9 +2737,14 @@ p:active {
 @media (max-width: 480px) {
   .layout-container-demo .el-aside {
     width: 52px !important;
+    min-width: 52px !important;
   }
   .layout-container-demo .el-menu-item {
-    font-size: 12px !important;
+    font-size: 11px !important;
+    margin: 3px 4px !important;
+  }
+  .layout-container-demo .el-menu-item .menu-label {
+    letter-spacing: 1px;
   }
 }
 </style>

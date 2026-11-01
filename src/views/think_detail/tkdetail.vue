@@ -63,6 +63,44 @@
     >
     修改
   </el-button>
+  <!-- 片段配图管理：列出该片段目录里的图片，可预览、删除（误传/换图清理） -->
+  <el-button
+    class="filter-item"
+    type="warning"
+    @click="openImgManager"
+    style="text-align:center; margin-left:1%;"
+    v-if="canManage"
+    >
+    图片管理
+  </el-button>
+  <el-dialog v-model="imgDialogVisible" title="图片管理" width="min(760px, 94%)">
+    <el-table :data="imgList" v-loading="imgLoading" size="small" max-height="420">
+      <el-table-column label="预览" width="90">
+        <template #default="scope">
+          <el-image
+            :src="scope.row.url"
+            :preview-src-list="[scope.row.url]"
+            fit="cover"
+            preview-teleported
+            style="width:60px;height:45px;"
+          />
+        </template>
+      </el-table-column>
+      <el-table-column prop="name" label="文件名" show-overflow-tooltip />
+      <el-table-column label="大小" width="90">
+        <template #default="scope">{{ formatSize(scope.row.size) }}</template>
+      </el-table-column>
+      <el-table-column prop="mtime" label="上传时间" width="150" />
+      <el-table-column label="操作" width="90">
+        <template #default="scope">
+          <el-button size="small" type="danger" @click="deleteImg(scope.row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <div v-if="!imgLoading && imgList.length===0" style="text-align:center;color:#999;padding:20px 0;">
+      这个片段还没有图片，在【修改】弹窗里可以上传
+    </div>
+  </el-dialog>
   <!-- <el-dialog v-model="dialogFormVisible_top" title="输入密钥放在最上面" width="500"> -->
   <el-dialog v-model="dialogFormVisible_top" title="放在最上面的" width="min(500px, 92%)">
     <span hidden>
@@ -245,6 +283,10 @@ export default {
       toptop:false,
       nottop:true,
       canManage:false,
+      // 图片管理
+      imgDialogVisible: false,
+      imgList: [],
+      imgLoading: false,
     }
   },
   mounted(){
@@ -696,7 +738,9 @@ export default {
         owner = m[1];
       }
       if (!owner && this.$route.params.id) {
-        owner = this.$route.params.id;
+        // uid URL 下 params.id 是 36 位 uid：等于自己的 uid 时视 owner 为自己
+        owner = this.$route.params.id === (localStorage.getItem('my_uid') || '')
+          ? (Cookies.get("mail") || '') : this.$route.params.id;
       }
       const my = Cookies.get("mail");
       this.canManage = (owner && my === owner) || isAdminQuanxian(Cookies.get("quanxian"));
@@ -708,10 +752,11 @@ export default {
         gu = response;
       });
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/think/'+gu.urlmail, query:{"currentpage": Cookies.get("think"), "pagesize": Cookies.get("thinkpage")}});
+        // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
+        this.$router.push({ path: '/think/'+(gu.urluid || gu.urlmail), query:{"currentpage": Cookies.get("think"), "pagesize": Cookies.get("thinkpage")}});
       } else {
         // this.$router.push({ path: '/think/zj'});
-        this.$router.push({ path: '/think/homepage@gmail.com'});
+        this.$router.push({ path: '/think/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
     async sha(str) { 
@@ -746,6 +791,9 @@ export default {
         if(response.data.ret > 0) {
           ElMessage.warning("已经删除了的！");
           this.PrePage();
+          // 先切回列表再整页刷新：SPA 内导航不会重新拉取列表数据，
+          // 删除后必须 reload 才能立即反映结果
+          setTimeout(() => { window.location.reload(); }, 300);
         } else if(response.data.ret == 0) {
           ElMessage.warning("删除报错了的！");
           return false;
@@ -784,6 +832,85 @@ export default {
     },
     handleEdit() {
 
+    },
+    // ==================== 图片管理 ====================
+    formatSize(n) {
+      if(typeof n !== "number" || isNaN(n)) return "";
+      if(n < 1024) return n + " B";
+      if(n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+      return (n / 1024 / 1024).toFixed(2) + " MB";
+    },
+    async imgRequest(url, payload) {
+      // 与本页其他操作同款请求封装（/think/img_list、/think/img_delete）
+      const instance = axios.create({ baseURL: url, timeout: 20000 });
+      const response = await instance({
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        data: payload,
+      });
+      return response.data;
+    },
+    async openImgManager() {
+      if(!this.path) {
+        ElMessage.warning("片段路径缺失，无法管理图片");
+        return;
+      }
+      this.imgDialogVisible = true;
+      this.imgLoading = true;
+      try {
+        const r = await this.imgRequest('/think/img_list', {
+          'mail': Cookies.get("mail"), 'password': Cookies.get("password"),
+          'url': document.URL, 'path': this.path,
+        });
+        if(r.ret === 1) {
+          this.imgList = r.images || [];
+        } else {
+          this.imgList = [];
+          ElMessage.error(r.msg || "图片列表获取失败");
+        }
+      } catch(e) {
+        this.imgList = [];
+        ElMessage.error("图片列表获取失败");
+      } finally {
+        this.imgLoading = false;
+      }
+    },
+    deleteImg(item) {
+      // 片段正文里引用了该图时特别提醒（editcontent 是 /think/detail 返回的原文）
+      const used = (this.editcontent || "").includes(item.name);
+      const tip = used
+        ? `图片【${item.name}】正被片段内容引用，删除后将自动移除内容里的引用（需重新提交修改才会生效），确定删除？`
+        : `确定删除图片【${item.name}】？`;
+      this.$confirm(tip, "删除确认", {type: 'warning'})
+        .then(async () => {
+          try {
+            const r = await this.imgRequest('/think/img_delete', {
+              'mail': Cookies.get("mail"), 'password': Cookies.get("password"),
+              'url': document.URL, 'path': this.path, 'name': item.name,
+            });
+            if(r.ret === 1) {
+              // 文件已删，若内容里还留着引用，浏览器缓存的旧图会继续显示——
+              // 这里同步剥掉内容里的引用（<img src="name"> 与 ![..](name) 两种写法）
+              if(used) {
+                const esc = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const imgTag = new RegExp(`<img\\s+src=["']${esc}["']\\s*/?>`, 'gi');
+                const mdRef = new RegExp(`!\\[[^\\]]*\\]\\(${esc}\\)`, 'g');
+                this.editcontent = (this.editcontent || '')
+                  .replace(imgTag, '').replace(mdRef, '').replace(/\n{3,}/g, '\n\n');
+                ElMessage.success("图片已删除，内容里的引用已同步移除，记得提交修改");
+              } else {
+                ElMessage.success("图片已删除");
+              }
+              this.openImgManager();
+            } else if(r.ret === -100) {
+              ElMessage.error("没有登陆不能修改!");
+            } else {
+              ElMessage.error(r.msg || "图片删除失败");
+            }
+          } catch(e) {
+            ElMessage.error("图片删除失败");
+          }
+        }).catch(() => {});
     },
   },
 }

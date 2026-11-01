@@ -1,8 +1,28 @@
-numpy
-django
-markdown2
-django-cors-headers
-apscheduler
-beautifulsoup4==4.12.2
-requests
-pillow
+# 冻结自本机系统 Python 3.12（Ubuntu 24.04, 2026-11）
+# 安装：pip3 install -r requirements.txt
+#
+# 说明：
+# - 只包含站点真实用到的依赖（mysite 的 import + settings 里的 corsheaders）及其传递依赖，
+#   已排除系统包（cloud-init/ufw/python-apt 等带 ubuntu 后缀的包无法跨机安装）
+# - 本机 requests 为 Ubuntu 打包版，其元数据被剔除了核心传递依赖，
+#   已手动补上 urllib3/idna/certifi（均为本机实际安装的版本）
+# - charset-normalizer、tzdata(Windows) 等平台/打包差异依赖未固定，由 pip 自动解析
+
+# ---- 站点直接依赖 ----
+Django==6.1.2
+django-cors-headers==4.9.0
+markdown2==2.5.5
+APScheduler==3.11.3
+beautifulsoup4==4.12.3
+numpy==2.5.3
+requests==2.31.0
+pillow==10.2.0
+
+# ---- 传递依赖（版本与本机一致） ----
+asgiref==3.13.0        # Django
+sqlparse==0.6.0        # Django
+soupsieve==2.5         # beautifulsoup4
+tzlocal==5.4.5         # APScheduler
+urllib3==2.0.7         # requests（Ubuntu 版元数据缺失，手动补）
+idna==3.6              # requests（同上）
+certifi==2023.11.17    # requests（同上）

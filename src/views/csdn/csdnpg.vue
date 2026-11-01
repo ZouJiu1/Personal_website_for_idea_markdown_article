@@ -706,6 +706,40 @@ export default {
         this.search(ele.nextElementSibling);
       }
     },
+    // URL 隐私：邮箱 -> uid 查询（公开 userlist 已带 uid）。
+    // 转发链接/转发链中的主页链接不能出现邮箱；拉取失败或用户已删除时回退原串
+    // （旧邮箱 URL 后端仍兼容，只是不再新增邮箱形态链接）
+    async buildUidLookup() {
+      const cache = (this._uidLookupMap && Date.now() - this._uidLookupAt < 300000)
+        ? this._uidLookupMap : null;
+      if (cache) {
+        return cache;
+      }
+      let map = {};
+      try {
+        const instance = axios.create({ baseURL: '/csdn/userlist', timeout: 20000 });
+        const response = await instance({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          data: {},
+        });
+        if (response.data && response.data.ret === 1) {
+          (response.data.users || []).forEach((u) => {
+            if (u.mail && u.uid) {
+              map[u.mail] = u.uid;
+            }
+          });
+        }
+      } catch (e) {
+        map = {};
+      }
+      // 自己的邮箱兜底用 localStorage 缓存的 my_uid（登录者必然在 userlist 里，一般走不到）
+      const lookup = (mail) => map[mail]
+        || (mail && mail === Cookies.get('mail') ? (localStorage.getItem('my_uid') || mail) : mail);
+      this._uidLookupMap = lookup;
+      this._uidLookupAt = Date.now();
+      return lookup;
+    },
     // 转发：把他人文章以片段形式转发到自己的片段空间（复用已登录即可用的 post_think 接口）
     async forwardArticle(event) {
       // 先向后端确认登录态，避免 Cookie 残留导致"看似登录"却实际未登录
@@ -753,6 +787,8 @@ export default {
       if (summary.length > 100) {
         summary = summary.slice(0, 100) + '…';
       }
+      // URL 隐私：转发生成的链接（查看全文/转发链主页链接）中用户段一律用 uid
+      const uidOf = await this.buildUidLookup();
       ElMessageBox.prompt('文章将以片段形式转发到你的片段空间，可附上你的想法', '转发文章', {
         confirmButtonText: '转发',
         cancelButtonText: '取消',
@@ -767,7 +803,7 @@ export default {
             owner = parts[0];
           }
         }
-        const link = location.origin + '/#/csdn/markdown_detail/' + owner + '?plan=' + encodeURIComponent(originPath);
+        const link = location.origin + '/#/csdn/markdown_detail/' + uidOf(owner) + '?plan=' + encodeURIComponent(originPath);
         // 转发链：我 → 原作者 → 更早的转发者（用户名都可点击跳转到其主页）
         const mails = [myMail, owner];
         chain.forEach((m) => {
@@ -775,7 +811,7 @@ export default {
             mails.push(m);
           }
         });
-        const chainStr = mails.map((m) => '[@' + m + '](/#/' + m + ')').join(' → ');
+        const chainStr = mails.map((m) => '[@' + m + '](/#/' + uidOf(m) + ')').join(' → ');
         let content = '🔁 转发自 ' + chainStr + ' 的文章';
         if (summary) {
           content += '\n\n> ' + summary;
@@ -832,7 +868,8 @@ export default {
       // window.history.pushState({ page: 1 }, "标题 1", "?page=1");
       // console.log(window.history.state)
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/csdn/markdown_detail/'+gu.urlmail, query: { plan: this.dire_path }});
+        // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
+        this.$router.push({ path: '/csdn/markdown_detail/'+(gu.urluid || gu.urlmail), query: { plan: this.dire_path }});
       } else {
         this.$router.push({ path: '/csdn/markdown_detail/*', query: { plan: this.dire_path }});
       }
@@ -844,7 +881,7 @@ export default {
       });
       // console.log(gu);
       if(gu && gu.ret > 0) {
-        this.$router.push({ path: '/csdn/post_article/'+gu.urlmail});
+        this.$router.push({ path: '/csdn/post_article/'+(gu.urluid || gu.urlmail)});
       } else {
         this.$router.push({ path: '/csdn/post_article/*'});
       }

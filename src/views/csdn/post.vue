@@ -73,6 +73,44 @@
             草稿箱空空如也，写点什么然后点【保存草稿】吧
           </div>
         </el-dialog>
+        <!-- 文章配图管理：列出当前文章目录里的图片，可预览、删除（误传/换图清理） -->
+        <el-button
+          class="filter-item"
+          type="primary"
+          plain
+          @click="openImgManager"
+          style="margin-left:10px;text-align:center;"
+          >
+          图片管理
+        </el-button>
+        <el-dialog v-model="imgDialogVisible" title="图片管理" width="min(760px, 94%)">
+          <el-table :data="imgList" v-loading="imgLoading" size="small" max-height="420">
+            <el-table-column label="预览" width="90">
+              <template #default="scope">
+                <el-image
+                  :src="scope.row.url"
+                  :preview-src-list="[scope.row.url]"
+                  fit="cover"
+                  preview-teleported
+                  style="width:60px;height:45px;"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column prop="name" label="文件名" show-overflow-tooltip />
+            <el-table-column label="大小" width="90">
+              <template #default="scope">{{ formatSize(scope.row.size) }}</template>
+            </el-table-column>
+            <el-table-column prop="mtime" label="上传时间" width="150" />
+            <el-table-column label="操作" width="90">
+              <template #default="scope">
+                <el-button size="small" type="danger" @click="deleteImg(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="!imgLoading && imgList.length===0" style="text-align:center;color:#999;padding:20px 0;">
+            这篇文章还没有图片，点【上传图片】添加
+          </div>
+        </el-dialog>
         <el-button
           class="filter-item"
           type="warning"
@@ -90,6 +128,46 @@
           >
           草稿箱
         </el-button>
+        <!-- 历史文档：每次发布都会留下一份带时间戳的旧版 md，这里可阅读、恢复、删除 -->
+        <el-button
+          class="filter-item"
+          type="warning"
+          plain
+          @click="openHistoryBox"
+          style="margin-left:10px;text-align:center;"
+          >
+          历史文档
+        </el-button>
+        <el-dialog v-model="historyDialogVisible" title="历史文档" width="min(680px, 94%)">
+          <el-table :data="historyList" v-loading="historyLoading" size="small" max-height="420">
+            <el-table-column label="版本文件" show-overflow-tooltip>
+              <template #default="scope">
+                <span>{{ scope.row.name }}</span>
+                <el-tag v-if="scope.row.name===historyCurrent" size="small" type="success" style="margin-left:6px;">当前</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="mtime" label="保存时间" width="150" />
+            <el-table-column label="操作" width="215">
+              <template #default="scope">
+                <el-button size="small" @click="readHistory(scope.row)">阅读</el-button>
+                <el-button size="small" type="primary" @click="restoreHistory(scope.row)">恢复</el-button>
+                <el-button
+                  size="small"
+                  type="danger"
+                  :disabled="scope.row.name===historyCurrent"
+                  @click="deleteHistory(scope.row)"
+                >删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="!historyLoading && historyList.length===0" style="text-align:center;color:#999;padding:20px 0;">
+            还没有历史版本，发布一次文章后旧版本会自动留存在这里
+          </div>
+        </el-dialog>
+        <!-- 历史版本阅读弹窗：复用 /csdn/postArticle 的预览渲染（save=false 不落盘） -->
+        <el-dialog v-model="historyReadVisible" title="历史版本内容" width="min(880px, 94%)" top="5vh">
+          <div id="historyReadBox" v-loading="historyReadLoading" class="history-read" v-html="historyReadHtml"></div>
+        </el-dialog>
         <el-button
           class="filter-item"
           type="success"
@@ -181,6 +259,18 @@ export default {
       draftDialogVisible: false,
       draftList: [],
       draftLoading: false,
+      // 图片管理
+      imgDialogVisible: false,
+      imgList: [],
+      imgLoading: false,
+      // 历史文档
+      historyDialogVisible: false,
+      historyList: [],
+      historyLoading: false,
+      historyCurrent: "",     // 当前版本文件名（不允许删除）
+      historyReadVisible: false,
+      historyReadLoading: false,
+      historyReadHtml: "",
       dialogFormVisible: false,
       elaside: "",
       save: false,
@@ -261,7 +351,10 @@ export default {
       if(x1 === x0) return y0;
       return y0 + (y1 - y0) * (v - x0) / (x1 - x0);
     },
-    // 依据源文本标题行与右预览标题元素，构建“源滚动px -> 预览滚动px”的锚点
+    // 依据源文本块与右预览块级元素，构建“源滚动px -> 预览滚动px”的锚点。
+    // 块配对覆盖段落/标题/代码围栏/$$公式块/列表/引用/表格/分割线/图片等所有块，
+    // latex 渲染高度、代码高亮、图片加载造成的高度失配都由下一个块锚点校正；
+    // 配对不可靠时退回标题锚点方案。
     buildScrollAnchors() {
       const ta = document.getElementById("textarea_input");
       const pre = document.getElementById("previewHalf");
@@ -270,28 +363,58 @@ export default {
         return;
       }
       const src = this.textarea_content || ta.value || "";
-      const srcIdx = [];
-      const re = /^([ \t]*#{1,6}[ \t]+)[^\n]*/gm;
-      let m;
-      while((m = re.exec(src)) !== null) {
-        srcIdx.push(m.index);
-      }
-      const heads = pre.querySelectorAll("h1, h2, h3, h4, h5, h6");
       const srcMax = ta.scrollHeight - ta.clientHeight;
       const preMax = pre.scrollHeight - pre.clientHeight;
       if(srcMax <= 0 || preMax <= 0) {
         this._scrollAnchors = null;
         return;
       }
-      const n = Math.min(srcIdx.length, heads.length);
+      const srcB = this.srcBlocks(src);
+      // 预览直接子元素就是渲染块（渲染器输出顶级块；codehilite 等包裹层整体算一块）
+      const preB = [];
+      for(const el of pre.children) {
+        if(el.nodeType !== 1) continue;
+        const tag = el.tagName;
+        if(tag === "SCRIPT" || tag === "STYLE") continue;
+        preB.push(el);
+      }
       const s = [0], p = [0];
-      for(let i = 0; i < n; i++) {
-        const sp = Math.max(0, Math.min(srcMax, this.measureSourcePx(ta, src, srcIdx[i])));
-        const pp = Math.max(0, Math.min(preMax, heads[i].getBoundingClientRect().top - pre.getBoundingClientRect().top + pre.scrollTop));
-        // 保证严格单调递增，避免插值分母为负或跳变
-        if(sp > s[s.length - 1] && pp >= p[p.length - 1]) {
-          s.push(sp);
-          p.push(pp);
+      let pushed = 0;
+      // 数量接近才做逐块配对（渲染器可能合并/拆块，差异大时按标题兜底）
+      if(srcB.length >= 2 && preB.length >= 2 &&
+         Math.abs(srcB.length - preB.length) <= Math.max(4, srcB.length * 0.34)) {
+        const n = Math.min(srcB.length, preB.length);
+        for(let i = 0; i < n; i++) {
+          const sp = Math.max(0, Math.min(srcMax, this.measureSourcePx(ta, src, srcB[i])));
+          const pp = Math.max(0, Math.min(preMax,
+            preB[i].getBoundingClientRect().top - pre.getBoundingClientRect().top + pre.scrollTop));
+          // 保证严格单调递增，避免插值分母为负或跳变
+          if(sp > s[s.length - 1] && pp >= p[p.length - 1]) {
+            s.push(sp);
+            p.push(pp);
+            pushed++;
+          }
+        }
+      }
+      if(pushed < 2) {
+        // 兜底：按“硬标记块”配对——标题 + 代码围栏（渲染器对这两类都是 1:1 输出
+        // h1..h6 / div.codestyle，见 mysite/markdown_detail/views.py addback_code），
+        // 标题/代码块高度差异大也能被各自锚点校正，比只按标题更稳；
+        // $$ 公式块暂不进兜底（渲染器对行内/块级 $ 的输出难区分），交回上方逐块配对。
+        const srcIdx = srcB.filter(off => {
+          const head = src.slice(off, off + 200);
+          return /^([ \t]*#{1,6}[ \t]+)[^\n]*/m.test(head) || /^\s*(```|~~~)/m.test(head);
+        });
+        const marks = pre.querySelectorAll("h1, h2, h3, h4, h5, h6, div.codestyle");
+        const n = Math.min(srcIdx.length, marks.length);
+        for(let i = 0; i < n; i++) {
+          const sp = Math.max(0, Math.min(srcMax, this.measureSourcePx(ta, src, srcIdx[i])));
+          const pp = Math.max(0, Math.min(preMax,
+            marks[i].getBoundingClientRect().top - pre.getBoundingClientRect().top + pre.scrollTop));
+          if(sp > s[s.length - 1] && pp >= p[p.length - 1]) {
+            s.push(sp);
+            p.push(pp);
+          }
         }
       }
       if(s[s.length - 1] < srcMax) {
@@ -299,6 +422,48 @@ export default {
         p.push(preMax);
       }
       this._scrollAnchors = s.length >= 2 ? { s, p } : null;
+    },
+    // 把源 markdown 划分成块，返回每块首字符的 offset。
+    // 围栏代码块（```/~~~）与 $$ 公式块整体算一块；其余以空行为界成块。
+    srcBlocks(src) {
+      const n = src.length;
+      const isEol = c => c === 10 || c === 13;
+      const lines = [];
+      let lineStart = 0;
+      for(let k = 0; k <= n; k++) {
+        if(k === n || isEol(src.charCodeAt(k))) {
+          lines.push([lineStart, k]);
+          if(src.charCodeAt(k) === 13 && src.charCodeAt(k + 1) === 10) k++;
+          lineStart = k + 1;
+        }
+      }
+      const blocks = [];
+      let idx = 0;
+      while(idx < lines.length) {
+        const s0 = lines[idx][0];
+        const line = src.slice(s0, lines[idx][1]);
+        if(line.trim() === "") { idx++; continue; }
+        let end = idx + 1;
+        const fence = line.match(/^\s*(```|~~~)/);
+        if(fence) {
+          const mark = fence[1];
+          while(end < lines.length && !new RegExp("^\\s*" + mark.replace(/`/g, "`")).test(src.slice(lines[end][0], lines[end][1]))) end++;
+          if(end < lines.length) end++;   // 含围栏闭合行
+        } else if(line.indexOf("$$") >= 0) {
+          if((line.match(/\$\$/g) || []).length >= 2) {
+            end = idx + 1;   // $$...$$ 单行自成一块
+          } else {
+            while(end < lines.length && src.slice(lines[end][0], lines[end][1]).indexOf("$$") < 0) end++;
+            if(end < lines.length) end++;   // 含 $$ 闭合行
+          }
+        } else {
+          // 段落/标题/列表/引用/表格/分割线：直到空行
+          while(end < lines.length && src.slice(lines[end][0], lines[end][1]).trim() !== "") end++;
+        }
+        blocks.push(s0);
+        idx = end;
+      }
+      return blocks;
     },
     // 用与 textarea 完全一致样式的镜像 div 测量源文本某字符处的像素高度
     measureSourcePx(ta, src, offset) {
@@ -565,6 +730,8 @@ export default {
           this.setTextarea(r.markdown);
           this.draft_id = r.id;
           this.draftDialogVisible = false;
+          // 载入草稿后右侧预览自动渲染（与编辑已存在文章时一致）
+          this.axiospost(r.markdown);
           ElMessage.success("草稿已载入，可继续编辑");
         } else {
           ElMessage.error(r.msg || "草稿读取失败");
@@ -591,6 +758,204 @@ export default {
             }
           } catch(e) {
             ElMessage.error("草稿删除失败");
+          }
+        }).catch(() => {});
+    },
+    // ==================== 图片管理 ====================
+    formatSize(n) {
+      if(typeof n !== "number" || isNaN(n)) return "";
+      if(n < 1024) return n + " B";
+      if(n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+      return (n / 1024 / 1024).toFixed(2) + " MB";
+    },
+    requireLogin() {
+      // 与草稿箱同款：mail/password 都存在 cookie 才算已登录
+      const mail = Cookies.get("mail");
+      const password = Cookies.get("password");
+      if(!mail || !password) {
+        ElMessage.error("请先登录后再操作");
+        return null;
+      }
+      return { mail, password };
+    },
+    async openImgManager() {
+      if(!this.path) {
+        ElMessage.warning("还没有文章目录：先上传图片或发布一次文章后再管理");
+        return;
+      }
+      const cred = this.requireLogin();
+      if(!cred) return;
+      this.imgDialogVisible = true;
+      this.imgLoading = true;
+      try {
+        const r = await this.draftRequest('/csdn/img_list', {
+          mail: cred.mail, password: cred.password, path: this.path,
+        });
+        if(r.ret === 1) {
+          this.imgList = r.images || [];
+        } else {
+          this.imgList = [];
+          ElMessage.error(r.msg || "图片列表获取失败");
+        }
+      } catch(e) {
+        this.imgList = [];
+        ElMessage.error("图片列表获取失败");
+      } finally {
+        this.imgLoading = false;
+      }
+    },
+    deleteImg(item) {
+      const used = (this.textarea_content || "").includes(item.name);
+      const tip = used
+        ? `图片【${item.name}】正被当前编辑内容引用，删除后将自动移除正文中的引用（已发布的页面需重新发布才会生效），确定删除？`
+        : `确定删除图片【${item.name}】？`;
+      this.$confirm(tip, "删除确认", {type: 'warning'})
+        .then(async () => {
+          try {
+            const r = await this.draftRequest('/csdn/img_delete', {
+              mail: Cookies.get("mail"), password: Cookies.get("password"),
+              path: this.path, name: item.name,
+            });
+            if(r.ret === 1) {
+              // 文件已删，若正文还留着引用，浏览器缓存的旧图会继续显示——
+              // 这里同步剥掉正文里的引用（<img src="name"> 与 ![..](name) 两种写法）再重渲染预览
+              if(used) {
+                const esc = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const imgTag = new RegExp(`<img\\s+src=["']${esc}["']\\s*/?>`, 'gi');
+                const mdRef = new RegExp(`!\\[[^\\]]*\\]\\(${esc}\\)`, 'g');
+                this.textarea_content = (this.textarea_content || '')
+                  .replace(imgTag, '').replace(mdRef, '').replace(/\n{3,}/g, '\n\n');
+                this.save = false;
+                this.axiospost(this.textarea_content);
+                ElMessage.success("图片已删除，正文引用已同步移除");
+              } else {
+                ElMessage.success("图片已删除");
+              }
+              this.openImgManager();
+            } else {
+              ElMessage.error(r.msg || "图片删除失败");
+            }
+          } catch(e) {
+            ElMessage.error("图片删除失败");
+          }
+        }).catch(() => {});
+    },
+    // ==================== 历史文档 ====================
+    async openHistoryBox() {
+      if(!this.path) {
+        ElMessage.warning("发布文章后才有历史版本");
+        return;
+      }
+      const cred = this.requireLogin();
+      if(!cred) return;
+      this.historyDialogVisible = true;
+      this.historyLoading = true;
+      try {
+        const r = await this.draftRequest('/csdn/history_list', {
+          mail: cred.mail, password: cred.password, path: this.path,
+        });
+        if(r.ret === 1) {
+          this.historyList = r.versions || [];
+          this.historyCurrent = r.current || "";
+        } else {
+          this.historyList = [];
+          this.historyCurrent = "";
+          ElMessage.error(r.msg || "历史版本获取失败");
+        }
+      } catch(e) {
+        this.historyList = [];
+        this.historyCurrent = "";
+        ElMessage.error("历史版本获取失败");
+      } finally {
+        this.historyLoading = false;
+      }
+    },
+    async fetchHistory(item) {
+      // 读取单个历史版本全文
+      return await this.draftRequest('/csdn/history_get', {
+        mail: Cookies.get("mail"), password: Cookies.get("password"),
+        path: this.path, name: item.name,
+      });
+    },
+    async renderMarkdownHtml(text) {
+      // 复用 /csdn/postArticle 的预览渲染（save=false 不落盘），排版与右侧预览一致；
+      // path 必须传真实文章路径，后端据此把 <img src> 改写为可访问的站点路径
+      const instance = axios.create({ baseURL: '/csdn/postArticle', timeout: 20000 });
+      const response = await instance({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        data: {"textarea": text, "title": this.title, "save": false,
+               "old_title": this.old_title, "dirname": this.dirname, "path": this.path || "", "mail": ""},
+        withCredentials: true,
+      });
+      return response.data.markdown;
+    },
+    async readHistory(item) {
+      this.historyReadVisible = true;
+      this.historyReadLoading = true;
+      this.historyReadHtml = "";
+      try {
+        const r = await this.fetchHistory(item);
+        if(r.ret !== 1) {
+          ElMessage.error(r.msg || "历史版本读取失败");
+          this.historyReadVisible = false;
+          return;
+        }
+        this.historyReadHtml = await this.renderMarkdownHtml(r.markdown);
+        await this.$nextTick();
+        // 与右侧预览一致：渲染返回 html 里的 katex 公式
+        const box = document.getElementById("historyReadBox");
+        if(box) {
+          const ks = box.getElementsByClassName("katexspan");
+          for(let i = 0; i < ks.length; i++) {
+            katex.render(ks[i].outerText, ks[i], { throwOnError: false });
+          }
+        }
+      } catch(e) {
+        ElMessage.error("历史版本读取失败");
+        this.historyReadVisible = false;
+      } finally {
+        this.historyReadLoading = false;
+      }
+    },
+    restoreHistory(item) {
+      this.$confirm(
+        `把历史版本【${item.name}】的内容恢复到编辑器？当前编辑内容将被覆盖（未发布且想保留的内容请先存草稿）`,
+        "恢复确认", {type: 'warning'}
+      ).then(async () => {
+        try {
+          const r = await this.fetchHistory(item);
+          if(r.ret !== 1) {
+            ElMessage.error(r.msg || "历史版本读取失败");
+            return;
+          }
+          this.textarea_content = r.markdown;
+          this.setTextarea(r.markdown);
+          this.draft_id = "";   // 恢复的是历史正文，不再关联之前载入的草稿
+          this.historyDialogVisible = false;
+          this.axiospost(r.markdown);   // 右侧预览同步刷新
+          ElMessage.success("已恢复到编辑器，确认无误后点【发布】生效");
+        } catch(e) {
+          ElMessage.error("历史版本读取失败");
+        }
+      }).catch(() => {});
+    },
+    deleteHistory(item) {
+      this.$confirm(`确定删除历史版本【${item.name}】？删除后不可恢复`, "删除确认", {type: 'warning'})
+        .then(async () => {
+          try {
+            const r = await this.draftRequest('/csdn/history_delete', {
+              mail: Cookies.get("mail"), password: Cookies.get("password"),
+              path: this.path, name: item.name,
+            });
+            if(r.ret === 1) {
+              ElMessage.success("历史版本已删除");
+              this.openHistoryBox();
+            } else {
+              ElMessage.error(r.msg || "历史版本删除失败");
+            }
+          } catch(e) {
+            ElMessage.error("历史版本删除失败");
           }
         }).catch(() => {});
     },
@@ -822,10 +1187,11 @@ export default {
               } else {
                 if(gu && gu.ret > 0) {
                   // this.$router.push({ path: '/csdn/' + gu.mail,});
-                  this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+                  // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
+                  this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
                 } else {
                   // this.$router.push({ path: '/csdn/zj',});
-                  this.$router.push({ path: '/csdn/homepage@gmail.com',});
+                  this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'),});
                 }
               } 
             } else {
@@ -888,21 +1254,21 @@ export default {
         } else {
           if(gu && gu.ret > 0) {
             // this.$router.push({ path: '/csdn/' + gu.urlmail});
-            this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+            this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
           } else {
             // this.$router.push({ path: '/csdn/zj'});
             // this.$router.push({ path: '/csdn/homepage@gmail.com'});
-            this.$router.push({ path: '/csdn/homepage@gmail.com',  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+            this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
           }
-        } 
+        }
       } else {
         if(gu && gu.ret > 0) {
           // this.$router.push({ path: '/csdn/' + gu.urlmail});
-          this.$router.push({ path: '/csdn/' + gu.urlmail,  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+          this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         } else {
           // this.$router.push({ path: '/csdn/zj'});
           // this.$router.push({ path: '/csdn/homepage@gmail.com'});
-          this.$router.push({ path: '/csdn/homepage@gmail.com',  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
+          this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         }
       }
       // this.$router.push({ path: '/csdn/markdown_detail', hash: '#csdn/markdown_detail', query: { plan: this.path }});
@@ -1305,6 +1671,17 @@ textarea {
   margin-top:10px;
   margin-bottom:0px;
   margin-left:3px;
+}
+
+/* 历史版本阅读弹窗：复用预览排版（:deep 规则同样作用于 teleport 出去的弹窗内容） */
+.history-read {
+  max-height: 68vh;
+  overflow: auto;
+  padding: 6px 12px;
+  background-color: #ffffff;
+}
+.history-read :deep(img) {
+  max-width: 100%;
 }
 
 /* 手机端适配：工具栏按钮换行、标题输入占满、编辑器与预览改为上下堆叠 */

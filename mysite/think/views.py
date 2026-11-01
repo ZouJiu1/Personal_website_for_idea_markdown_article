@@ -11,8 +11,8 @@ addpath = os.path.abspath(__file__ + "/../../")
 import sys
 sys.path.append(addpath)
 from csdn.views import handle_uploaded_file, replacewithjpg, getTail
-from csdn.views import check_logined, getusername, renzheng, notify_administer, ADMIN_QUANXIAN, check_identity, is_admin, is_super_admin
-from mysite.projectpaths import find_top_marker, TOP_THINK
+from csdn.views import check_logined, getusername, renzheng, notify_administer, ADMIN_QUANXIAN, check_identity, is_admin, is_super_admin, _member_level
+from mysite.projectpaths import find_top_marker, TOP_THINK, web_relative_path
 import markdown2
 import re as regular
 from copy import deepcopy
@@ -381,8 +381,10 @@ def modify(request):
     tailreal = os.path.realpath(tailpath)  # 用 realpath 归一化后做归属校验，防止 ../ 路径穿越篡改他人内容
     if is_admin(get['quanxian']):
         pass  # 管理员可修改任何用户的内容
-    elif f"{get['mail']}" not in req['url'] or f"/people/{get['mail']}/" not in tailreal:
-        # 普通用户只能修改自己目录下的内容
+    elif get['urlmail'] != get['mail'] or f"/people/{get['mail']}/" not in tailreal:
+        # 普通用户只能修改自己目录下的内容。
+        # uid 化后 URL 不含邮箱，页面主人判定改用 getusername 还原出的 urlmail
+        # （原来是 URL 子串判断，uid 形态下恒为 False 会误拒本人操作）
         return JsonResponse( { "ret" : -100} , safe = False)
 
     if not os.path.isdir(tailpath):
@@ -471,7 +473,8 @@ def post_think(request):
     if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
     basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-    if f"{get['mail']}" not in req['url']:
+    # uid 化后 URL 不含邮箱，页面主人判定改用还原出的 urlmail（子串判断会误拒本人）
+    if get['urlmail'] != get['mail']:
         return JsonResponse( { "ret" : -100} , safe = False)
     postdate = str(req["postdate"])
 
@@ -540,7 +543,8 @@ def uploadImg(request):
     if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
     basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-    if f"{get['mail']}" not in req['url']:
+    # uid 化后 URL 不含邮箱，页面主人判定改用还原出的 urlmail（子串判断会误拒本人）
+    if get['urlmail'] != get['mail']:
         return JsonResponse( { "ret" : -100} , safe = False)
 
     # https://docs.djangoproject.com/zh-hans/5.1/ref/files/uploads/#django.core.files.uploadedfile.UploadedFile
@@ -846,3 +850,96 @@ def upvote_change(request):
     finally:
         sem.release()
     return JsonResponse( { "ret" : True } , safe = False)
+
+# ==================== 片段配图管理 ====================
+# 片段的图片与 content.txt 同目录存放（people/<mail>/.../think/<postdate>/）。
+# 供片段详情页「图片管理」列出/删除配图；鉴权与其他写接口一致：登录/管理员 + realpath 归属校验。
+_thinkimg_mutex = Semaphore(value=1)
+_IMG_TAILS = ('.jpg', '.png', '.jpeg', '.bmp', '.gif')
+
+def _think_img_auth(request, req):
+    """片段图片接口统一鉴权：通过返回 (dirpath, '')，失败返回 ('', 原因)。
+    dirpath 为片段目录 realpath：仅允许 people/ 或 article/ 内；普通用户仅限本人目录，管理员不限。"""
+    auth = check_identity(request, req, admin_bypass=True)
+    get = auth['get']
+    if not auth['passed']:
+        return '', '未登录或校验失败'
+    root = os.path.realpath(os.path.abspath(__file__ + "/../../../"))
+    dirpath = str(req.get('path', ''))
+    if dirpath and not dirpath.startswith('/'):
+        # 相对路径按项目根解析（与站点 /people/... 静态路径一致），避免受 Django 进程 cwd 影响
+        dirpath = os.path.join(root, dirpath)
+    real = os.path.realpath(dirpath) if dirpath else ""
+    allowed_roots = [os.path.join(root, 'people') + os.sep, os.path.join(root, 'article') + os.sep]
+    if not real or not any(real.startswith(a) for a in allowed_roots) or not os.path.isdir(real):
+        return '', '片段目录不存在或路径非法'
+    # 身份取「请求自带且已通过 check_logined 校验的 mail」，
+    # 不能用 getusername 从 URL 解析的 get['mail']——部分 URL 形态（短 urlmail 等）
+    # 会把已登录用户匿名化成 None，导致本人操作自己的片段也被误判越权。
+    mail = str(req.get('mail', ''))
+    if not (is_admin(get.get('quanxian', -1)) or is_admin(_member_level(req))):
+        own_root = os.path.join(root, 'people', mail) + os.sep
+        if not mail or not real.startswith(own_root):
+            return '', '只能操作自己的内容'
+    return real, ''
+
+def _img_safe_name(name):
+    """校验客户端传来的文件名：必须是纯文件名（无路径成分、无 ..）且为图片扩展名。"""
+    name = str(name or '')
+    if not name or name != os.path.basename(name) or '..' in name:
+        return ''
+    if not any(name.lower().endswith(t) for t in _IMG_TAILS):
+        return ''
+    return name
+
+def img_list(request):
+    """片段配图列表。req: {mail, password, path}；返回 [{name,url,size,mtime}] 按时间倒序。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    dirpath, err = _think_img_auth(request, req)
+    if err:
+        return JsonResponse({"ret": -100, "msg": err}, safe=False)
+    images = []
+    try:
+        for f in os.listdir(dirpath):
+            if not any(f.lower().endswith(t) for t in _IMG_TAILS):
+                continue
+            p = os.path.join(dirpath, f)
+            try:
+                st = os.stat(p)
+            except Exception:
+                continue
+            images.append({"name": f,
+                           "url": web_relative_path(p),
+                           "size": st.st_size,
+                           "mtime": datetime.fromtimestamp(st.st_mtime + timezone).strftime('%Y-%m-%d %H:%M:%S')})
+        images.sort(key=lambda x: x["mtime"], reverse=True)
+    except Exception:
+        return JsonResponse({"ret": -2, "msg": "片段目录不存在或已删除"}, safe=False)
+    return JsonResponse({"ret": 1, "images": images}, safe=False)
+
+def img_delete(request):
+    """删除片段配图。req: {mail, password, path, name}。"""
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    dirpath, err = _think_img_auth(request, req)
+    if err:
+        return JsonResponse({"ret": -100, "msg": err}, safe=False)
+    name = _img_safe_name(req.get('name', ''))
+    if not name:
+        return JsonResponse({"ret": -100, "msg": "非法图片文件名"}, safe=False)
+    p = os.path.join(dirpath, name)
+    if not os.path.realpath(p).startswith(dirpath + os.sep):
+        return JsonResponse({"ret": -100, "msg": "非法图片路径"}, safe=False)
+    _thinkimg_mutex.acquire()
+    try:
+        if not os.path.exists(p):
+            return JsonResponse({"ret": -2, "msg": "图片不存在或已删除"}, safe=False)
+        os.remove(p)
+    finally:
+        _thinkimg_mutex.release()
+    return JsonResponse({"ret": 1}, safe=False)

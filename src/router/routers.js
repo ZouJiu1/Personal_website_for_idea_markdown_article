@@ -46,9 +46,10 @@ import getusername from '/src/common.js'
 export const constantRoutes = [
   {
     // 裸域名访问（无 hash）时重定向到站长空间，避免路由 no-match 告警与空白内容区。
-    // 站长账号为全邮箱 homepage@gmail.com：裸域名、/、/#、/#/ 四种形态都归结为根路由 '/'
+    // 邮箱 URL 已彻底失效：优先用缓存的站长 uid；无缓存时落到中性短名段 /zj，
+    // App.vue loading() 的匿名分支会再跳到后端返回的站长 uid（不经过邮箱形态）
     path: '/',
-    redirect: '/homepage@gmail.com',
+    redirect: () => (localStorage.getItem('site_owner_uid') || '/zj'),
   },
   {
     path: '/book/:id',

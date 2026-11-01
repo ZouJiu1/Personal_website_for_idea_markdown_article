@@ -218,7 +218,8 @@ export default {
       });
       if (!gu || gu.ret <= 0 || !isAdminQuanxian(gu.quanxian)) {
         ElMessage.error('只有管理员才能访问管理页面！');
-        this.$router.push({ path: '/homepage@gmail.com' });
+        // URL 隐私：回站长 uid 页面，取不到回退站长邮箱
+        this.$router.push({ path: '/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com') });
         return;
       }
       this.myLevel = parseInt(gu.quanxian);
@@ -241,7 +242,8 @@ export default {
           }
         } else if (response.data.ret === -100) {
           ElMessage.error('没有管理员权限！');
-          this.$router.push({ path: '/homepage@gmail.com' });
+          // URL 隐私：回站长 uid 页面，取不到回退站长邮箱
+          this.$router.push({ path: '/' + (localStorage.getItem('site_owner_uid') || 'homepage@gmail.com') });
         } else {
           ElMessage.error('获取用户列表失败！');
         }

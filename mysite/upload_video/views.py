@@ -62,7 +62,8 @@ def upload(request):
     if not auth['passed']:
         return JsonResponse( { "ret" : -100} , safe = False)
     basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
-    if f"{get['mail']}" not in req['url']:
+    # uid 化后 URL 不含邮箱，页面主人判定改用还原出的 urlmail（子串判断会误拒本人）
+    if get['urlmail'] != get['mail']:
         return JsonResponse( { "ret" : -100} , safe = False)
 
     savepath = deepcopy(basepath)
