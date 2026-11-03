@@ -91,8 +91,14 @@ function applySavedPos(el) {
   if (p && typeof p.left === 'number' && typeof p.top === 'number') {
     el.style.right = 'auto'
     el.style.bottom = 'auto'
-    el.style.left = p.left + 'px'
-    el.style.top = p.top + 'px'
+    // 记忆值按当前视口钳制后再应用（不改写记忆）：窗口比保存时窄也不会把播放器
+    // 挪出屏幕，窗口恢复大后自动回到原位——与 resize 钳制行为一致（同看板郎逻辑）
+    const w = el.offsetWidth || 0
+    const h = el.offsetHeight || 0
+    const nl = Math.min(Math.max(p.left, 0), Math.max(window.innerWidth - w, 0))
+    const nt = Math.min(Math.max(p.top, 0), Math.max(window.innerHeight - h, 0))
+    el.style.left = nl + 'px'
+    el.style.top = nt + 'px'
   }
 }
 

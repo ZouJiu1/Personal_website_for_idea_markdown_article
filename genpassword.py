@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('--pw', type=str, default='')
     args = parser.parse_args()
 
-    password = args.pw or '12ab[,'
+    password = args.pw or '123ab&^'
     if len(password) == 0:
         raise RuntimeError(password)
 

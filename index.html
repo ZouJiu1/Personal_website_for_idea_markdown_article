@@ -50,7 +50,9 @@
         var waifu = document.getElementById("waifu");
         if (!waifu) return;
         var KEY = "waifu_pos";
-        // 恢复记忆位置：等入场动画（bottom 3s transition）结束后再切 left/top 定位
+        // 恢复记忆位置：等入场动画（bottom 3s transition）结束后再切 left/top 定位。
+        // 记忆值按当前视口钳制后再应用（不改写记忆）：窗口比保存时窄也不会把看板郎
+        // 挪出屏幕，窗口恢复大后自动回到原位——与下方 resize 钳制行为一致
         function applySaved() {
           var p = null;
           try { p = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
@@ -58,8 +60,11 @@
             waifu.style.transition = "none";
             waifu.style.right = "auto";
             waifu.style.bottom = "auto";
-            waifu.style.left = p.left + "px";
-            waifu.style.top = p.top + "px";
+            var w = waifu.offsetWidth || 0, h = waifu.offsetHeight || 0;
+            var nl = Math.min(Math.max(p.left, 0), Math.max(window.innerWidth - w, 0));
+            var nt = Math.min(Math.max(p.top, 0), Math.max(window.innerHeight - h, 0));
+            waifu.style.left = nl + "px";
+            waifu.style.top = nt + "px";
             syncPicker();
             setTimeout(function () { waifu.style.transition = ""; }, 60);
           }
