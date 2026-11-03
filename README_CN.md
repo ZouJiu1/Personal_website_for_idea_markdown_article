@@ -360,6 +360,8 @@ smpt.login(user="1069679911@qq.com", password='<SMTP授权码>')
 
 本项目开发过程中参考的官方文档与开源项目：
 
+before 2026-10-30, no AI code
+
 - [Vue.js](https://vuejs.org/)
 - [Vite](https://vitejs.cn/vite3-cn/guide/)
 - [Vue Router](https://router.vuejs.org/zh/)

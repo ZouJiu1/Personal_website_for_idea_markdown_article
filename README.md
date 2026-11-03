@@ -390,6 +390,8 @@ Enable SMTP in your QQ Mail settings, get an auth code, and replace the placehol
 
 Official docs and open-source projects referenced during development:
 
+before 2026-10-30, no AI code
+
 - [Vue.js](https://vuejs.org/)
 - [Vite](https://vitejs.cn/vite3-cn/guide/)
 - [Vue Router](https://router.vuejs.org/zh/)
