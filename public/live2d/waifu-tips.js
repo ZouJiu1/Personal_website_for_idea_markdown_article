@@ -167,9 +167,16 @@ function loadWidget() {
 		});
 		document.querySelector("#waifu-tool .tool-chat").addEventListener("click", showHitokoto);
 		document.querySelector("#waifu-tool .tool-config").addEventListener("click", openModelPicker);
-		document.querySelector("#waifu-tool .tool-switch").addEventListener("click", loadNextModel);
+		document.querySelector("#waifu-tool .tool-switch").addEventListener("click", () => {
+			// 换装互动：旧形象先炸一圈星星送别，新形象站好后 400ms 再冒一簇爱心打个招呼
+			waifuBurst(["star", "sparkle"]);
+			Promise.resolve(loadNextModel()).then(() => {
+				setTimeout(() => waifuBurst(["heart", "sparkle", "petal"]), 400);
+			}).catch(() => { });
+		});
 		document.querySelector("#waifu-tool .tool-photo").addEventListener("click", () => {
 			showMessage("照好了嘛，是不是很帅呢？", 6000, 9);
+			waifuBurst(["star", "sparkle"], 20);   // 拍照闪光：快门一响冒一圈星
 			Live2D.captureName = "photo.png";
 			Live2D.captureFrame = true;
 		});
@@ -181,6 +188,30 @@ function loadWidget() {
 				document.getElementById("waifu").style.display = "none";
 				document.getElementById("waifu-toggle").classList.add("waifu-toggle-active");
 			}, 3000);
+		});
+		// 看板郎与用户的专属互动：点击角色时从角色身上迸发一圈粒子（配合语料里的点击文案一起出），
+		// 偶尔慢半拍再补一小簇，像真的被戳到才反应过来；悬停/掠过/波及在特效引擎里处理
+		let waifuClickTimes = [];
+		document.getElementById("live2d").addEventListener("click", () => {
+			waifuBurst(["star", "sparkle", "heart"]);
+			if (Math.random() < 0.35) setTimeout(() => waifuBurst(["petal", "bubble"]), 500);
+			// 连点彩蛋：2.5 秒内戳满 5 次，角色气得大爆发并摇晃两下（WAAPI 动画，无需样式表）
+			const now = Date.now();
+			waifuClickTimes = waifuClickTimes.filter(ts => now - ts < 2500);
+			waifuClickTimes.push(now);
+			if (waifuClickTimes.length >= 5) {
+				waifuClickTimes = [];
+				waifuBurst(["star", "heart", "petal", "sparkle"], 70);
+				showMessage("别戳啦别戳啦！再戳我要生气了哦！", 4000, 12);
+				const el = document.getElementById("waifu");
+				if (el && el.animate) el.animate([
+					{ transform: "translateX(0)" },
+					{ transform: "translateX(-7px) rotate(-2deg)" },
+					{ transform: "translateX(7px) rotate(2deg)" },
+					{ transform: "translateX(-4px)" },
+					{ transform: "translateX(0)" },
+				], { duration: 480, easing: "ease-in-out" });
+			}
 		});
 		// 检测用户活动状态，并在空闲时显示消息
 		let userAction = false,
@@ -195,6 +226,8 @@ function loadWidget() {
 			} else if (!userActionTimer) {
 				userActionTimer = setInterval(() => {
 					showChatBatch(messageArray, CHAT_BATCH_SIZE, 9);
+					// 空闲搭话时配一簇爱心粒子：像角色主动朝用户挥手求关注
+					waifuBurst(["heart", "sparkle"], 12);
 				}, 20000);
 			}
 		}, 1000);
@@ -222,7 +255,10 @@ function loadWidget() {
 		});
 		// 右键彩蛋（原版为 jQuery 实现，这里改为原生事件）
 		document.getElementById("live2d").addEventListener("mousedown", e => {
-			if (e.button === 2) showMessage(tipsResult.message.secret_path, 4000, 12);
+			if (e.button === 2) {
+				showMessage(tipsResult.message.secret_path, 4000, 12);
+				waifuBurst(["sparkle", "moonOrb"], 18);   // 右键彩蛋也配一圈星光
+			}
 		});
 		document.getElementById("live2d").addEventListener("contextmenu", e => e.preventDefault());
 		// 长时间闲置/后台待机后，浏览器会回收 WebGL 上下文，画布变空白但按钮和台词还在：
@@ -2923,7 +2959,6 @@ function loadWidget() {
 	const FX_SPEEDS = { xslow: 0.3, slow: 0.55, normal: 1, fast: 1.7, xfast: 2.4 };
 	const FX_SIZES = { small: 0.7, normal: 1, large: 1.45 };
 	const FX_DENSITY = { sparse: 0.5, normal: 1, dense: 1.5, xdense: 2.2 };
-
 	// ===== 900 个图形家族 → 7032 种基础元素（家族 × 参数档 × 6 种描边风格） =====
 	// 前 20 个是手绘基础家族（保持原有顺序与参数档，g1~g1000 编号不变，老配置不受影响）；
 	// 后 880 个是程序化曲线家族（带 curve 字段，由 drawCurveFamily 烘焙成 Path2D 绘制）。
@@ -3251,12 +3286,14 @@ function loadWidget() {
 		const [speedTag, sizeTag, densityTag] = (tag || "").split(",");
 		const gm = /^g(\d+)$/.exec(type || "");
 		const index = gm ? Math.max(1, Math.min(FX_ELEMENTS.length, parseInt(gm[1], 10) || 1)) - 1 : -1;
+		// 尺寸 tag 支持两形态：小/中/大档位（small/normal/large），或 "n数字"（手动配置滑块的连续倍率，如 n1.5）
+		const numSize = /^n([\d.]+)$/.exec(sizeTag || "");
 		return {
 			type: index >= 0 ? "generic" : type,
 			element: index >= 0 ? FX_ELEMENTS[index] : null,
 			colors: FX_VARIANT_PALETTES[variant] || null,
 			speed: FX_SPEEDS[speedTag] || 1,
-			sizeMul: FX_SIZES[sizeTag] || 1,
+			sizeMul: numSize ? Math.min(3, Math.max(0.5, parseFloat(numSize[1]) || 1)) : (FX_SIZES[sizeTag] || 1),
 			densityMul: FX_DENSITY[densityTag] || 1,
 		};
 	}
@@ -3309,7 +3346,11 @@ function loadWidget() {
 		const pick = (arr, v) => arr.includes(v) ? v : arr[Math.floor(Math.random() * arr.length)];
 		const n = parseInt(cfg.element, 10);
 		const el = (n >= 1 && n <= FX_ELEMENTS.length) ? n : 1 + Math.floor(Math.random() * FX_ELEMENTS.length);
-		return `g${el}:${pick(palettes, cfg.palette)}#${pick(speeds, cfg.speed)},${pick(sizes, cfg.size)},${pick(densities, cfg.density)}`;
+		// 尺寸：滑块数值（cfg.sizeNum）优先，连续倍率编码成 "n数字" tag；勾了随机则用随机档位
+		const sz = (cfg.sizeRandom || typeof cfg.sizeNum !== "number")
+			? pick(sizes, cfg.size)
+			: `n${cfg.sizeNum}`;
+		return `g${el}:${pick(palettes, cfg.palette)}#${pick(speeds, cfg.speed)},${sz},${pick(densities, cfg.density)}`;
 	}
 
 	// 平日里的"有来历的一天"：科学家诞辰、世界日等，只影响当天特效的偏好元素
@@ -3426,6 +3467,287 @@ function loadWidget() {
 		});
 		return filtered.length ? filtered : EVERYDAY_FX;
 	}
+	// ===== 鼠标互动引擎：14 种移动力场 × 16 种点击效果 × 8 种光标拖尾 =====
+	// 全组合出 1792 个命名预设（远超 300 种），随全屏特效每 10 分钟一起轮换：
+	// 同一种特效配上不同互动预设，观感完全不同。全部纯 canvas 实现，无 DOM 开销。
+	// 参数约定：dx/dy = 粒子相对光标的方向，d = 距离，near = 0~1 越近越大，mf = 当前预设
+	const MOUSE_MOVES = {
+		// 推开（经典手感）：光标像一阵风把粒子吹开，移动越快推得越远
+		push(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.7 * mf.str * (1 + Math.min(1.2, s.ms / 22));
+			q.x += (dx / d) * f; q.y += (dy / d) * f; q.glow = near;
+		},
+		// 吸附：光标是磁铁，粒子往光标上贴
+		pull(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.5 * mf.str;
+			q.x -= (dx / d) * f; q.y -= (dy / d) * f; q.glow = near * 0.8;
+		},
+		// 环绕：粒子绕着光标打转，像小行星带
+		orbit(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.4 * mf.str;
+			q.x += (-dy / d) * f; q.y += (dx / d) * f; q.glow = near;
+		},
+		// 涡旋：被吸进来同时旋转，像水流进下水口
+		vortex(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.2 * mf.str;
+			q.x += ((dx / d) * 0.5 - (dy / d)) * f;
+			q.y += ((dy / d) * 0.5 + (dx / d)) * f;
+			q.glow = near;
+		},
+		// 弹簧：被拉过去又被弹回来，来回震荡
+		spring(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.6 * mf.str * Math.sin(Date.now() / 260 + q.phase);
+			q.x -= (dx / d) * f; q.y -= (dy / d) * f; q.glow = near * 0.7;
+		},
+		// 果冻：近距离左右抖动，Q 弹 Q 弹的
+		jelly(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.3 * mf.str * Math.sin(Date.now() / 55 + q.phase);
+			q.x += (-dy / d) * f; q.y += (dx / d) * f * 0.4; q.glow = near;
+		},
+		// 点燃：光标是火苗，附近的粒子被点亮并往上飘
+		ignite(q, dx, dy, d, near, s, mf) {
+			q.y -= near * 1.6 * mf.str; q.glow = Math.min(1, near * 1.4);
+		},
+		// 冻结：光标是冰块，附近粒子被冻住停在半空
+		freeze(q, dx, dy, d, near, s, mf) {
+			q.y -= q.vy * near * 0.9; q.x -= q.vx * near * 0.9;
+			q.glow = near * 0.5; q.frost = Math.max(q.frost || 0, near);
+		},
+		// 分流：粒子从光标两侧分开，像船头破浪
+		split(q, dx, dy, d, near, s, mf) {
+			q.x += (dx >= 0 ? 1 : -1) * near * 2.1 * mf.str; q.glow = near;
+		},
+		// 环形归位：把粒子推到光标周围 60px 的环上排列
+		ringPush(q, dx, dy, d, near, s, mf) {
+			const err = d - 60;
+			q.x += (dx / d) * err * 0.06 * mf.str; q.y += (dy / d) * err * 0.06 * mf.str;
+			q.glow = near * 0.9;
+		},
+		// 尾风：光标移动方向带起一阵风，粒子被吹着跑
+		wind(q, dx, dy, d, near, s, mf) {
+			q.x += (s.mdx || 0) * 0.16 * near * mf.str;
+			q.y += (s.mdy || 0) * 0.16 * near * mf.str;
+			q.glow = near * 0.7;
+		},
+		// 引力井：光标很"重"，粒子路过时轨道被掰弯
+		gravityWell(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.1 * mf.str;
+			q.x += (-(dy / d) * 0.85 - (dx / d) * 0.3) * f;
+			q.y += ((dx / d) * 0.85 - (dy / d) * 0.3) * f;
+			q.glow = near * 0.8;
+		},
+		// 弹球：猛地弹开，带一点过冲
+		bounce(q, dx, dy, d, near, s, mf) {
+			const f = near * near * 3.2 * mf.str * (1 + Math.min(1, s.ms / 30));
+			q.x += (dx / d) * f; q.y += (dy / d) * f; q.glow = near;
+		},
+		// 磁吸抖散：吸过来的同时横向抖开，像铁屑遇到磁铁又互相排斥
+		magnetJitter(q, dx, dy, d, near, s, mf) {
+			const f = near * 1.2 * mf.str;
+			q.x -= (dx / d) * f * 0.7 + Math.sin(Date.now() / 70 + q.phase) * near * 1.1;
+			q.y -= (dy / d) * f * 0.7; q.glow = near;
+		},
+	};
+
+	// 临时粒子（拖尾/点击迸发共用）：有寿命、会淡出，用现有元素绘制函数渲染
+	function spawnTemp(s, x, y, opts) {
+		if (!s.temp) s.temp = [];
+		if (s.temp.length > 260) s.temp.splice(0, s.temp.length - 260);
+		s.temp.push({
+			x, y,
+			vx: opts.vx || 0, vy: opts.vy || 0, g: opts.g || 0,
+			age: 0, life: opts.life || 700,
+			size: opts.size || 7, rot: Math.random() * Math.PI * 2,
+			vr: (Math.random() - 0.5) * 0.14,
+			phase: Math.random() * Math.PI * 2,
+			color: opts.color || "#ffd43b",
+			type: opts.type || "sparkle",
+			kind: Math.floor(Math.random() * 3),
+		});
+	}
+	function tempBurst(s, x, y, n, opts) {
+		const colors = (s.palette && s.palette.length) ? s.palette : FX_PALETTE.confetti;
+		for (let i = 0; i < n; i++) {
+			const a = Math.random() * Math.PI * 2;
+			const v = (opts.v || 2.2) * (0.5 + Math.random() * 0.8);
+			spawnTemp(s, x, y, {
+				vx: Math.cos(a) * v, vy: Math.sin(a) * v - (opts.up || 0),
+				g: opts.g || 0, life: (opts.life || 800) * (0.6 + Math.random() * 0.7),
+				size: (opts.size || 8) * (0.6 + Math.random() * 0.8),
+				color: colors[Math.floor(Math.random() * colors.length)],
+				type: opts.types ? opts.types[Math.floor(Math.random() * opts.types.length)] : "sparkle",
+			});
+		}
+	}
+
+	// 点击互动效果（x/y 为点击坐标；ripple 由 onClick 分支直接设置）
+	const MOUSE_CLICKS = {
+		heartBurst(s, x, y) { tempBurst(s, x, y, 26, { types: ["heart", "heart", "sparkle"], v: 2.6, up: 0.8, life: 950, size: 9 }); },
+		starBurst(s, x, y) { tempBurst(s, x, y, 30, { types: ["star", "sparkle"], v: 3.2, life: 900, size: 9 }); },
+		confettiRing(s, x, y) { tempBurst(s, x, y, 36, { types: ["confetti", "ribbon"], v: 3.6, life: 1100, size: 8 }); },
+		spiral(s, x, y) {
+			// 螺旋扩散：切向 + 向外，转着圈飞出去
+			const colors = (s.palette && s.palette.length) ? s.palette : FX_PALETTE.confetti;
+			for (let i = 0; i < 30; i++) {
+				const a = i / 30 * Math.PI * 2;
+				spawnTemp(s, x, y, {
+					vx: Math.cos(a) * 1.1 - Math.sin(a) * 2.0, vy: Math.sin(a) * 1.1 + Math.cos(a) * 2.0,
+					g: 0.006, life: 1000 + i * 18, size: 7,
+					color: colors[i % colors.length], type: i % 3 ? "sparkle" : "star",
+				});
+			}
+		},
+		fountain(s, x, y) {
+			// 喷泉：从点击处向上喷，受重力落下
+			for (let i = 0; i < 34; i++) {
+				spawnTemp(s, x + (Math.random() - 0.5) * 14, y, {
+					vx: (Math.random() - 0.5) * 2.4, vy: -(3.2 + Math.random() * 3.4),
+					g: 0.055, life: 1300, size: 8,
+					color: (s.palette || FX_PALETTE.confetti)[Math.floor(Math.random() * (s.palette || FX_PALETTE.confetti).length)],
+					type: ["bubble", "sparkle", "star"][Math.floor(Math.random() * 3)],
+				});
+			}
+		},
+		bloom(s, x, y) { tempBurst(s, x, y, 24, { types: ["petal", "petal", "sparkle"], v: 1.4, life: 1400, size: 10 }); },
+		blackHole(s, x, y) {
+			// 黑洞：附近粒子被猛地吸到点击处，再炸出一圈星
+			for (const q of s.parts) {
+				const dx = x - q.x, dy = y - q.y, d = Math.hypot(dx, dy);
+				if (d < 300 && d > 1) { q.x += (dx / d) * (1 - d / 300) * 26; q.y += (dy / d) * (1 - d / 300) * 26; q.glow = 1; }
+			}
+			tempBurst(s, x, y, 22, { types: ["star", "sparkle"], v: 3.8, life: 800, size: 7 });
+		},
+		rainbowRing(s, x, y) {
+			const rainbow = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93", "#ff7ab6", "#00c2a8"];
+			for (let i = 0; i < 28; i++) {
+				const a = i / 28 * Math.PI * 2;
+				spawnTemp(s, x + Math.cos(a) * 12, y + Math.sin(a) * 12, {
+					vx: Math.cos(a) * 2.8, vy: Math.sin(a) * 2.8, life: 1000, size: 9,
+					color: rainbow[i % rainbow.length], type: i % 2 ? "bubble" : "sparkle",
+				});
+			}
+		},
+		rainDrop(s, x, y) {
+			for (let i = 0; i < 20; i++) {
+				spawnTemp(s, x + (Math.random() - 0.5) * 160, y - 120 - Math.random() * 80, {
+					vy: 4.5 + Math.random() * 2, life: 900, size: 8,
+					color: "#a5d8ff", type: "rain",
+				});
+			}
+		},
+		cage(s, x, y) {
+			// 粒子笼：把附近粒子推到点击处 90px 的球面上，短暂困住
+			for (const q of s.parts) {
+				const dx = q.x - x, dy = q.y - y, d = Math.hypot(dx, dy);
+				if (d < 260 && d > 1) {
+					const err = d - 90;
+					q.x += (dx / d) * err * 0.35; q.y += (dy / d) * err * 0.35; q.glow = 0.9;
+				}
+			}
+		},
+		attractBurst(s, x, y) {
+			for (const q of s.parts) {
+				const dx = x - q.x, dy = y - q.y, d = Math.hypot(dx, dy);
+				if (d > 1) { q.x += (dx / d) * 9; q.y += (dy / d) * 9; q.glow = 0.8; }
+			}
+		},
+		twinkleZone(s, x, y) {
+			// 星光领域：点击处附近 1.6 秒内粒子疯狂闪烁
+			const until = performance.now() + 1600;
+			for (const q of s.parts) {
+				if (Math.hypot(q.x - x, q.y - y) < 190) q.twinkle = until;
+			}
+		},
+		swapColor(s) {
+			// 颜色洗牌：全场粒子重新分配配色，视觉焕然一新
+			const colors = (s.palette && s.palette.length) ? s.palette : FX_PALETTE.confetti;
+			for (const q of s.parts) q.color = colors[Math.floor(Math.random() * colors.length)];
+		},
+		shockwave(s, x, y) { s.ripple = { x, y, born: performance.now(), big: true }; },
+		meteorShower(s, x, y) {
+			for (let i = 0; i < 12; i++) {
+				spawnTemp(s, x + (Math.random() - 0.5) * 200 - 100, y - 200 - Math.random() * 160, {
+					vx: 2.4 + Math.random() * 1.6, vy: 1.4 + Math.random(), life: 1200, size: 10,
+					color: "#fff3bf", type: "shootingStar",
+				});
+			}
+		},
+	};
+
+	// 光标拖尾：移动时在光标处留下短命粒子（节流由 onMove 控制）
+	const MOUSE_TRAILS = {
+		sparkleTrail(s, x, y) {
+			spawnTemp(s, x, y, { vx: (Math.random() - .5) * .6, vy: -0.3, life: 520, size: 5 + Math.random() * 4, type: "sparkle" });
+		},
+		cometTrail(s, x, y) {
+			spawnTemp(s, x, y, { vx: (Math.random() - .5) * .4, vy: 0.2, life: 640, size: 11, type: "star" });
+			spawnTemp(s, x + 6, y + 4, { life: 380, size: 5, type: "sparkle" });
+		},
+		bubbleTrail(s, x, y) {
+			spawnTemp(s, x, y, { vx: (Math.random() - .5) * .5, vy: -0.55, life: 900, size: 5 + Math.random() * 5, type: "bubble", color: "#d0ebff" });
+		},
+		heartTrail(s, x, y) {
+			spawnTemp(s, x, y, { vx: (Math.random() - .5) * .5, vy: -0.7, life: 760, size: 7, type: "heart", color: "#ff8fab" });
+		},
+		starTrail(s, x, y) {
+			spawnTemp(s, x, y, { vx: (Math.random() - .5) * .7, vy: (Math.random() - .5) * .7, life: 560, size: 6 + Math.random() * 4, type: "star", color: "#ffe066" });
+		},
+		petalTrail(s, x, y) {
+			spawnTemp(s, x, y, { vx: (Math.random() - .5) * .8, vy: 0.5, life: 980, size: 8, type: "petal", color: "#ffb7c5" });
+		},
+		dustTrail(s, x, y) {
+			const colors = (s.palette && s.palette.length) ? s.palette : FX_PALETTE.confetti;
+			spawnTemp(s, x, y, { vx: (Math.random() - .5) * .9, vy: (Math.random() - .5) * .9, life: 480, size: 3 + Math.random() * 3, type: "snow", color: colors[Math.floor(Math.random() * colors.length)] });
+		},
+	};
+
+	// 看板郎（Live2D）与特效的互动锚点：角色中心坐标；手机端/隐藏时返回 null
+	function waifuCenter() {
+		const el = document.getElementById("waifu");
+		if (!el) return null;
+		const r = el.getBoundingClientRect();
+		if (r.width < 10 || r.height < 10) return null;
+		return { x: r.left + r.width / 2, y: r.top + r.height * 0.42 };
+	}
+	// 从看板郎身上迸发一圈粒子（点击角色/换装/连点彩蛋时），n 可指定数量
+	function waifuBurst(kinds, n) {
+		if (!fxState) return;
+		const c = waifuCenter();
+		if (!c) return;
+		tempBurst(fxState, c.x, c.y, n || 34, { types: kinds || ["star", "sparkle", "heart"], v: 3.0, up: 1.2, life: 1100, size: 9 });
+	}
+
+	// 互动预设注册表：14 力场 × 16 点击 × 8 拖尾 全组合 = 1792 个命名预设
+	// （远超 300 种），强度分 5 档、1/3 带看板郎力场（well 公转 / aura 点亮），
+	// 进页面与每次特效轮换时从中随机抽取
+	const MOUSE_FX_PRESETS = (() => {
+		const moves = Object.keys(MOUSE_MOVES);
+		const clicks = ["ripple", "heartBurst", "starBurst", "confettiRing", "shockwave", "spiral",
+			"fountain", "bloom", "blackHole", "rainbowRing", "rainDrop", "cage",
+			"attractBurst", "twinkleZone", "swapColor", "meteorShower"];
+		const trails = ["none", "sparkleTrail", "cometTrail", "bubbleTrail", "heartTrail", "starTrail", "petalTrail", "dustTrail"];
+		const out = [];
+		for (let m = 0; m < moves.length; m++) {
+			for (let c = 0; c < clicks.length; c++) {
+				for (let tr = 0; tr < trails.length; tr++) {
+					const i = out.length;
+					out.push({
+						move: moves[m],
+						click: clicks[c],
+						trail: trails[tr],
+						str: 0.7 + (i % 5) * 0.35,
+						// 1/3 的预设带看板郎力场：粒子绕着角色转（well）或被角色点亮（aura）
+						waifu: (i % 3 === 0) ? (i % 2 ? "well" : "aura") : null,
+					});
+				}
+			}
+		}
+		return out;
+	})();
+	function pickMouseFx() {
+		return MOUSE_FX_PRESETS[Math.floor(Math.random() * MOUSE_FX_PRESETS.length)];
+	}
+
 	// ===== 全屏特效循环：节日默认播放，平日按开关播放，每 10 分钟随机换一种 =====
 	// 进页面先随机挑一种，之后每 10 分钟换一次；刷新页面重新随机。
 	const FX_ROTATE_MS = 10 * 60 * 1000;
@@ -3437,6 +3759,16 @@ function loadWidget() {
 			if (!isNaN(v)) return Math.min(4, Math.max(0.5, v));
 		} catch (e) { }
 		return FX_FESTIVAL_BOOST_DEFAULT;
+	}
+	// 平日特效整体放大的倍数，主题配置面板滑块可调（localStorage: waifu-fx-weekday-boost），
+	// 默认 1.8：小/中/大三档一起上调约 80%，配合下方更粗的曲线描边，函数图形不再糊成一团
+	const FX_WEEKDAY_BOOST_DEFAULT = 1.8;
+	function weekdayBoost() {
+		try {
+			const v = parseFloat(localStorage.getItem("waifu-fx-weekday-boost"));
+			if (!isNaN(v)) return Math.min(4, Math.max(0.5, v));
+		} catch (e) { }
+		return FX_WEEKDAY_BOOST_DEFAULT;
 	}
 	let fxState = null;
 
@@ -3482,24 +3814,83 @@ function loadWidget() {
 			canvas, ctx, W: 0, H: 0,
 			type: "", element: null, palette: [], parts: [], bursts: [], nextBurst: 0,
 			speedMul: 1, sizeMul: 1, densityMul: 1, raf: 0, rotateTimer: 0, onResize: null,
-			mx: -9999, my: -9999, ms: 0, ripple: null, onMove: null, onClick: null,
+			mx: -9999, my: -9999, ms: 0, mdx: 0, mdy: 0, ripple: null, onMove: null, onClick: null,
+			// 鼠标互动预设（1792 种里随机）+ 临时粒子（拖尾/迸发）+ 悬停/掠过/呼出节流
+			mouseFx: pickMouseFx(), temp: [], lastTrail: 0, prevT: 0,
+			hoverAt: 0, swipeAt: 0, waifuEmitAt: 0,
 		};
-		// 鼠标互动：粒子会被光标轻轻推开（鼠标移动越快推得越远）、附近粒子被点亮；
-		// 点击处扩散一圈推力波（烟花则是当空一朵）
+		// 鼠标互动：按当前预设的力场响应光标；移动方向带风；节流生成光标拖尾；
+		// 与角色的互动：悬停时朝光标吹星星、快速掠过时带起粒子风（均限频）
 		fxState.onMove = e => {
 			if (fxState.mx > -9000) {
-				const d = Math.hypot(e.clientX - fxState.mx, e.clientY - fxState.my);
-				fxState.ms = fxState.ms * 0.6 + Math.min(40, d) * 0.4;   // 平滑鼠标速度
+				const dx = e.clientX - fxState.mx, dy = e.clientY - fxState.my;
+				fxState.ms = fxState.ms * 0.6 + Math.min(40, Math.hypot(dx, dy)) * 0.4;   // 平滑鼠标速度
+				fxState.mdx = dx; fxState.mdy = dy;                                        // 本帧位移（尾风用）
 			}
 			fxState.mx = e.clientX;
 			fxState.my = e.clientY;
+			// 光标拖尾（每 55ms 最多一个，避免拖尾粒子刷屏）
+			const mf = fxState.mouseFx;
+			if (mf && mf.trail !== "none") {
+				const now = performance.now();
+				if (now - fxState.lastTrail > 55) {
+					fxState.lastTrail = now;
+					MOUSE_TRAILS[mf.trail](fxState, e.clientX, e.clientY);
+				}
+			}
+			// 与看板郎的鼠标互动（都有限频，不会刷屏）：
+			const wc = waifuCenter();
+			if (wc) {
+				const wd = Math.hypot(e.clientX - wc.x, e.clientY - wc.y);
+				const now = performance.now();
+				// 悬停：光标凑近角色时，角色朝光标方向「吹」出几颗小星星（害羞回应，2.5 秒一次）
+				if (wd < 170 && now - fxState.hoverAt > 2500) {
+					fxState.hoverAt = now;
+					const a = Math.atan2(e.clientY - wc.y, e.clientX - wc.x);
+					for (let i = 0; i < 3; i++) {
+						spawnTemp(fxState, wc.x + Math.cos(a) * 30, wc.y + Math.sin(a) * 30, {
+							vx: Math.cos(a) * (1 + Math.random()), vy: Math.sin(a) * (1 + Math.random()) - .4,
+							life: 800, size: 7, type: "sparkle", color: "#ffd6ff",
+						});
+					}
+				}
+				// 快速掠过：光标高速扫过角色身边，带起一阵粒子风（像风吹乱了头发，1.2 秒一次）
+				if (wd < 220 && fxState.ms > 26 && now - (fxState.swipeAt || 0) > 1200) {
+					fxState.swipeAt = now;
+					const colors = (fxState.palette && fxState.palette.length) ? fxState.palette : FX_PALETTE.confetti;
+					for (let i = 0; i < 10; i++) {
+						spawnTemp(fxState, wc.x + (Math.random() - .5) * 70, wc.y + (Math.random() - .5) * 90, {
+							vx: (fxState.mdx || 0) * .12 + (Math.random() - .5), vy: (fxState.mdy || 0) * .12 - .5,
+							life: 700, size: 6, type: "sparkle",
+							color: colors[Math.floor(Math.random() * colors.length)],
+						});
+					}
+				}
+			}
 		};
 		fxState.onClick = e => {
 			if (!fxState) return;
+			// 点在看板郎身上由专属互动处理（waifuBurst + 文案），这里跳过避免叠加
+			if (e.target && e.target.closest && e.target.closest("#waifu")) return;
+			const x = e.clientX, y = e.clientY;
+			const mf = fxState.mouseFx || { click: "ripple" };
 			if (fxState.type === "firework") {
-				spawnFireworkBurst(fxState, e.clientX, e.clientY);
+				spawnFireworkBurst(fxState, x, y);
+			} else if (mf.click === "ripple") {
+				fxState.ripple = { x, y, born: performance.now() };
 			} else {
-				fxState.ripple = { x: e.clientX, y: e.clientY, born: performance.now() };
+				const fn = MOUSE_CLICKS[mf.click];
+				if (fn) fn(fxState, x, y);
+			}
+			// 点击落在角色 260px 内：特效波及到看板郎，被「吓一跳」冒一小簇泡泡，
+			// 三成概率慢半拍嘀咕一句——用户没点角色，角色也会对身边的动静有反应
+			const wc = waifuCenter();
+			if (wc && Math.hypot(x - wc.x, y - wc.y) < 260) {
+				waifuBurst(["bubble", "sparkle"], 14);
+				if (Math.random() < 0.3) {
+					const lines = ["哇！吓我一跳……", "欸？旁边好热闹～", "呀，就在我旁边炸开了！", "咳咳，我什么都没看见。"];
+					setTimeout(() => showMessage(lines[Math.floor(Math.random() * lines.length)], 2500, 8), 350);
+				}
 			}
 		};
 		window.addEventListener("mousemove", fxState.onMove);
@@ -3522,6 +3913,13 @@ function loadWidget() {
 		window.addEventListener("resize", resize);
 		resize();
 		switchAmbientFx();
+		// 节日进场彩蛋：角色上场先在自己的位置放一发大迸发（用当天节日配色，
+		// 平日特效不打扰）——让「角色」和「节日特效」从第一秒就绑定在一起
+		setTimeout(() => {
+			if (!fxState || !fxState.entry || !fxState.entry.festival) return;
+			const c = waifuCenter();
+			if (c) tempBurst(fxState, c.x, c.y - 30, 46, { types: ["star", "sparkle", "heart"], v: 4.2, up: 1.6, life: 1300, size: 9 });
+		}, 900);
 		fxState.rotateTimer = setInterval(() => {
 			// 既没有节日、平日特效又被关掉时收掉；否则换一种继续放
 			if (!ambientFxPool()) { stopAmbientFx(); return; }
@@ -3540,13 +3938,18 @@ function loadWidget() {
 		fxState.type = fx.type;
 		fxState.element = fx.element || null;
 		fxState.speedMul = fx.speed || 1;
-		// 节日特效按主题面板配置的整体倍数放大；平日特效保持原有大小
-		fxState.sizeMul = (fx.sizeMul || 1) * (entry.festival ? festivalBoost() : 1);
+		// 节日特效按主题面板配置的整体倍数放大；平日特效按「平日特效大小」滑块整体放大
+		// （默认 1.8 倍，小/中/大三档一起上调，手动配置里的尺寸滑块是相对此倍率的精细微调）
+		fxState.sizeMul = (fx.sizeMul || 1) * (entry.festival ? festivalBoost() : weekdayBoost());
 		fxState.densityMul = fx.densityMul || 1;
 		fxState.palette = fx.colors || ((entry.colors && entry.colors.length) ? entry.colors : (FX_PALETTE[fx.type] || FX_PALETTE.confetti));
 		fxState.bursts = [];
 		fxState.nextBurst = 0;
+		fxState.ripple = null;   // 切换特效时清掉旧涟漪，避免新特效画出旧点击的波纹
 		fxState.parts = buildFxParticles(fx.type, fxState.W, fxState.H, fxState.palette, fxState.sizeMul, fxState.densityMul, fxState.element);
+		// 特效每 10 分钟轮换时，鼠标互动预设一起换（1792 种里重新随机）：
+		// 同一种特效配上不同力场/点击/拖尾，观感完全不同；keepEntry（仅调大小/改开关）时保持不变
+		if (!keepEntry) fxState.mouseFx = pickMouseFx();
 	}
 
 	// 主题配置里切换"平日特效"后立刻生效：关掉就收，打开就开；
@@ -3577,7 +3980,10 @@ function loadWidget() {
 		const rise = fxRise(type, element);
 		const still = fxStill(type, element);
 		const drift = type === "cloud";
-		const count = Math.min(200, Math.max(30, Math.round((W / 14) * (densityMul || 1))));
+		// 图形放大后单个粒子占屏更多，按 sizeMul 的平方根补偿数量（面积∝size²，取 √ 控制开销），
+		// 避免「放大后画面变稀疏」；上限同步放宽到 320
+		const sizeComp = Math.sqrt(Math.max(0.5, sizeMul || 1) / 1.45);
+		const count = Math.min(320, Math.max(30, Math.round((W / 14) * (densityMul || 1) * sizeComp)));
 		const parts = [];
 		for (let i = 0; i < count; i++) {
 			parts.push({
@@ -3597,12 +4003,59 @@ function loadWidget() {
 		return parts;
 	}
 
+	// 可见涟漪：点击处扩散的圆环（普通涟漪一圈白色；冲击波 big 更大更粗，再补一道彩色内环）
+	// 之前只有粒子推力、没有可见波纹，用户点「涟漪/冲击波」感知不到效果
+	function drawRipples(s, t) {
+		if (!s.ripple) return;
+		const age = (t - s.ripple.born) / (s.ripple.big ? 900 : 700);
+		if (age >= 1) { s.ripple = null; return; }
+		const ctx = s.ctx;
+		const radius = s.ripple.big ? 70 + age * 320 : 20 + age * 170;   // 与粒子推力半径同步扩散
+		ctx.save();
+		ctx.globalCompositeOperation = "lighter";
+		ctx.strokeStyle = "rgba(255,255,255,0.55)";
+		ctx.globalAlpha = 1 - age;
+		ctx.lineWidth = (s.ripple.big ? 5 : 3) * (1 - age) + 0.5;
+		ctx.beginPath();
+		ctx.arc(s.ripple.x, s.ripple.y, radius, 0, Math.PI * 2);
+		ctx.stroke();
+		if (s.ripple.big) {   // 冲击波内圈：当前特效配色的彩色光环
+			ctx.strokeStyle = (s.palette && s.palette[0]) || "#ffd93d";
+			ctx.globalAlpha = (1 - age) * 0.7;
+			ctx.lineWidth = 2.5 * (1 - age) + 0.5;
+			ctx.beginPath();
+			ctx.arc(s.ripple.x, s.ripple.y, radius * 0.66, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+		ctx.restore();
+	}
+
 	function animateFestivalFx(t) {
 		const s = fxState;
 		if (!s) return;
 		s.ctx.clearRect(0, 0, s.W, s.H);
 		if (s.type === "firework") drawFireworks(s, t);
 		else drawFxParticles(s, t);
+		drawTempParticles(s, t);   // 临时粒子两种特效模式都画（拖尾/点击/角色互动）
+		drawRipples(s, t);         // 点击涟漪/冲击波的可见圆环
+		// 看板郎周期性「呼出」特效：每隔 9~16 秒从角色身上飘出一小股当前配色粒子，
+		// 像角色在呼吸/施法——特效仿佛就是从角色身上长出来的（特效 → 角色的存在感）
+		if (t > (s.waifuEmitAt || 0)) {
+			s.waifuEmitAt = t + 9000 + Math.random() * 7000;
+			const c = waifuCenter();
+			if (c) {
+				const colors = (s.palette && s.palette.length) ? s.palette : FX_PALETTE.confetti;
+				const n = 8 + Math.floor(Math.random() * 8);
+				for (let i = 0; i < n; i++) {
+					spawnTemp(s, c.x + (Math.random() - .5) * 54, c.y + (Math.random() - .5) * 64, {
+						vx: (Math.random() - .5) * .8, vy: -0.6 - Math.random() * .9,
+						life: 1400 + Math.random() * 900, size: 6 + Math.random() * 5,
+						color: colors[Math.floor(Math.random() * colors.length)],
+						type: ["sparkle", "star", "bubble"][Math.floor(Math.random() * 3)],
+					});
+				}
+			}
+		}
 		s.raf = requestAnimationFrame(animateFestivalFx);
 	}
 
@@ -3637,18 +4090,23 @@ function loadWidget() {
 		const still = fxStill(type, s.element);
 		const drift = type === "cloud";
 		const speed = (type === "rain" ? 4.5 : (type === "shootingStar" ? 2.6 : 1)) * (s.speedMul || 1);
-		// 点击涟漪：从点击处向外扩散的一圈推力波，600ms 后自然消散
+		// 当前鼠标互动预设（1792 种里的一种）：力场 + 点击 + 拖尾 + 可选看板郎力场
+		const mf = s.mouseFx || { move: "push", str: 1, waifu: null };
+		// 看板郎力场锚点：带 waifu 字段的预设才取角色中心（避免每帧白算 getBoundingClientRect）
+		const waifuField = mf.waifu ? waifuCenter() : null;
+		// 点击涟漪：从点击处向外扩散的一圈推力波（shockwave 大涟漪更快更远），寿命到自然消散
 		let ripple = null;
 		if (s.ripple) {
-			const age = (t - s.ripple.born) / 600;
+			const life = s.ripple.big ? 900 : 600;
+			const age = (t - s.ripple.born) / life;
 			if (age >= 1) s.ripple = null;
-			else ripple = { cx: s.ripple.x, cy: s.ripple.y, rr: 20 + age * 170, fade: 1 - age };
+			else ripple = { cx: s.ripple.x, cy: s.ripple.y, rr: s.ripple.big ? 70 + age * 320 : 20 + age * 170, fade: 1 - age, band: s.ripple.big ? 70 : 42 };
 		}
 		for (const q of s.parts) {
 			q.x += drift ? 0.25 : q.vx + Math.sin(t / 700 + q.phase) * 0.3;
 			q.y += rise ? -q.vy * 0.55 * (s.speedMul || 1) : (still || drift ? 0 : q.vy * speed);
-			// 鼠标互动：光标附近的粒子被轻轻推开（鼠标移动越快推力越强），
-			// 同时被点亮、转速加快，像被光标唤起了一样
+			// 鼠标互动：按当前预设的力场响应光标（推开/吸附/环绕/涡旋/弹簧……共 14 种），
+			// 力场函数自己负责点亮（q.glow）和冻结（q.frost）等副作用
 			q.glow = 0;
 			{
 				const dx = q.x - s.mx, dy = q.y - s.my;
@@ -3656,10 +4114,26 @@ function loadWidget() {
 				if (d2 < 16900 && d2 > 0.01) {
 					const d = Math.sqrt(d2);
 					const near = 1 - d / 130;
-					const f = near * 1.7 * (1 + Math.min(1.2, s.ms / 22));
-					q.x += (dx / d) * f;
-					q.y += (dy / d) * f;
-					q.glow = near;
+					const fn = MOUSE_MOVES[mf.move] || MOUSE_MOVES.push;
+					fn(q, dx, dy, d, near, s, mf);
+				}
+			}
+			// 看板郎力场（约 1/3 的互动预设带）：well = 粒子绕着角色公转，aura = 角色周围被点亮
+			if (waifuField) {
+				const dx = q.x - waifuField.x, dy = q.y - waifuField.y;
+				const d2 = dx * dx + dy * dy;
+				if (mf.waifu === "well") {
+					const d = Math.sqrt(d2) || 1;
+					if (d > 30 && d < 480) {
+						const near = Math.max(0.15, 1 - Math.abs(d - 210) / 210);   // 越贴近 210px 轨道受力越强
+						const f = near * 1.35;
+						const err = (210 - d) * 0.018;                              // 径向修正：把粒子拉回轨道
+						q.x += (-(dy / d) * 0.9 + (dx / d) * err) * f;               // 切向 = 公转方向
+						q.y += ((dx / d) * 0.9 + (dy / d) * err) * f;
+						q.glow = Math.max(q.glow, f * 0.45);
+					}
+				} else if (d2 < 62500) {   // aura：角色周围 250px 内的粒子被点亮，像角色自带光环
+					q.glow = Math.max(q.glow, 1 - Math.sqrt(d2) / 250);
 				}
 			}
 			// 点击涟漪推力波
@@ -3667,8 +4141,8 @@ function loadWidget() {
 				const dx = q.x - ripple.cx, dy = q.y - ripple.cy;
 				const d = Math.sqrt(dx * dx + dy * dy) || 1;
 				const band = Math.abs(d - ripple.rr);
-				if (band < 42) {
-					const f = (1 - band / 42) * 3.4 * ripple.fade;
+				if (band < ripple.band) {
+					const f = (1 - band / ripple.band) * 3.4 * ripple.fade;
 					q.x += (dx / d) * f;
 					q.y += (dy / d) * f;
 				}
@@ -3684,6 +4158,16 @@ function loadWidget() {
 			ctx.rotate(q.rot);
 			ctx.fillStyle = q.color;
 			if (still) ctx.globalAlpha *= 0.45 + 0.55 * Math.abs(Math.sin(t / 320 + q.phase));
+			if (q.twinkle) {   // 星光领域：点击处附近的粒子在时限内疯狂闪烁
+				if (t > q.twinkle) q.twinkle = 0;
+				else ctx.globalAlpha *= 0.35 + 0.65 * Math.abs(Math.sin(t / 60 + q.phase));
+			}
+			if (q.frost) {     // 冻结余韵：粒子被冰过之后泛蓝白色，随时间缓慢融化
+				ctx.fillStyle = "#d0ebff";
+				ctx.globalAlpha = Math.min(1, ctx.globalAlpha * (1 + q.frost * 0.5));
+				q.frost *= 0.96;
+				if (q.frost < 0.02) q.frost = 0;
+			}
 			if (q.glow) ctx.globalAlpha = Math.min(1, ctx.globalAlpha * (1 + q.glow * 0.4));   // 悬停点亮
 			if (fxIsGlow(type, q.el)) ctx.globalCompositeOperation = "lighter";   // 灯光元素叠色，重叠处更亮
 			drawFxShape(ctx, type, q);
@@ -3691,6 +4175,33 @@ function loadWidget() {
 		}
 		// 鼠标速度随帧衰减，停下后推力回落
 		s.ms *= 0.94;
+	}
+
+	// 临时粒子（光标拖尾/点击迸发/角色呼出）：独立于常驻粒子，带速度、重力和寿命。
+	// 单独成函数：烟花模式下也要画（拖尾/点击/角色互动在烟花特效下同样生效）
+	function drawTempParticles(s, t) {
+		if (!s.temp || !s.temp.length) { s.prevT = t; return; }
+		const ctx = s.ctx;
+		const dt = Math.min(50, t - (s.prevT || t));   // 帧间隔（ms），切后台回来不超过 50ms 防跳变
+		s.prevT = t;
+		const k = dt / 16.7;                            // 归一到 60fps 的步长倍率
+		for (let i = s.temp.length - 1; i >= 0; i--) {
+			const p = s.temp[i];
+			p.age += dt;
+			if (p.age >= p.life) { s.temp.splice(i, 1); continue; }
+			p.vy += p.g * k;
+			p.x += p.vx * k;
+			p.y += p.vy * k;
+			p.rot += p.vr * k;
+			const prog = p.age / p.life;                // 出生 15% 内淡入，之后一路淡出
+			ctx.save();
+			ctx.translate(p.x, p.y);
+			ctx.rotate(p.rot);
+			ctx.fillStyle = p.color;
+			ctx.globalAlpha *= prog < 0.15 ? prog / 0.15 : 1 - (prog - 0.15) / 0.85;
+			drawFxShape(ctx, p.type, p);
+			ctx.restore();
+		}
 	}
 
 	function drawFxShape(ctx, type, q) {
@@ -4353,7 +4864,11 @@ function loadWidget() {
 			const path = curvePathFor(el);
 			ctx.save();
 			ctx.scale(s * 0.5, s * 0.5);
-			ctx.lineWidth = Math.max(1, s * 0.06) / (s * 0.5);
+			// 线宽随图形尺寸线性放大（scale 后再回除，让屏幕实际线宽 = s * 比例）：
+			// 之前只占 6% 且保底 1px，图形越大线条相对越细，函数曲线糊成细丝看不清。
+			// 实心/描边比 13%，开放路径（闪电/桥/电路/函数曲线等纯描线）比 21%，小图保底 1.8px。
+			const strokeRatio = open ? 0.21 : 0.13;
+			ctx.lineWidth = Math.max(1.8, s * strokeRatio) / (s * 0.5);
 			if (style === "dashed") ctx.setLineDash([0.32, 0.24]);
 			else if (style === "dotted") ctx.setLineDash([0.05, 0.2]);
 			if (filled) ctx.fill(path);
@@ -5526,6 +6041,8 @@ function loadWidget() {
 
 	// ===== 形象库（多分类 + 用户自选，见 public/live2d/model_list.json）=====
 	let modelList;
+	// 当前已加载的形象 id：用于避免重复加载同一模型（重复 loadlive2d 会让画布短暂空白）
+	let currentModelName = null;
 	async function loadModelList() {
 		let response = await fetch(`${live2d_path}model_list.json`);
 		modelList = await response.json();
@@ -5605,7 +6122,19 @@ function loadWidget() {
 		localStorage.setItem("waifu-model", modelName);
 		applyCharacterTips(modelName); // 切换角色后台词（戳/点/闲聊/欢迎）立即换上该角色的口吻
 		showMessage(message, 4000, 10);
-		loadlive2d("live2d", `${live2d_path}model/${modelName}/index.json`);
+		// 记录已加载形象；加载异常（模型文件损坏/并发切换）时回退到昼夜默认，
+		// 避免画布停在空白状态再也出不来
+		currentModelName = modelName;
+		try {
+			loadlive2d("live2d", `${live2d_path}model/${modelName}/index.json`);
+		} catch (e) {
+			console.warn("Live2D 模型加载失败", modelName, e);
+			const fallback = (new Date().getHours() >= 20 || new Date().getHours() < 8) ? "izumi" : "haruto";
+			if (modelName !== fallback) {
+				currentModelName = fallback;
+				loadlive2d("live2d", `${live2d_path}model/${fallback}/index.json`);
+			}
+		}
 		console.log(`Live2D 模型 ${modelName} 加载完成`);
 	}
 
@@ -5620,15 +6149,8 @@ function loadWidget() {
 
 	// 初始化优先级：主页主人配置 > 登录账号配置 > 本机记录 > 按昼夜默认（白天 haruto，20 点至次日 8 点 izumi）
 	// 打开谁的主页就看到谁的形象、听到谁的自定义台词（公开接口读取，无需登录）
-	(async function initModel() {
-		localStorage.removeItem("modelId");        // 清理旧版数字下标存档
-		localStorage.removeItem("modelTexturesId");
-		const urlmail = findUrlmail();
-		// 形象清单和主页主人配置互不依赖，并行请求，少一个来回
-		const [, ownerWidget] = await Promise.all([
-			modelList ? null : loadModelList(),
-			urlmail ? fetchOwnerWidget(urlmail) : Promise.resolve(null),
-		]);
+	async function resolveOwnerModel(urlmail) {
+		const ownerWidget = urlmail ? await fetchOwnerWidget(urlmail) : null;
 		const ids = modelList.models.map(m => m.id);
 		ownerLines = ownerWidget && Array.isArray(ownerWidget.lines) ? ownerWidget.lines : [];
 		let model = ownerWidget && ids.includes(ownerWidget.model) ? ownerWidget.model : null;
@@ -5636,7 +6158,10 @@ function loadWidget() {
 			const widget = await fetchUserWidget();
 			model = widget && ids.includes(widget.model) ? widget.model : null;
 		}
-		if (!model) {
+		// 本机记录只在没有页面主人时兜底（裸域名/未知页面）：本机形象是访客自己的选择，
+		// 出现在别人的主页会张冠李戴——主人已识别（urlmail 存在）却没配置形象时，
+		// 直接落到昼夜默认，而不是显示访客自己的角色
+		if (!model && !urlmail) {
 			model = localStorage.getItem("waifu-model");
 			if (!model || !ids.includes(model)) model = null;
 		}
@@ -5644,7 +6169,15 @@ function loadWidget() {
 			const hour = new Date().getHours();
 			model = (hour >= 20 || hour < 8) ? "izumi" : "haruto";
 		}
-		loadModel(model);
+		return model;
+	}
+
+	(async function initModel() {
+		localStorage.removeItem("modelId");        // 清理旧版数字下标存档
+		localStorage.removeItem("modelTexturesId");
+		// 形象清单先就绪，才能校验主人配置里的 id 是否有效
+		if (!modelList) await loadModelList();
+		loadModel(await resolveOwnerModel(findUrlmail()));
 		// 语料在脚本加载时就开始预取；这里只是兜底：首屏没拿到（或内存里已失效）时再补一次，
 		// 已经在内存里则直接复用，不会重复下载
 		preloadTips();
@@ -5797,7 +6330,12 @@ function loadWidget() {
 				card.innerHTML = `<div class="waifu-picker-name">${m.name}</div><div class="waifu-picker-desc">${m.desc}</div>`;
 				card.setAttribute("role", "button");
 				card.addEventListener("click", () => {
-					loadModel(m.id, `${m.name}：${m.desc}`);
+					// 重复点击当前形象不再重新加载：重复 loadlive2d 会让画布短暂空白
+					if (m.id === currentModelName) {
+						showMessage(`${m.name}：${m.desc}`, 4000, 10);
+					} else {
+						loadModel(m.id, `${m.name}：${m.desc}`);
+					}
 					saveUserWidget(m.id);
 					list.querySelectorAll(".waifu-picker-card").forEach(c => c.classList.remove("waifu-picker-card-active"));
 					card.classList.add("waifu-picker-card-active");

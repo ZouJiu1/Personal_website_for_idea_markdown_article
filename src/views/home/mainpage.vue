@@ -1,6 +1,6 @@
 <template>
   <el-card class="el-card-detail" shadow="always" 
-    style="margin-top:10px;margin-left:30px;margin-right:30px;margin-bottom:3px;overflow:auto;">
+    style="margin-top:10px;margin-left:2%;margin-right:2%;margin-bottom:3px;overflow:auto;">
     <template #header>
       <div class="card-header" style="height:16px; font-size: 20px; color: #00ff00;">
         <span > 个人 </span>
@@ -238,10 +238,11 @@
       <p style="margin:10px 20px 10px 20px;">
         <el-link type="primary" href="https://www.zhihu.com/people/zoujiu1" target="_blank">知乎 [www.zhihu.com/people/zoujiu1]</el-link>
       </p> -->
+      <div class="pane-title">🔗 链接导航</div>
       <p
         v-for="LfF in leftresult"
         :key="LfF"
-        style="margin-bottom:20px;"
+        class="leftlink-row"
       >
           <el-link type="primary" :href="LfF.link" :style="LfF.style" target="_blank">
             {{ LfF['introduction'] }}
@@ -301,17 +302,19 @@
             </div>
           </el-dialog>
       </p>
-      <el-button
-        style="margin-left:10px; text-align:center;"
-        @click="LeftFunctiondialogSetting"
+      <div class="toolbar-row">
+        <el-button
+          style="text-align:center;"
+          @click="LeftFunctiondialogSetting"
         >
-        配置
-      </el-button>
-      <el-button type="success" @click="downloadzipvisible=true"
-        style="margin-left:6px;margin-top:0px;"
-      >
-        下载
-      </el-button>
+          配置
+        </el-button>
+        <el-button type="success" @click="downloadzipvisible=true"
+          style="margin-left:0;"
+        >
+          下载
+        </el-button>
+      </div>
       <el-dialog v-model="downloadzipvisible" title="提交下载请求" width="min(600px, 92%)" height="90%">
         <span hidden>
           <el-input
@@ -323,21 +326,18 @@
             type="password"
           />
         </span>
-        <br>
-        <span>此操作会下载该用户所有资料用来自行备份</span>
-        <br>
+        <span class="dialog-tip">此操作会下载该用户所有资料用来自行备份，下载链接将发送到下方邮箱。</span>
         <el-input
           v-model="receivemail"
           placeholder="请填写接收邮箱，最好是国内邮箱账号"
-          style="width: 60%; margin-left:20px;margin-bottom:10px;"
+          style="width: 100%; margin-bottom:10px;"
           class="filter-item mobile-full"
           id="elinputmail"
           @change="mailChange"
           @blur="mailChange"
         />
-        <br>
         <el-button type="primary" @click="downloadzip" id="downloadidZip"
-          style="margin-left:6px;margin-top:0px;"
+          style="margin-left:0;"
         >
           确认下载所有
         </el-button>
@@ -379,7 +379,7 @@
                 placeholder="Select"
                 size="small"
                 class="mobile-full"
-                style="width: 240px"
+                style="width: min(240px, 100%)"
               >
                 <el-option label="默认#000000" value="#000000" style="color:#000000;"></el-option>
                 <el-option label="rgb(136, 187, 250)" value="rgb(136, 187, 250)" style="color:rgb(136, 187, 250);"></el-option>
@@ -473,9 +473,9 @@
         </el-dialog>
   </el-main>
   <el-main class="preview" id="previewHalf">
-    <div>
-    <el-image 
-      style="width:60%; overflow:auto;"
+    <div class="pane-title">👤 个人名片</div>
+    <div class="avatar-block">
+    <el-image
       :src="'/article/2寸.jpg'"
       :zoom-rate="1.0"
       :max-scale="10"
@@ -491,7 +491,7 @@
     </el-image>
     </div>
     <el-button
-      style="margin-left:10px; text-align:center;"
+      style="text-align:center;"
       @click="pictureChange"
       >
       照片
@@ -533,11 +533,11 @@
       <el-input
         v-model="modifiednickname"
         placeholder="昵称，若不需要修改可以留空"
-        style="width: 30%; margin-left:20px;margin-bottom:10px;margin-top:10px"
+        style="width: 100%; margin-bottom:10px;margin-top:10px"
         class="filter-item mobile-full"
         id="nickname"
       />
-      <el-button type="primary" @click="NicknameSetting" id="NicknameSetting" style="margin-left:10px;">
+      <el-button type="primary" @click="NicknameSetting" id="NicknameSetting" style="margin-left:0;">
         提交昵称修改
       </el-button>
     </el-dialog>
@@ -1164,13 +1164,13 @@ p {
 
 .lefteditor {
   width: 61%;
-  height: 55vh;
+  max-height: 78vh;
+  overflow-y: auto;
   background-color: #eeffee;
   border: 0px solid #ffffff;
 }
 .preview {
   width: 39%;
-  height: 55vh;
   background-color: #eeffee;
 }
 
@@ -1204,6 +1204,99 @@ p {
 }
 .setting-item:hover {
   border-color: var(--el-color-primary-light-5, #a0cfff);
+}
+
+/* ---------- 左栏（链接/配置）与右栏（照片）美化 ---------- */
+/* 两栏画布：内边距 + 圆角，内容不再贴边（el-main 全局 padding 被清零，这里补回） */
+/* 区分度：左栏白底卡片风（信息/操作），右栏淡蓝渐变名片风（照片/昵称） */
+/* 左栏纵向布局：链接区在上，「配置/下载」按钮组吸底，消除栏底空白 */
+.lefteditor {
+  background: #ffffff;
+  border: 1px solid #ebeef5;
+  display: flex;
+  flex-direction: column;
+}
+.preview {
+  background: linear-gradient(160deg, #f4f8ff 0%, #eaf1fb 100%);
+  border: 1px solid #dbe6f5;
+  display: flex;
+  flex-direction: column;
+}
+.lefteditor,
+.preview {
+  padding: 16px 20px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  margin: 6px;
+}
+/* 栏内小标题：分隔线 + 加粗灰字，两栏功能一眼可辨 */
+.pane-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+  letter-spacing: 1px;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px dashed #e4e7ed;
+}
+/* 链接行：呼吸感间距 + 行高，链接悬停微移 + 浅底高亮 */
+.leftlink-row {
+  margin-bottom: 14px;
+  line-height: 1.8;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+.leftlink-row:hover {
+  background: #f5f7fa;
+}
+.leftlink-row .el-link {
+  font-size: 15px;
+  transition: transform 0.15s ease;
+}
+.leftlink-row .el-link:hover {
+  transform: translateX(2px);
+}
+/* 配置/下载按钮行：成组排列 + 吸住左栏底部，不再散落 */
+.toolbar-row {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+/* 右栏是纵向 flex：按钮默认会被 stretch 拉成全宽白条，改为居中自适应宽度 */
+.preview > .el-button {
+  align-self: center;
+  min-width: 120px;
+}
+/* 头像块：居中 + 卡片式投影，随右栏高度弹性填充，照片不再悬在半空留一片空 */
+.avatar-block {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 14px;
+}
+.avatar-block .personimg {
+  width: min(380px, 90%) !important;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(15, 27, 61, 0.14);
+}
+/* 弹窗说明文字：弱化灰色、行距舒适 */
+.dialog-tip {
+  display: block;
+  color: #909399;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+@media (max-width: 768px) {
+  .lefteditor,
+  .preview {
+    padding: 12px;
+    margin: 2px 0;
+  }
 }
 
 /* 手机端（<=768px）响应式适配：边距收紧、左右分栏改上下堆叠、图片与表单控件占满宽度 */

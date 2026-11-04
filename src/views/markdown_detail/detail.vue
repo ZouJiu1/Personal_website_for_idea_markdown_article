@@ -139,7 +139,7 @@
   </el-affix>
   <div id="detailvue" class="detailarticle">
   </div>
-  <el-dialog v-model="commentvisible" title="评论" width="90%" style="height:96%;margin-top:6px;">
+  <el-dialog v-model="commentvisible" title="评论" width="min(720px, 94%)" class="dialog-scroll">
     <textarea 
       spellcheck="false"
       id="textarea_input"
@@ -194,8 +194,8 @@ import katex from "katex"
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import Cookies from "js-cookie";
-import getusername, { isAdminQuanxian, getCookieDays } from '/src/common.js'
-// import imgURL from '/home/zj/zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/2024-09-16_空格_13_43_28_临时发布的文篇_感叹号_/1寸_1__.jpg'
+import getusername, { isAdminQuanxian, getCookieDays, isOwnerPage } from '/src/common.js'
+// import imgURL from '/home//zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/2024-09-16_空格_13_43_28_临时发布的文篇_感叹号_/1寸_1__.jpg'
 export default {
   name: 'markdown_detail',
   data() {
@@ -260,9 +260,8 @@ export default {
       this.canManage = (owner && my === owner) || isAdminQuanxian(Cookies.get("quanxian"));
     },
     async shoucang(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -333,9 +332,8 @@ export default {
       });
     },
     async uploadComment() {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -398,9 +396,8 @@ export default {
       });
     },
     commentdialog(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.info("没有登陆不能评论！");
@@ -420,9 +417,8 @@ export default {
       this.commentvisible = true;
     },
     async upvoteclick(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -645,7 +641,7 @@ export default {
         // console.log(typeof(src));
         // console.log(imgimg[0].src.replace(imgimg[0].baseURI, "/")); 
         // // imgimg[0].src = new URL(imgimg[0].src.replace(imgimg[0].baseURI, "/"), import.meta.url).href;
-        // let stk = "/home/zj/zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg";
+        // let stk = "/home//zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg";
         // let kk = String(stk);
         // let kkk = new URL("/Users/zoujiu/Desktop/webpage/vue-project/article/github_yolov3/8.jpg", import.meta.url).href;
         // console.log(kkk);
@@ -719,7 +715,6 @@ export default {
           // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
           this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         } else {
-          // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
           this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')}); //, query:{"currentpage": 1, "pagesize":20}
         }
         // this.$router.go(-1);
@@ -942,11 +937,11 @@ export default {
 
 .detailarticle {
   margin-top:3px;
-  margin-left:10%;
-  margin-right:10%;
+  margin-left:2%;
+  margin-right:2%;
   background-color:#ffffff;
-  padding-left:60px;
-  padding-right: 60px;
+  padding-left:40px;
+  padding-right: 40px;
   padding-top: 30px;
   padding-bottom: 30px;
   margin-bottom: 3%;

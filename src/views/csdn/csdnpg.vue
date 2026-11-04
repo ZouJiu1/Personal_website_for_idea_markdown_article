@@ -56,7 +56,7 @@
           <span hidden><p :hidden="true" @click="cardClick" class="hiddenp"> {{ o["path"] }} </p></span>
         </div>
       </template>
-      <span style="width:60%; font-size: 16px; color: #000000;" @click="cardClick">
+      <span style="width:100%; font-size: 16px; color: #000000;" @click="cardClick">
         {{ o["markdown"] }}
       </span>
       <span hidden><p :hidden="true" @click="cardClick" class="hiddenp"> {{ o["path"] }} </p></span>
@@ -115,7 +115,7 @@
         </el-row>
       </template>
     </el-card>
-    <el-dialog v-model="commentvisible" title="评论" width="90%" style="height:96%;margin-top:6px;">
+    <el-dialog v-model="commentvisible" title="评论" width="min(720px, 94%)" class="dialog-scroll">
       <textarea 
         spellcheck="false"
         id="textarea_input"
@@ -181,7 +181,7 @@
 import axios from 'axios'
 import Cookies from 'js-cookie';
 import { ElMessage, ElMessageBox } from 'element-plus'
-import getusername, { getCookieDays } from '/src/common.js'
+import getusername, { getCookieDays, isOwnerPage } from '/src/common.js'
 import { toggleRowStatus } from 'element-plus/es/components/table/src/util';
 export default {
   name: 'app',
@@ -234,9 +234,8 @@ export default {
       // });
     },
     async shoucang(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -315,9 +314,8 @@ export default {
       });
     },
     async uploadComment() {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -381,9 +379,8 @@ export default {
       });
     },
     commentdialog(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.info("没有登陆不能评论！");
@@ -413,9 +410,8 @@ export default {
       this.commentvisible = true;
     },
     async upvoteclick(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -932,11 +928,11 @@ h3 {
 }
 
 .el-card-detail {
-  width: 80%;
+  width: 96%;
   color: #00ff00;
   margin-top: 3px;
-  margin-left: 10%;
-  margin-right: 10%;
+  margin-left: 2%;
+  margin-right: 2%;
 }
 
 /* 压缩卡片上下间距：header/body/footer 默认 padding 过大（20px 级），

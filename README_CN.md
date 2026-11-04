@@ -9,7 +9,7 @@
 - 不使用数据库：用户、文章、设置等全部保存在 txt / markdown 等文本文件中
 - 多用户隔离：每个注册用户拥有独立的 `people/<用户名>/` 数据目录，互不影响
 - **网址隐私**：网址中永不出现邮箱——每个账号映射为一个随机 36 位纯数字 uid
-  （如 `/#/165984218734184801318416830165629911`），旧邮箱形态链接彻底失效，
+  （如 `/#/165989218739189801318616830165629911`），旧邮箱形态链接彻底失效，
   站内所有生成的链接均使用 uid（见 4.8）
 - js-cookie 维持登录态（30 天），支持注册、登录、登出、邮箱验证码改密
 - 文篇发布页内置草稿箱：保存草稿、草稿箱列表、再次编辑、删除，发布成功自动清稿（见 4.4）
@@ -18,6 +18,17 @@
   （渲染预览）、恢复到编辑器、删除旧版本，当前版本受保护不可删
 - 登录弹窗：两个输入框内按 Enter 即可登录（等同点击登录按钮）
 - 内置注册管理页面：管理员可查看用户列表、新建用户、重置密码、修改权限、删除用户
+- 三层安全防护：nginx 限流（10 请求/秒 + 每 IP 并发连接数限制）→ 防洪水中间件（突发 100 请求/秒、
+  持续 3000 请求/分钟、后台接口单独限速）→ 敏感接口限流（登录 20 次/10 分钟、注册 5 次/小时、
+  验证码同邮箱 60 秒 1 封）；上传接口服务端二次校验（图片 ≤13MB + 文件头魔数、视频 mp4/webm
+  ≤2G + 魔数、文件名剥离路径防目录穿越）
+- 凭据库隔离：member.txt（全量用户表）与 oldpassword/（历史密码备份）存放在部署根 data/
+  私有目录（nginx 不服务，首次启动自动从旧静态目录迁移）；nginx 同时封堵 article/ 下全部数据 txt 的直接下载
+- 站点配置管理：site_config.json 全部配置项进入管理页弹窗，仅站长可见可改，修改需点确认生效，删除操作三次确认
+- 左侧栏实时显示在线人数（绿色呼吸动效，60 秒轮询），在线计数不设上限
+- 看板郎鼠标互动引擎：1792 种随机互动预设（14 种移动力场 × 16 种点击效果 × 8 种光标拖尾，
+  每 10 分钟随特效轮换），约三分之一预设带看板郎力场（粒子绕角色公转 / 角色光环）；
+  悬停吹星星、快速掠过带起粒子风、点击/连点角色触发台词与粒子爆发（详见 6.1）
 - 内置 Live2D 看板郎挂件：23 个开源形象按 9 大分类自选，账号级记忆（换设备也生效），
   29 个中外节日全天祝福 + 全屏粒子特效（可用鼠标互动），非节日也有平日特效
   （900 个图形家族 / 10000 种组合）
@@ -38,11 +49,15 @@ Personal_website_for_idea_markdown_article/
 │   └── assets/main.css     # 全局样式 + 响应式适配
 ├── mysite/                 # Django 后端
 │   ├── mysite/projectpaths.py  # 项目根目录自动定位（无需硬编码绝对路径）
+│   ├── mysite/antiflood.py # 防洪水中间件（突发/持续限速 + admin 限速 + 在线计数刷新，MIDDLEWARE 首位）
 │   ├── csdn/               # 文篇 + 用户注册/登录/管理接口
 │   ├── uidmap.py           # 邮箱 ↔ 36 位 uid 映射（网址隐私，持久化在 uid_map.txt）
+│   ├── ratelimit.py        # 滑动窗口限流器（登录/注册/验证码等敏感接口）
+│   ├── online.py           # 同时在线用户计数（5 分钟滑动窗口，按 IP 去重）
 │   ├── zhihu/ think/ video/ travel/ commonuse/ markdown_detail/ upload_video/
 │   └── manage.py
-├── article/                # 公共数据（member.txt 用户表、register.txt 验证码、文章等）
+├── data/                   # 私有数据（member.txt 用户表、oldpassword/ 历史密码备份；nginx 不服务，防直接下载）
+├── article/                # 公共数据（register.txt 验证码、文章等）
 ├── people/<用户名>/        # 每个注册用户的独立数据目录
 ├── public/live2d/          # Live2D 看板郎挂件资源（引擎/样式/文案/农历库/23 个模型目录）
 ├── vite.config.js          # Vite 配置（开发代理转发到 Django，构建代码分割）
@@ -93,12 +108,12 @@ npm run dev -- --port 9000
 # 终端 2：启动后端
 source ./venv/bin/activate
 cd mysite
-python3 manage.py runserver localhost:7009
+python3 manage.py runserver localhost:7290
 ```
 
 浏览器访问 `http://localhost:9000`。
 
-- 后端地址可用环境变量覆盖：`DJANGO_TARGET=http://127.0.0.1:7009 npm run dev`
+- 后端地址可用环境变量覆盖：`DJANGO_TARGET=http://127.0.0.1:7290 npm run dev`
 - DEBUG 模式下 Django 会直接提供 `/article`、`/people`、`/hls` 静态资源
 
 ## 3. 生产部署（nginx）
@@ -110,7 +125,7 @@ npm run build
 # 启动后端（生产务必以 DJANGO_DEBUG=0 关闭调试，静态资源改由 nginx 伺服）
 source ./venv/bin/activate
 cd mysite
-DJANGO_DEBUG=0 python3 manage.py runserver localhost:7009
+DJANGO_DEBUG=0 python3 manage.py runserver localhost:7290
 ```
 
 ### 发布检查清单
@@ -124,7 +139,10 @@ DJANGO_DEBUG=0 python3 manage.py runserver localhost:7009
 - CSRF：`mysite/middleware.py` 的 `ScopedCsrfMiddleware` 仅对 Django admin（`/admin`）启用校验；
   自定义 API 认证走 body 传参（不读 cookie），天然免疫 CSRF，不受影响
 - 密码只存加盐格式（`sha256s$盐$摘要`），旧格式（裸 sha256）已彻底弃用，旧用户需重新注册（见 4.1）
-- 上传接口仅接受图片扩展名（jpg/jpeg/png/bmp/gif），文件名已剥离路径成分
+- 上传接口服务端二次校验：图片仅 jpg/jpeg/png/bmp/gif 且 ≤13MB、视频仅 mp4/webm 且 ≤2G，
+  均校验文件头魔数（防改后缀伪装），文件名剥离路径成分防目录穿越
+- 凭据库不在静态目录：member.txt / oldpassword/ 位于部署根 `data/`（首次启动自动迁移），
+  nginx 对 article/ 下全部数据 txt deny，防止直接下载用户表
 - nginx 对 `/article`、`/people` 下发 `Cache-Control: no-cache`（回源校验）：未变更的文件仍走
   廉价 304，而经图片管理删除的图片立即变 404，浏览器缓存不再残留旧图
 - 删除接口（delete）与管理员代编辑/代传图均限制在项目 `people/`、`article/` 目录内，防路径穿越
@@ -134,7 +152,7 @@ nginx 配置参考 [nginx_http.conf](./nginx_http.conf) 或 [nginx_https.conf](.
 
 - `dist/` 作为前端静态根目录
 - `/article`、`/people`、`/hls` 指向项目根目录下的同名目录
-- `/csdn`、`/zhihu`、`/think`、`/video`、`/travel`、`/commonuse`、`/markdown_detail`、`/upload_video` 等接口前缀 proxy_pass 到 `http://localhost:7009`
+- `/csdn`、`/zhihu`、`/think`、`/video`、`/travel`、`/commonuse`、`/markdown_detail`、`/upload_video` 等接口前缀 proxy_pass 到 `http://localhost:7290`
 
 常用命令：
 
@@ -148,7 +166,8 @@ nginx -s stop                  # 停止
 
 ### 4.1 用户文件格式
 
-用户保存在 `article/member.txt`，每行一个用户，字段以 `<》!=$)(=$@` 分隔：
+用户保存在部署根 `data/member.txt`（私有目录，nginx 不服务；首次启动自动从旧的静态目录
+`article/member.txt` 迁移），每行一个用户，字段以 `<》!=$)(=$@` 分隔：
 
 ```
 <密码哈希><》!=$)(=$@<邮箱><》!=$)(=$@<昵称><》!=$)(=$@<权限>
@@ -178,7 +197,7 @@ cd 项目根目录
 python3 genpassword.py --pw 新密码
 ```
 
-将输出的 `sha256s$盐$摘要` 整串替换 `article/member.txt` 中管理员行的第一段即可
+将输出的 `sha256s$盐$摘要` 整串替换 `data/member.txt` 中管理员行的第一段即可
 （登录时前端传 sha256 值，后端按加盐格式校验）。
 
 ### 4.4 草稿箱（文篇发布页）
@@ -238,7 +257,7 @@ python3 genpassword.py --pw 新密码
 ### 4.8 网址隐私：邮箱 → uid 映射
 
 网址中永不出现邮箱（或形似手机号的前缀）。每个账号映射为一个随机 **36 位纯数字 uid**，
-用户空间网址形如 `/#/165984218734184801318416830165629911` 或
+用户空间网址形如 `/#/165989218739189801318616830165629911` 或
 `/#/think/<uid>?currentpage=1&pagesize=9`，不再包含邮箱。
 
 - 映射模块：`mysite/uidmap.py`，持久化在 `mysite/uid_map.txt`（自动创建、线程安全、
@@ -253,7 +272,7 @@ python3 genpassword.py --pw 新密码
   python3 manage.py shell -c '
   import os, uidmap
   from csdn import views as cv
-  member = os.path.join(os.path.abspath(cv.__file__ + "/../../"), "..", "article", "member.txt")
+  member = cv.MEMBER_TXT   # 凭据库已迁至部署根 data/member.txt
   n = 0
   for parts in cv._read_members(member)[1]:
       mail = parts[1]
@@ -276,7 +295,21 @@ python3 genpassword.py --pw 新密码
 
 ## 5. 并发与多用户说明
 
-- 设计目标：最多 1000 人同时在线，每秒最多 100 个请求
+- 设计目标：每秒最多 100 个请求；同时在线人数不设上限（左侧栏实时显示当前在线数）
+- 三层限流：
+  - nginx `limit_req`（10 请求/秒，burst 20，nodelay）+ `limit_conn`（每 IP 20 并发连接），全部
+    API location 共享计数
+  - Django 防洪水中间件 `mysite/mysite/antiflood.py`（挂 MIDDLEWARE 首位）：突发 100 请求/秒、
+    持续 3000 请求/分钟、`/admin*` 60 次/分钟，超限返回 429 + Retry-After；在线计数
+    `mysite/online.py`（5 分钟滑动窗口按 IP 去重）也在此刷新
+  - 敏感接口限流 `mysite/ratelimit.py`：登录 20 次/10 分钟、注册 5 次/小时、验证码同邮箱
+    60 秒 1 封且每 IP 10 封/小时、找回密码校验 15 次/10 分钟
+- 上传服务端二次校验（前端校验之外再拦一道）：图片（`/csdn/uploadImg`、`/csdn/mainpageuploadImg`）
+  仅 jpg/jpeg/png/bmp/gif 且 ≤13MB；视频（`/upload_video/upload`）仅 mp4/webm 且 ≤2G；
+  均校验文件头魔数（防改后缀伪装脚本/网页），文件名 basename 剥离路径成分防目录穿越
+- 敏感数据封堵：member.txt 与 oldpassword/ 存部署根 `data/`（nginx 不服务）；nginx 对
+  `article/` 下 member.txt、oldpassword/、register/clickpage 等数据 txt 全部 deny，
+  防止直接下载用户表与统计库
 - 文件写入使用 `threading.Semaphore` 信号量串行化（`memmute`、`regmute` 等），避免并发写坏 txt 文件
 - 列表缓存按用户数据目录隔离（`allfile = {}` 以 basepath 为键），用户之间互不影响
 - 前端构建做了代码分割（element-plus / katex / vendor 单独打包），利于浏览器缓存
@@ -317,10 +350,20 @@ python3 genpassword.py --pw 新密码
   屠呦呦等中外科学家纪念日，世界水日/地球日等世界日）当天特效按语义偏向对应元素——
   特斯拉→闪电、化学家→苯环、物理学家→原子、数学家→函数曲线/算盘/像素点阵、茅以升→拱桥、
   牛顿→三棱镜/苹果、天文学家→星座/星系、生物学家→细胞/DNA/蝴蝶；主题面板可开关
-- **特效鼠标互动**：光标划过时粒子被轻轻推开（鼠标移动越快推力越强）、附近粒子被点亮并
-  转得更快；点击处扩散一圈推力波（烟花特效则是点击处当空炸一朵）
-- **主题面板配置**：节日特效大小滑块（0.5–4 倍，默认 1.9）；平日特效开关；手动指定平日特效的
-  元素/配色/速度/尺寸/密度（任意项可保持随机）；配置存 localStorage、改完立即生效
+- **特效鼠标互动（1792 种随机预设）**：14 种移动力场（推开/吸附/环绕/涡旋/弹簧/果冻/点燃/冻结/
+  分流/环形归位/尾风/引力井/弹球/磁吸抖散）× 16 种点击效果（爱心/星星迸发、彩带环、螺旋、喷泉、
+  花开、黑洞、彩虹环、雨滴、粒子笼、引力爆发、星光领域、颜色洗牌、冲击波、流星雨等）× 8 种
+  光标拖尾（星光/彗星/泡泡/爱心/星星/花瓣/星尘/无），全组合 1792 个命名预设随机抽取，每 10 分钟
+  随特效轮换一起换，另有 5 档强度随机；约三分之一预设带看板郎力场——粒子绕角色公转（well）
+  或角色附近点亮成光环（aura）；点击涟漪与冲击波附带可见扩散波纹
+- **看板郎与用户互动**：悬停角色附近角色朝光标吹星星、光标快速掠过带起粒子风、点击角色迸发
+  星星爱心并偶尔回应一句台词、2.5 秒内连点 5 次触发大爆发+摇晃+「别戳啦」台词、点击特效波及
+  角色会被吓一跳冒泡泡、换装时旧形象炸星星新形象冒爱心、拍照/右键彩蛋配星光、闲置搭话冒爱心；
+  特效每 9~16 秒从角色身上飘出一小股当前配色粒子，节日当天角色上场自带进场彩蛋
+- **主题面板配置**：节日特效大小滑块（0.5–4 倍，默认 1.9）；**平日特效大小滑块**（0.5–4 倍，
+  默认 1.8，曲线描边随尺寸加粗、粒子数量随面积补偿）；平日特效开关；手动指定平日特效的
+  元素/配色/速度/尺寸（0.5–3 连续滑块）/密度（任意项可保持随机）；配置存 localStorage、
+  改完立即生效
 - **隐藏与恢复**：点 ✖️ 收起看板郎，右下角露出【看 板 郎】竖排标签（完整可见），点标签即恢复
 - **稳健性**：语料 60 万字符进页面即预加载常驻内存，失效自动重拉；闲置后 WebGL 上下文被浏览器
   回收时自动重载模型，人物不会消失；闲聊一次随机 3 句、按字数延长气泡时长

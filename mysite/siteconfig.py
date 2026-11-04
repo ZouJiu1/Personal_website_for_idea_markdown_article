@@ -13,6 +13,7 @@
 """
 import json
 import os
+import threading
 
 _CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site_config.json')
 
@@ -20,8 +21,7 @@ DEFAULTS = {
     # 访客统计（csdn/views.py StatisticTravelerCount / read_traveler_count）
     'traveler_dedup_window_seconds': 600,   # 同一 IP 重复访问同一用户的去重窗口
     'traveler_cleanup_seconds': 3600,       # 内存访客表超时清理
-    'traveler_baseline': 3600,              # 访客数展示下限
-    'traveler_default_init': 100,           # 统计文件缺失/损坏时的初始值
+    'traveler_default_init': 100,           # 统计文件缺失/损坏时的初始值（新建/注册用户同值）
     'traveler_filename': 'TravelerStatistics.txt',
 
     # 登录凭据 cookie 有效期（天数）。前端经 /csdn/getSiteConfig 白名单接口读取
@@ -127,3 +127,81 @@ def get(key):
             _data = {}
         _mtime = m
     return _data.get(key, DEFAULTS.get(key))
+
+
+# ---------------- 管理页「站点配置」支持（仅站长可用，权限校验在 csdn/views.py） ----------------
+
+_write_lock = threading.Lock()
+
+# 敏感键：读取时打码（前端显示占位、留空表示不修改），保存时空值跳过。
+# 目前为空：站长要求 smtp_password 在管理页可见明文、可直接修改（该页仅站长可见）
+MASKED_KEYS = set()
+
+# 只读键：管理页只展示、不可修改（前后端双层拦截）。
+# traveler_filename 改名后旧统计文件不会迁移、历史访客数全部丢失，因此锁定
+READONLY_KEYS = {'traveler_filename'}
+
+
+def raw_data():
+    """读取 site_config.json 原始内容（含 _ 文档键）；文件缺失/损坏时返回 {}"""
+    get('__probe__')  # 触发一次 mtime 缓存刷新，保证拿到的是磁盘最新内容
+    with _write_lock:
+        return dict(_data)
+
+
+def _type_name(value):
+    if isinstance(value, bool):
+        return 'bool'
+    if isinstance(value, int):
+        return 'int'
+    if isinstance(value, float):
+        return 'float'
+    if isinstance(value, str):
+        return 'str'
+    if isinstance(value, (list, dict)):
+        return 'json'
+    return None
+
+
+def save_items(updates):
+    """用 updates 覆写对应配置键后原子写回 site_config.json。
+
+    校验规则：键必须已存在（JSON 或 DEFAULTS，防止凭空写入）；_ 开头的文档键不可改；
+    值类型必须与现值一致（bool/int/float/str/list/dict，前端 JSON 传输天然保类型）。
+    返回 (True, None) 或 (False, 错误说明)；失败时文件保持原样。
+    """
+    if not isinstance(updates, dict) or len(updates) == 0:
+        return False, '没有可保存的配置项'
+    with _write_lock:
+        # 写前从磁盘重新读最新内容（不信任 get() 的 mtime 缓存，防止覆盖期间的并发改动）
+        try:
+            with open(_CONFIG_FILE, encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            data = {}
+        for key, value in updates.items():
+            if not isinstance(key, str) or key.startswith('_'):
+                return False, '非法配置键：' + str(key)
+            cur = data.get(key, DEFAULTS.get(key, None))
+            if cur is None:
+                return False, '未知配置键：' + key
+            cur_type = _type_name(cur)
+            new_type = _type_name(value)
+            if cur_type != new_type:
+                return False, f'{key} 类型不对：应为 {cur_type}，收到 {new_type}'
+            # 播放源列表结构校验：每项必须有 server/type/id 三个字符串字段
+            if key == 'music_sources':
+                if not isinstance(value, list):
+                    return False, 'music_sources 必须是数组'
+                for i, src in enumerate(value):
+                    if not isinstance(src, dict) or \
+                            not all(isinstance(src.get(f), str) and src.get(f) for f in ('server', 'type', 'id')):
+                        return False, f'music_sources 第 {i + 1} 项缺少 server/type/id 字段'
+            data[key] = value
+        # 原子写：先写临时文件再替换，写一半崩溃不会损坏原配置
+        tmp = _CONFIG_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.write('\n')
+        os.replace(tmp, _CONFIG_FILE)
+        return True, None

@@ -209,7 +209,7 @@ def main():
 
 if __name__ == '__main__':
     # python manage.py startapp zhihu
-    # python manage.py runserver localhost:7009
-    # python3 manage.py runserver localhost:7009
+    # python manage.py runserver localhost:7290
+    # python3 manage.py runserver localhost:7290
     # getbingimg()
     main()

@@ -5,7 +5,7 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // 后端 Django 地址（本地调试）
-const djangoTarget = process.env.DJANGO_TARGET || 'http://localhost:7009'
+const djangoTarget = process.env.DJANGO_TARGET || 'http://localhost:7290'
 
 // 接口与静态资源前缀，开发环境经 vite 代理转发到 Django，前端代码一律使用相对路径
 const proxyPrefixes = [

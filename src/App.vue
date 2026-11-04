@@ -69,7 +69,7 @@
             </el-badge>
           </span>
         </span>
-        <el-dialog v-model="dialogLoginVisible" title="登录" width="77%" height="90%">
+        <el-dialog v-model="dialogLoginVisible" title="登录" width="min(520px, 92%)">
           <el-form
             style="max-width: 600px"
             :model="LoginForm"
@@ -105,7 +105,7 @@
               </el-button>
               <el-button @click="resetLoginForm">重置</el-button>
               <el-button @click="forgetVisible = true">修改密钥</el-button>
-              <el-dialog v-model="forgetVisible" title="修改密钥" width="90%" height="90%">
+              <el-dialog v-model="forgetVisible" title="修改密钥" width="min(480px, 92%)">
                 <el-form
                   style="max-width: 600px"
                   :model="LoginForm"
@@ -163,7 +163,7 @@
             </el-form-item>
           </el-form>
         </el-dialog>
-        <el-dialog v-model="dialogRegisterVisible" title="注册" width="77%" height="90%">
+        <el-dialog v-model="dialogRegisterVisible" title="注册" width="min(560px, 92%)">
           <el-form
             style="max-width: 600px"
             :model="ruleForm"
@@ -340,6 +340,8 @@
         </el-menu>
         <!-- 访客数量：紧跟【用户】下方显示 -->
         <el-text class="visitor-stat">{{ TravelerStatistics }}</el-text>
+        <!-- 在线人数：访客数量下方，绿色与访客数（白色）区分 -->
+        <el-text class="online-stat">在线 {{ onlineCount }}</el-text>
         <!-- 底部工具组：主题按钮，flex 自动沉底 -->
         <div class="aside-footer">
           <el-button
@@ -351,7 +353,7 @@
             主题
           </el-button>
         </div>
-        <el-dialog v-model="themeChangevisible" title="配置" width="70%" height="auto">
+        <el-dialog v-model="themeChangevisible" title="配置" width="min(720px, 94%)">
           <span hidden>
             <el-input
               v-model="postkey"
@@ -415,10 +417,17 @@
                 style="width:220px;margin-right:8px;" @change="applyFestivalBoost" />
               <span style="font-size:12px;color:#999;">倍，默认 1.9</span>
             </div>
-            <div style="margin-top:8px;">
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
               <span style="font-size:16px;font-weight: 600;">平日特效</span>
               <el-switch v-model="weekdayFxEnabled" @change="toggleWeekdayFx" style="margin-left:12px;" />
               <span style="font-size:13px;font-weight: 300;color:#888;margin-left:8px;">非节日期间的全屏特效，可关闭</span>
+            </div>
+            <div v-if="weekdayFxEnabled" style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:13px;color:#666;white-space:nowrap;">平日特效大小</span>
+              <el-slider v-model="fxWeekdayBoost" :min="0.5" :max="4" :step="0.1"
+                show-input :show-input-controls="false" input-size="small"
+                style="width:220px;margin-right:8px;" @change="applyWeekdayBoost" />
+              <span style="font-size:12px;color:#999;">倍，默认 1.8</span>
             </div>
             <div v-if="weekdayFxEnabled" style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
               <el-switch v-model="fxCustom.enabled" @change="applyFxCustom" active-text="手动指定特效" />
@@ -436,9 +445,10 @@
                   <el-option v-for="o in fxSpeedOptions" :key="o.value" :label="o.label" :value="o.value" />
                 </el-select>
                 <span style="font-size:13px;color:#666;">尺寸</span>
-                <el-select v-model="fxCustom.size" size="small" style="width:80px;" @change="applyFxCustom">
-                  <el-option v-for="o in fxSizeOptions" :key="o.value" :label="o.label" :value="o.value" />
-                </el-select>
+                <el-slider v-model="fxCustom.sizeNum" :min="0.5" :max="3" :step="0.1"
+                  :disabled="fxCustom.sizeRandom" style="width:150px;" @change="applyFxCustom" />
+                <span style="font-size:12px;color:#999;">{{ fxCustom.sizeNum }} 倍</span>
+                <el-checkbox v-model="fxCustom.sizeRandom" @change="applyFxCustom" style="margin-left:4px;">随机</el-checkbox>
                 <span style="font-size:13px;color:#666;">密度</span>
                 <el-select v-model="fxCustom.density" size="small" style="width:86px;" @change="applyFxCustom">
                   <el-option v-for="o in fxDensityOptions" :key="o.value" :label="o.label" :value="o.value" />
@@ -492,7 +502,7 @@
             重置
           </el-button>
         </el-dialog>
-        <el-dialog v-model="usersVisible" title="其他用户" width="60%" style="max-height:80%;overflow:auto;">
+        <el-dialog v-model="usersVisible" title="其他用户" width="min(760px, 94%)" class="dialog-scroll">
           <el-input
             v-model="userSearch"
             placeholder="输入完整邮箱或用户名精确查找"
@@ -511,7 +521,7 @@
           </div>
           <div v-if="userSearch && filteredUsersList.length === 0" style="color:#999;">没有匹配的用户</div>
         </el-dialog>
-        <el-dialog v-model="noticeVisible" title="管理员通知" width="60%" style="max-height:80%;overflow:auto;">
+        <el-dialog v-model="noticeVisible" title="管理员通知" width="min(640px, 94%)" class="dialog-scroll">
           <div style="font-size:12px;color:#999;margin-bottom:4px;">仅显示最近 {{ noticeMax }} 条通知</div>
           <div v-if="notices.length === 0" style="color:#999;">暂无通知</div>
           <div
@@ -639,8 +649,11 @@ export default {
       weekdayFxEnabled: true,
       // 节日特效整体放大倍数（存 localStorage，看板郎脚本读取），默认 1.9
       fxFestivalBoost: 1.9,
-      // 平日特效手动配置：元素 1~7032（0=随机）、配色/速度/尺寸/密度留空=随机
-      fxCustom: { enabled: false, element: 0, palette: '', speed: '', size: '', density: '' },
+      // 平日特效整体放大倍数（存 localStorage，看板郎脚本读取），默认 1.8
+      fxWeekdayBoost: 1.8,
+      // 平日特效手动配置：元素 1~7032（0=随机）、配色/速度/密度留空=随机；
+      // 尺寸为滑块连续倍率 sizeNum（0.5~3），勾选 sizeRandom 则随机档位
+      fxCustom: { enabled: false, element: 0, palette: '', speed: '', sizeNum: 1.5, sizeRandom: false, density: '' },
       fxPaletteOptions: [
         { value: '', label: '随机' }, { value: 'red', label: '红' }, { value: 'gold', label: '金' },
         { value: 'pink', label: '粉' }, { value: 'blue', label: '蓝' }, { value: 'green', label: '绿' },
@@ -649,10 +662,6 @@ export default {
       fxSpeedOptions: [
         { value: '', label: '随机' }, { value: 'xslow', label: '极慢' }, { value: 'slow', label: '慢' },
         { value: 'normal', label: '标准' }, { value: 'fast', label: '快' }, { value: 'xfast', label: '极快' },
-      ],
-      fxSizeOptions: [
-        { value: '', label: '随机' }, { value: 'small', label: '小' },
-        { value: 'normal', label: '中' }, { value: 'large', label: '大' },
       ],
       fxDensityOptions: [
         { value: '', label: '随机' }, { value: 'sparse', label: '稀疏' },
@@ -686,6 +695,8 @@ export default {
       // 登录态三态：null=尚未向服务端确认，true=已登录，false=未登录/凭据失效
       logined: null,
       TravelerStatistics:3900,
+      // 当前同时在线人数（左侧栏绿色「在线 N」，60 秒轮询刷新）
+      onlineCount: 0,
       predefineColors: [
         'rgb(136, 187, 250)',
         '#ff4500',
@@ -1089,19 +1100,35 @@ export default {
     this.$router.isReady().then(() => { this.getColor(); });
     this.loadCookieConfig();
     this.startClock();
-    // 恢复平日特效开关（默认开启）与手动配置
+    // 恢复平日特效开关（默认开启）、大小滑块与手动配置
     try { this.weekdayFxEnabled = localStorage.getItem('waifu-fx-weekday') !== '0' } catch (e) {}
     try {
       const boost = parseFloat(localStorage.getItem('waifu-fx-festival-boost'));
       if (boost >= 0.5 && boost <= 4) this.fxFestivalBoost = boost;
     } catch (e) {}
     try {
+      const boost = parseFloat(localStorage.getItem('waifu-fx-weekday-boost'));
+      if (boost >= 0.5 && boost <= 4) this.fxWeekdayBoost = boost;
+    } catch (e) {}
+    try {
       const raw = localStorage.getItem('waifu-fx-custom');
-      if (raw) this.fxCustom = Object.assign({}, this.fxCustom, JSON.parse(raw));
+      if (raw) {
+        const cfg = Object.assign({}, this.fxCustom, JSON.parse(raw));
+        // 旧版配置兼容：原「尺寸」下拉是小/中/大字符串（留空=随机），迁移为滑块数值
+        if (typeof cfg.sizeNum !== 'number') {
+          const legacy = { small: 0.7, normal: 1, large: 1.45 };
+          cfg.sizeNum = legacy[cfg.size] || 1.5;
+          cfg.sizeRandom = !cfg.size;   // 原来留空就是随机
+        }
+        this.fxCustom = cfg;
+      }
     } catch (e) {}
     this.myMail = Cookies.get('mail') || '';
     this.updateReturnButton();
     this.loadNotices(false);
+    // 在线人数：立即拉一次 + 每 60 秒轮询（失败静默，保持上次值）
+    this.refreshOnline();
+    this.onlineTimer = setInterval(() => { this.refreshOnline(); }, 60000);
     //   this.first = false;
     // }
   },
@@ -1110,8 +1137,28 @@ export default {
       clearInterval(this.clockTimer);
       this.clockTimer = null;
     }
+    if (this.onlineTimer) {
+      clearInterval(this.onlineTimer);
+      this.onlineTimer = null;
+    }
   },
   methods: {
+    // 拉取当前同时在线人数（/csdn/online_count 只读内存计数，无鉴权无文件 IO）
+    async refreshOnline() {
+      try {
+        const instance = axios.create({ baseURL: '/csdn/online_count', timeout: 10000 });
+        const response = await instance({
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          data: {},
+        });
+        if (response.data && response.data.ret === 1 && typeof response.data.online === 'number') {
+          this.onlineCount = response.data.online;
+        }
+      } catch (e) {
+        // 静默失败：保持上次值，下一轮再试
+      }
+    },
     // 从后端统一配置读取浏览器侧可调参数；失败时保持缺省值
     async loadCookieConfig() {
       // cookie 有效期由 common.js 的 initCookieDays 统一拉取（localStorage + 模块级缓存），
@@ -1165,6 +1212,12 @@ export default {
     applyFestivalBoost(val) {
       const v = Math.min(4, Math.max(0.5, parseFloat(val) || 1.9));
       try { localStorage.setItem('waifu-fx-festival-boost', String(v)) } catch (e) {}
+      window.dispatchEvent(new CustomEvent('waifu-fx-config'));
+    },
+    // 保存平日特效整体放大倍数并立即生效（与节日滑块同机制）
+    applyWeekdayBoost(val) {
+      const v = Math.min(4, Math.max(0.5, parseFloat(val) || 1.8));
+      try { localStorage.setItem('waifu-fx-weekday-boost', String(v)) } catch (e) {}
       window.dispatchEvent(new CustomEvent('waifu-fx-config'));
     },
     // 保存手动特效配置（元素/配色/速度/尺寸/密度）并立即生效
@@ -1602,7 +1655,6 @@ export default {
     },
     findmail(urlrul) {
       let mail = "";
-      // let ind = urlrul.indexOf("/zj");
       // 站长公共主页全邮箱标识；用全邮箱匹配可避免误伤前缀同名用户（如 homepage2@x.com）
       let ind = urlrul.indexOf("/homepage@gmail.com");
       if(ind < 0) {
@@ -1732,10 +1784,13 @@ export default {
         if (target) {
           const curpath = window.location.pathname.replace(/\/+$/, '') || '/';
           location.replace(curpath + '#/' + target);
+          // 只改 hash 不会重新加载页面：主题/看板郎在脚本启动时已按"无主人"的旧 URL
+          // 取过数据，必须整页刷新一次，让新地址重新初始化
+          window.location.reload();
           return;
         }
         // 拿不到站长 uid（后端未升级到 uid 方案/接口异常）：不再跳转，
-        // 避免与路由 redirect 形成 /#/zj ↔ /#/邮箱 的无限循环；
+        // 避免与路由 redirect 形成 /#/↔ /#/邮箱 的无限循环；
         // 页面按匿名继续渲染，等后端正常后自然恢复
       }
       if(gu && gu.ret > 0) {
@@ -1803,11 +1858,6 @@ export default {
           this.$router.push({ path: '/' + rootseg});
         }
       } else {
-        // if(gu.ret==0 && gu.urlmail=='zj' && Cookies.get("mail")) {
-        //   this.returnback = false;
-        //   this.loginbutton = true;
-        //   this.registerbutton = true;
-        // }
         // 未登录/登录失效：复位按钮组（返回隐藏、登录/注册显示），清掉铃铛依赖的
         // myMail。注意不能在这里清登录 cookie——短名守卫场景（如 #/zj）下
         // getusername 不做鉴权直接返回 ret=0，误清会丢掉有效登录态；
@@ -1830,6 +1880,9 @@ export default {
           && window.location.hash === '#/' + owneruid;
         if(!onPublicHome) {
           location.replace(curpath + '#/' + owneruid);
+          // 同上：hash 变更不触发整页加载，主题与看板郎会停留在"无主人"的默认值，
+          // 刷新一次让新地址（站长 uid）重新初始化
+          window.location.reload();
         }
       }
       // console.log(document.URL);
@@ -1871,6 +1924,10 @@ export default {
           this.$alert("【" + this.ruleForm.email + "】这个邮箱已经注册过了，可以直接登录！");
           this.dialogRegisterVisible = false;
           this.resetForm();
+        }
+        else if(this.sendret==4){
+          // 服务端限流：同邮箱 60 秒 1 封 / 同 IP 每小时 10 封
+          ElMessage("发送太频繁了，请稍后再试！");
         }
         else if(!this.sendret){
           ElMessage("send mail failed, please check email address！");
@@ -1940,6 +1997,10 @@ export default {
         }
         else if(this.sendret==3){
           ElMessage("login administer's email address 1069679911@qq.com failed! please connect administer with 1069679911@qq.com");
+        }
+        else if(this.sendret==4){
+          // 服务端限流：同邮箱 60 秒 1 封 / 同 IP 每小时 10 封
+          ElMessage("发送太频繁了，请稍后再试！");
         }
         else if(this.sendret==0){
           ElMessage("send mail failed, please check email address！");
@@ -2030,6 +2091,9 @@ export default {
             ElMessage("验证数字串时间过期了！需要再次发送！");
           } else if(ret==-6) {
             ElMessage("已经注册过了，请勿重复注册，可以点击登录！");
+          } else if(ret==-7) {
+            // 服务端防攻击限流（每 IP 注册频次 / 每邮箱验证码校验次数）
+            ElMessage.error(response.data.msg || "操作过于频繁，请稍后再试！");
           } else {
             ElMessage("验证失败了的！");
           }
@@ -2060,6 +2124,11 @@ export default {
         data: {'LoginForm' : {'username': this.LoginForm.username, 'password': hexDigest}},
       }).then(async (response) => {
         let result = response.data;
+        // 服务端防爆破限流：每 IP 10 分钟最多 20 次登录尝试
+        if (result.ret === -50) {
+          ElMessage.error(result.msg || "登录尝试过于频繁，请 10 分钟后再试！");
+          return;
+        }
         if(result.ret) {
           let mail = result.mail;
           let password = result.password;
@@ -2238,7 +2307,6 @@ export default {
         // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
         this.$router.push({ path: '/zhihu/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":30}})
       } else {
-        // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
         this.$router.push({ path: '/zhihu/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')}); //, query:{"currentpage": 1, "pagesize":20}
       }
     },
@@ -2258,7 +2326,6 @@ export default {
       if(gu && gu.ret > 0) {
         this.$router.push({ path: '/'+(gu.urluid || gu.urlmail)});
       } else {
-        // this.$router.push("/zj");
         this.$router.push('/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'));
       }
     },
@@ -2278,7 +2345,6 @@ export default {
       if(gu && gu.ret > 0) {
         this.$router.push({ path: '/book/'+(gu.urluid || gu.urlmail)});
       } else {
-        // this.$router.push({ path: '/book/zj'});
         this.$router.push({ path: '/book/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
@@ -2299,7 +2365,6 @@ export default {
         // this.$router.push({ path: '/csdn/'+gu.urlmail}); // query:{"currentpage": 1, "pagesize":20}
         this.$router.push({ path: '/csdn/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":30}})
       } else {
-        // this.$router.push({ path: '/csdn/zj'}); //, query:{"currentpage": 1, "pagesize":20}
         this.$router.push({ path: '/csdn/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')}); //, query:{"currentpage": 1, "pagesize":20}
       }
     },
@@ -2319,7 +2384,6 @@ export default {
       if(gu && gu.ret > 0) {
         this.$router.push({ path: '/think/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":9}});
       } else {
-        // this.$router.push({ path: '/think/zj'});
         this.$router.push({ path: '/think/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
@@ -2339,7 +2403,6 @@ export default {
       if(gu && gu.ret > 0) {
         this.$router.push({ path: '/video/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":6}});
       } else {
-        // this.$router.push({ path: '/video/zj'});
         this.$router.push({ path: '/video/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
@@ -2359,7 +2422,6 @@ export default {
       if(gu && gu.ret > 0) {
         this.$router.push({ path: '/travel/'+(gu.urluid || gu.urlmail), query:{"currentpage": 1, "pagesize":30}});
       } else {
-        // this.$router.push({ path: '/travel/zj'});
         this.$router.push({ path: '/travel/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
@@ -2379,7 +2441,6 @@ export default {
       if(gu && gu.ret > 0) {
         this.$router.push({ path: '/commonuse/'+(gu.urluid || gu.urlmail)});
       } else {
-        // this.$router.push({ path: '/commonuse/zj'});
         this.$router.push({ path: '/commonuse/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
@@ -2549,6 +2610,30 @@ html,body,#app{
   padding:0 4px;
   text-shadow:0 1px 2px rgba(0,0,0,0.25);
   word-break:break-all;
+}
+/* 在线人数：访客数量下方，亮绿色与访客数（白色）区分，带呼吸光点动效 */
+.layout-container-demo .online-stat {
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  color:#7bed9f;
+  text-align:center;
+  line-height:1.4;
+  margin:2px 0 4px;
+  padding:0 4px;
+  text-shadow:0 0 6px rgba(123,237,159,0.55);
+  word-break:break-all;
+}
+.layout-container-demo .online-stat::before {
+  content:'●';
+  font-size:9px;
+  margin-right:4px;
+  vertical-align:1px;
+  animation:online-blink 2.4s ease-in-out infinite;
+}
+@keyframes online-blink {
+  0%, 100% { opacity:1; }
+  50% { opacity:0.35; }
 }
 /* 底部工具组：主题按钮，flex 自动沉底 */
 .layout-container-demo .aside-footer {
@@ -2750,13 +2835,282 @@ p:active {
 </style>
 
 <style>
-/* 全局（非 scoped）兜底：el-dialog 会 teleport 到 body，scoped 样式够不到；
-   手机端所有弹窗统一接近全屏宽，避免固定像素/百分比宽度溢出屏幕。
-   桌面端（>768px）不受影响，各视图自带的 min(…) 宽度依旧生效。 */
+/* 全局（非 scoped）兜底：el-dialog 会 teleport 到 body，scoped 样式够不到。
+   1) 任何视口下弹窗都不超过屏幕（防止固定像素宽度的弹窗在小屏溢出）；
+   2) 手机端所有弹窗统一接近全屏宽。
+   桌面端（>768px）宽度按各视图自带的 min(…) 生效。 */
+.el-dialog {
+  max-width: 96vw;
+}
+/* 通用滚动弹窗：评论等长列表内容区限高滚动，不再把弹窗撑出屏幕 */
+.el-dialog.dialog-scroll .el-dialog__body {
+  max-height: 68vh;
+  overflow-y: auto;
+}
 @media (max-width: 768px) {
   .el-dialog {
     width: 95% !important;
     max-width: 95% !important;
+  }
+}
+
+/* ---------- 全站弹窗美化 ---------- */
+/* 弹窗本体：大圆角 + 柔和立体阴影 + 顶部渐变标题栏 */
+.el-dialog {
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.el-dialog .el-dialog__header {
+  background: linear-gradient(135deg, #f8faff 0%, #f0f5ff 100%);
+  border-bottom: 1px solid #ebeef5;
+  margin-right: 0;
+  padding: 13px 24px;
+}
+.el-dialog .el-dialog__title {
+  font-weight: 600;
+  font-size: 18px;
+  color: #303133;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+.el-dialog .el-dialog__headerbtn {
+  top: 12px;
+  right: 20px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.el-dialog .el-dialog__headerbtn:hover {
+  background: #e8ecf3;
+}
+.el-dialog .el-dialog__body {
+  padding: 20px 24px;
+}
+.el-dialog .el-dialog__footer {
+  padding: 14px 24px 18px;
+  border-top: 1px solid #f0f2f5;
+}
+/* 遮罩加深一点，弹窗更聚焦 */
+.el-overlay {
+  background-color: rgba(17, 20, 28, 0.5) !important;
+  backdrop-filter: blur(2px);
+}
+/* ---------- 全站按钮微交互 ---------- */
+/* 悬停轻浮 + 按下回弹：所有 el-button / 常见自绘按钮统一手感 */
+.el-button {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.el-button:not(.is-disabled):hover {
+  transform: translateY(-1px);
+}
+.el-button:not(.is-disabled):active {
+  transform: translateY(0) scale(0.97);
+}
+/* 主按钮：柔和投影强调层级 */
+.el-button--primary:not(.is-disabled):hover {
+  box-shadow: 0 6px 16px rgba(64, 128, 255, 0.35);
+}
+/* 危险按钮：红色系投影 */
+.el-button--danger:not(.is-disabled):hover {
+  box-shadow: 0 6px 16px rgba(245, 74, 69, 0.3);
+}
+/* 圆角统一 */
+.el-button {
+  border-radius: 8px;
+}
+/* 输入类控件圆角与按钮统一，弹窗内表单视觉一致 */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: 8px;
+}
+@media (max-width: 768px) {
+  /* 手机端按钮更大更好按 */
+  .el-button {
+    min-height: 36px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+/* ---------- 1) 页面/区块占比与卡片美化（文章/想法/游记等列表与详情页通用） ---------- */
+/* 内容卡片：大圆角 + 轻边框去重影 + 悬停微浮，列表页的 block 从"色块"变成"卡片" */
+.el-card {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(15, 27, 61, 0.06);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.el-card:hover {
+  box-shadow: 0 8px 22px rgba(15, 27, 61, 0.1);
+}
+/* 正文类卡片（含 markdown 渲染的详情页）内边距更舒展，长文阅读不憋屈 */
+.el-card__body {
+  padding: 18px 20px;
+}
+@media (max-width: 768px) {
+  .el-card__body {
+    padding: 14px;   /* 手机端卡片内边距收紧，内容占比更大 */
+  }
+}
+/* 卡片头：细分割线 + 适中留白 */
+.el-card__header {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0f2f5;
+  font-weight: 600;
+}
+/* 分页器：胶囊化，间距统一 */
+.el-pagination {
+  --el-pagination-border-radius: 8px;
+  --el-pagination-button-spacing: 6px;
+  padding: 10px 0;
+}
+/* 空状态：弱化灰色，不抢内容视觉 */
+.el-empty__description p {
+  color: #a8abb2;
+  font-size: 13px;
+}
+/* 媒体兜底：详情页长文里的图片/视频/代码块不撑破卡片 */
+.el-card img,
+.el-card video {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.el-card pre {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+/* ---------- 2) 文本输入框与表单美化 ---------- */
+/* 输入框：悬停边框加深、聚焦品牌色光圈，输入状态一目了然 */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.el-input__wrapper:not(.is-focus):hover,
+.el-select__wrapper:not(.is-focus):hover {
+  box-shadow: 0 0 0 1px #b1b8c4 inset;
+}
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px #409eff inset, 0 0 0 3px rgba(64, 158, 255, 0.12);
+}
+/* placeholder：更浅更轻，与正文区分 */
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: #b8bdc7;
+}
+/* 表单项：统一垂直节奏，弹窗/页面里的表单间距不再忽大忽小 */
+.el-form-item {
+  margin-bottom: 18px;
+}
+.el-form-item__label {
+  font-weight: 500;
+  color: #606266;
+}
+/* 表单内最后的项不留多余底距（弹窗 footer 间距更匀称） */
+.el-form-item:last-child {
+  margin-bottom: 0;
+}
+/* ---------- 3) 文字/文本排版美化 ---------- */
+/* 全局正文字色与行高：长文阅读更舒适（用 Element 变量，跟随主题） */
+body {
+  --el-text-color-primary: #303133;
+  --el-text-color-regular: #4e5969;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+/* 标题层级：字重与间距统一 */
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--el-text-color-primary);
+}
+h1 { font-size: 24px; margin: 0.6em 0 0.4em; }
+h2 { font-size: 20px; margin: 0.7em 0 0.4em; }
+h3 { font-size: 17px; margin: 0.7em 0 0.4em; }
+h4 { font-size: 15px; margin: 0.6em 0 0.3em; }
+/* 正文段落：行高与段距，长文（详情页）不再挤成一坨 */
+p {
+  line-height: 1.75;
+  margin: 0.5em 0;
+  color: var(--el-text-color-regular);
+  word-break: break-word;
+}
+/* 链接：品牌色 + 悬停下划线 */
+a {
+  color: #409eff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+a:hover {
+  color: #66b1ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* 选中文字：品牌色底 */
+::selection {
+  background: rgba(64, 158, 255, 0.18);
+}
+/* 全局滚动条：细窄圆角，深浅两套 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(144, 147, 153, 0.35);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(144, 147, 153, 0.55);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- el-card 手机/电脑适配 ---------- */
+/* 手机/平板（<=768px）：卡片更紧凑、阴影收淡、长文字防溢出 */
+@media (max-width: 768px) {
+  .el-card {
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(15, 27, 61, 0.08);
+  }
+  .el-card__header {
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+  .el-card__body {
+    padding: 12px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .el-card img,
+  .el-card video {
+    border-radius: 6px;
+  }
+}
+/* 小屏手机（<=480px）：进一步收紧留白，内容占比更大 */
+@media (max-width: 480px) {
+  .el-card__body {
+    padding: 10px;
+  }
+  .el-card__header {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+}
+/* 触屏设备（无悬停）：关闭卡片/按钮的悬停浮起与投影，避免点击后"粘住"悬停态 */
+@media (hover: none) {
+  .el-card:hover {
+    box-shadow: 0 2px 10px rgba(15, 27, 61, 0.06);
+  }
+  .el-button:not(.is-disabled):hover {
+    transform: none;
+    box-shadow: none;
   }
 }
 </style>

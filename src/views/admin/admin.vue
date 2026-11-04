@@ -9,7 +9,13 @@
         clearable
       />
       <el-button type="primary" @click="loadUsers">刷新</el-button>
+      <!-- 访客数批量保存：有未保存修改才可点，点击后弹确认，确认才真正生效 -->
+      <el-button v-if="canCreateUser" type="primary" plain :disabled="travelerDirtyCount === 0" @click="confirmSaveTravelers">
+        保存访客修改<template v-if="travelerDirtyCount > 0">（{{ travelerDirtyCount }}）</template>
+      </el-button>
       <el-button v-if="canCreateUser" type="warning" @click="openCreateUser">新建用户</el-button>
+      <!-- 站点配置：仅站长可见可配置（超级管理员/普通管理员后端与前端双层隐藏） -->
+      <el-button v-if="isOwner" type="danger" @click="openSiteConfig">站点配置</el-button>
       <el-button type="success" @click="openNotice">通知用户</el-button>
     </div>
     <el-dialog v-model="noticeVisible" title="发送通知" class="admin-dialog" width="min(600px, 92%)">
@@ -67,6 +73,22 @@
         <template #default="scope">
           <el-tag v-if="scope.row.hasdata" type="success">有</el-tag>
           <el-tag v-else type="warning">无</el-tag>
+        </template>
+      </el-table-column>
+      <!-- 访客数量：仅站长/超级管理员可见可编辑（后端同权限校验）；
+           只改本地值，点头部「保存访客修改」确认后才生效 -->
+      <el-table-column v-if="canCreateUser" label="访客" width="150">
+        <template #default="scope">
+          <el-input-number
+            v-model="scope.row.traveler"
+            size="small"
+            :min="0"
+            :max="999999999"
+            :step="1"
+            step-strictly
+            controls-position="right"
+            style="width: 120px"
+          />
         </template>
       </el-table-column>
       <el-table-column label="操作" width="250">
@@ -131,6 +153,92 @@
         <el-button type="primary" @click="submitCreateUser">确定创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- 站点配置弹窗：site_config.json 全部可编辑项，仅站长（按钮/入口已隐藏，后端再校验）；
+         桌面宽弹窗（1100px），手机端 CSS 强制全宽（见底部媒体查询） -->
+    <el-dialog v-model="siteConfigVisible" title="站点配置（site_config.json）" class="admin-dialog siteconfig-dialog" width="min(1100px, 96%)">
+      <!-- 顶部工具条：搜索过滤 + 统计 -->
+      <div class="siteconfig-toolbar">
+        <el-input
+          v-model="siteConfigSearch"
+          placeholder="搜索配置项（键名 / 说明）"
+          clearable
+          class="siteconfig-search"
+        />
+        <span class="siteconfig-count">
+          {{ filteredSiteConfigItems.length }} 项
+          <template v-if="siteConfigDirtyCount > 0">· 已修改 {{ siteConfigDirtyCount }} 项</template>
+        </span>
+      </div>
+      <!-- 分类折叠面板：按功能分组，标题带条数与未保存数 -->
+      <div v-loading="siteConfigLoading" class="siteconfig-list">
+        <el-collapse v-model="siteConfigOpenCats">
+          <el-collapse-item v-for="cat in siteConfigCats" :key="cat.name" :name="cat.name">
+            <template #title>
+              <span class="siteconfig-cat-title">{{ cat.name }}</span>
+              <span class="siteconfig-cat-count">
+                {{ cat.items.length }} 项<template v-if="cat.dirty > 0"> · 已改 {{ cat.dirty }}</template>
+              </span>
+            </template>
+            <div
+              v-for="it in cat.items"
+              :key="it.key"
+              class="siteconfig-item"
+              :class="{ 'siteconfig-item-dirty': isSiteConfigDirty(it) }"
+            >
+              <div class="siteconfig-key">
+                {{ it.key }}
+                <el-tooltip :content="it.doc || '（无说明）'" placement="top" :disabled="!it.doc">
+                  <span class="siteconfig-help">?</span>
+                </el-tooltip>
+                <span v-if="it.readonly" class="siteconfig-tag siteconfig-tag-readonly">只读</span>
+                <span v-if="isSiteConfigDirty(it)" class="siteconfig-tag siteconfig-tag-dirty">已修改</span>
+                <!-- 单项还原：回到服务端原值 -->
+                <el-button
+                  v-if="isSiteConfigDirty(it) && !it.readonly"
+                  link
+                  type="primary"
+                  size="small"
+                  class="siteconfig-restore"
+                  @click="resetSiteConfigItem(it)"
+                >还原</el-button>
+              </div>
+              <!-- 说明全文显示（不截断）：含义/怎么改/后果是站长改配置的主要依据 -->
+              <div v-if="it.doc" class="siteconfig-doc">{{ it.doc }}</div>
+              <!-- 只读项（如 traveler_filename，改名会丢历史统计）：置灰仅展示 -->
+              <el-input v-if="it.readonly" v-model="it.edit" disabled />
+              <el-switch v-else-if="it.type === 'bool'" v-model="it.edit" />
+              <el-input-number
+                v-else-if="it.type === 'int' || it.type === 'float'"
+                v-model="it.edit"
+                class="siteconfig-number"
+                :step="1"
+                controls-position="right"
+              />
+              <el-input v-else-if="it.type === 'str'" v-model="it.edit" clearable />
+              <!-- 数组/对象（music_sources / music_apis 等）：按 JSON 文本编辑 -->
+              <el-input
+                v-else-if="it.type === 'json'"
+                v-model="it.edit"
+                type="textarea"
+                :autosize="{ minRows: 4, maxRows: 14 }"
+                class="siteconfig-json"
+              />
+            </div>
+          </el-collapse-item>
+        </el-collapse>
+      </div>
+      <span class="admin-tip">绝大多数项保存即生效；说明里标注「需重启」的项（如 display_timezone_offset_seconds、server_request_queue_size）改后要重启后端才生效</span>
+      <template #footer>
+        <el-button @click="siteConfigVisible = false">关闭</el-button>
+        <el-button
+          type="primary"
+          :loading="siteConfigSaving"
+          :disabled="siteConfigDirtyCount === 0"
+          @click="saveSiteConfig"
+        >保存修改<template v-if="siteConfigDirtyCount > 0">（{{ siteConfigDirtyCount }}）</template></el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -140,6 +248,18 @@ import Cookies from 'js-cookie'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import getusername from '/src/common.js'
 import { ADMIN_QUANXIAN, NORMAL_QUANXIAN, SUPER_ADMIN_QUANXIAN, isAdminQuanxian, isSuperAdminQuanxian, isOwnerQuanxian } from '/src/common.js'
+
+// 站点配置分组：键名 -> 类别（site_config.json 现有键的固定归类，新增未识别键归「其他」）
+const SITE_CONFIG_CATEGORIES = [
+  { name: '访客统计', keys: ['traveler_dedup_window_seconds', 'traveler_cleanup_seconds', 'traveler_default_init', 'traveler_filename'] },
+  { name: '邮箱与通知', keys: ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'site_domain', 'site_name', 'mail_resend_cooldown_seconds', 'verify_code_ttl_seconds', 'notice_display_max', 'notice_clear_temporary'] },
+  { name: '音乐播放器', keys: ['music_enabled', 'music_api', 'music_apis', 'music_server', 'music_type', 'music_id', 'music_sources'] },
+  { name: '登录与账号', keys: ['cookie_login_days', 'min_username_prefix_length', 'short_name_guard_max_length', 'nickname_max_len'] },
+  { name: '内容长度限制', keys: ['modified_label_seconds', 'travel_min_email_len', 'travel_min_contact_len', 'travel_min_content_len', 'travel_max_content_len', 'travel_max_field_len', 'setting_max_items', 'setting_max_field_len', 'book_max_field_len', 'book_max_items', 'book_default_pagesize', 'book_max_pagesize'] },
+  { name: '列表分页', keys: ['default_currentpage', 'default_pagesize_csdn', 'default_pagesize_think', 'default_pagesize_travel', 'default_pagesize_video'] },
+  { name: '站点与页脚', keys: ['site_owner_mail', 'footer_gongan_code', 'footer_gongan_text', 'footer_copyright', 'footer_icp_text', 'footer_report_email'] },
+  { name: '服务与性能', keys: ['display_timezone_offset_seconds', 'server_request_queue_size'] },
+]
 
 export default {
   name: 'admin',
@@ -167,15 +287,65 @@ export default {
       // 新建用户（仅站长/超级管理员）
       createVisible: false,
       createForm: { email: '', nickname: '', password: '' },
+      // 站点配置（仅站长）
+      siteConfigVisible: false,
+      siteConfigItems: [],
+      siteConfigLoading: false,
+      siteConfigSaving: false,
+      siteConfigSearch: '',
+      siteConfigOpenCats: [],
     }
   },
   computed: {
     isSuper() {
       return isSuperAdminQuanxian(this.myLevel);
     },
+    // 站长本人（权限 999999999）：站点配置仅其可见可改
+    isOwner() {
+      return isOwnerQuanxian(this.myLevel);
+    },
     // 新建用户：仅站长与超级管理员
     canCreateUser() {
       return isOwnerQuanxian(this.myLevel) || isSuperAdminQuanxian(this.myLevel);
+    },
+    // 访客数未保存的修改条数（仅站长/超级管理员能看到访客列，普通管理员恒为 0）
+    travelerDirtyCount() {
+      return this.users.filter((u) => u.traveler !== u._travelerOrig).length;
+    },
+    // ---------- 站点配置 ----------
+    // 搜索过滤后的配置项（按键名/说明模糊匹配）
+    filteredSiteConfigItems() {
+      const s = (this.siteConfigSearch || '').trim().toLowerCase();
+      if (!s) {
+        return this.siteConfigItems;
+      }
+      return this.siteConfigItems.filter((it) =>
+        it.key.toLowerCase().includes(s) || (it.doc || '').toLowerCase().includes(s)
+      );
+    },
+    // 站点配置未保存修改条数
+    siteConfigDirtyCount() {
+      return this.siteConfigItems.filter((it) => this.isSiteConfigDirty(it)).length;
+    },
+    // 站点配置按类别分组（未识别键归「其他」；搜索时只显示命中的项，空分组隐藏）
+    siteConfigCats() {
+      const s = (this.siteConfigSearch || '').trim().toLowerCase();
+      const match = (it) => !s || it.key.toLowerCase().includes(s) || (it.doc || '').toLowerCase().includes(s);
+      const key2cat = {};
+      SITE_CONFIG_CATEGORIES.forEach((c) => c.keys.forEach((k) => { key2cat[k] = c.name; }));
+      const groups = {};
+      for (const it of this.siteConfigItems) {
+        const name = key2cat[it.key] || '其他';
+        (groups[name] = groups[name] || []).push(it);
+      }
+      const names = SITE_CONFIG_CATEGORIES.map((c) => c.name).filter((n) => groups[n]);
+      if (groups['其他']) {
+        names.push('其他');
+      }
+      return names.map((name) => {
+        const items = groups[name].filter(match);
+        return { name, items, dirty: items.filter((it) => this.isSiteConfigDirty(it)).length };
+      }).filter((c) => c.items.length > 0);
     },
     filteredUsers() {
       if (!this.search) {
@@ -187,6 +357,12 @@ export default {
           || (u.truemail && u.truemail.toLowerCase().includes(s))
           || (u.nickname && u.nickname.toLowerCase().includes(s));
       });
+    },
+  },
+  watch: {
+    // 搜索站点配置时自动展开全部分组，避免命中的项藏在折叠里
+    siteConfigSearch() {
+      this.siteConfigOpenCats = this.siteConfigCats.map((c) => c.name);
     },
   },
   mounted() {
@@ -236,7 +412,12 @@ export default {
       }).then((response) => {
         this.loading = false;
         if (response.data.ret === 1) {
-          this.users = response.data.users;
+          // 访客数兜底：后端仅对站长/超级管理员返回该字段；
+          // _travelerOrig 记录服务端原值，用于「保存访客修改」的未保存计数
+          this.users = response.data.users.map((u) => {
+            const t = typeof u.traveler === 'number' ? u.traveler : 0;
+            return { ...u, traveler: t, _travelerOrig: t };
+          });
           if (response.data.my_level) {
             this.myLevel = response.data.my_level;
           }
@@ -257,6 +438,64 @@ export default {
       this.newpass = '';
       this.resetPassVisible = true;
     },
+    // ---------- 访客数修改（仅站长/超级管理员；后端 admin_settraveler 同权限校验） ----------
+    // 弹窗列出全部待保存修改，确认后才逐条提交（修改不会即时生效）
+    confirmSaveTravelers() {
+      const dirty = this.users.filter((u) => u.traveler !== u._travelerOrig);
+      if (dirty.length === 0) {
+        return;
+      }
+      const lines = dirty.map((u) => '　' + (u.nickname || u.mail) + '：' + u._travelerOrig + ' → ' + u.traveler).join('\n');
+      ElMessageBox.confirm(
+        '以下 ' + dirty.length + ' 项访客数量修改将被保存：\n' + lines,
+        '保存访客修改',
+        { confirmButtonText: '确认保存', cancelButtonText: '取消', type: 'warning' }
+      ).then(() => {
+        this.submitSaveTravelers(dirty);
+      }).catch(() => {});
+    },
+    async submitSaveTravelers(dirty) {
+      // 防连点
+      if (this._busy) {
+        return;
+      }
+      this._busy = true;
+      let okCount = 0;
+      let failCount = 0;
+      const instance = axios.create({ baseURL: '/csdn/admin_settraveler', timeout: 20000 });
+      // 逐条提交（避免并发打后端），单条失败不影响其余
+      for (const row of dirty) {
+        const value = parseInt(row.traveler, 10);
+        if (isNaN(value) || value < 0) {
+          failCount += 1;
+          continue;
+        }
+        try {
+          const response = await instance({
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: { ...this.authData(), target: row.mail, value },
+          });
+          if (response.data.ret === 1) {
+            // 以后端回读值为准，同步原值标记（该行不再算未保存）
+            row.traveler = response.data.traveler;
+            row._travelerOrig = row.traveler;
+            okCount += 1;
+          } else {
+            failCount += 1;
+          }
+        } catch (e) {
+          failCount += 1;
+        }
+      }
+      this._busy = false;
+      if (failCount === 0) {
+        ElMessage.success('已保存 ' + okCount + ' 项访客数量修改！');
+      } else {
+        ElMessage.error('保存完成：成功 ' + okCount + ' 项，失败 ' + failCount + ' 项（已重新拉取列表）！');
+        this.loadUsers();
+      }
+    },
     openNotice() {
       this.noticeVisible = true;
       this.noticeAll = true;
@@ -266,6 +505,121 @@ export default {
     openCreateUser() {
       this.createForm = { email: '', nickname: '', password: '' };
       this.createVisible = true;
+    },
+    // ---------- 站点配置（仅站长；后端 siteconfig_list/siteconfig_save 同权限校验） ----------
+    async openSiteConfig() {
+      this.siteConfigVisible = true;
+      await this.loadSiteConfig();
+    },
+    async loadSiteConfig() {
+      this.siteConfigLoading = true;
+      const instance = axios.create({ baseURL: '/csdn/siteconfig_list', timeout: 20000 });
+      await instance({
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        data: this.authData(),
+      }).then((response) => {
+        this.siteConfigLoading = false;
+        if (response.data.ret === 1 && Array.isArray(response.data.items)) {
+          this.siteConfigItems = response.data.items.map((it) => {
+            // 编辑值：json 类型转成可编辑文本（smtp_password 按站长要求明文显示可改）
+            const edit = it.type === 'json' ? JSON.stringify(it.value, null, 2) : it.value;
+            // orig 记录服务端原值（与 edit 同形态），用于「已修改」高亮与单项还原
+            return { ...it, edit, orig: edit };
+          });
+          // 默认展开全部分组
+          this.siteConfigOpenCats = this.siteConfigCats.map((c) => c.name);
+        } else {
+          ElMessage.error('没有权限读取站点配置！');
+          this.siteConfigVisible = false;
+        }
+      }).catch(() => {
+        this.siteConfigLoading = false;
+        ElMessage.error('网络错误，读取站点配置失败！');
+      });
+    },
+    // 某配置项是否有未保存修改（edit 与服务端原值 orig 逐字比较）
+    isSiteConfigDirty(it) {
+      return String(it.edit) !== String(it.orig);
+    },
+    // 单项还原到服务端原值
+    resetSiteConfigItem(it) {
+      it.edit = it.orig;
+    },
+    // 确认弹窗里的值摘要：压掉换行并截断
+    shortSiteConfigVal(v) {
+      const s = String(v).replace(/\s+/g, ' ').trim();
+      return s.length > 60 ? s.slice(0, 60) + '…' : s;
+    },
+    async saveSiteConfig() {
+      // 防连点
+      if (this._busy) {
+        return;
+      }
+      // 只提交真正改动的项（未改动的不重写，降低误伤面）
+      const dirty = this.siteConfigItems.filter((it) => !it.readonly && this.isSiteConfigDirty(it));
+      if (dirty.length === 0) {
+        ElMessage('没有修改任何配置');
+        return;
+      }
+      // 保存前确认：列出每项 原值 -> 新值
+      const lines = dirty.slice(0, 8).map((it) =>
+        '　' + it.key + '：' + this.shortSiteConfigVal(it.orig) + ' → ' + this.shortSiteConfigVal(it.edit)
+      ).join('\n') + (dirty.length > 8 ? '\n　… 等共 ' + dirty.length + ' 项' : '');
+      try {
+        await ElMessageBox.confirm(
+          '以下 ' + dirty.length + ' 项配置修改将被保存：\n' + lines + '\n\n确认保存？',
+          '保存站点配置',
+          { confirmButtonText: '确认保存', cancelButtonText: '取消', type: 'warning' }
+        );
+      } catch (e) {
+        return;
+      }
+      const updates = {};
+      for (const it of dirty) {
+        let v = it.edit;
+        if (it.type === 'json') {
+          try {
+            v = JSON.parse(v);
+          } catch (e) {
+            ElMessage.error(it.key + ' 不是合法的 JSON！');
+            return;
+          }
+          updates[it.key] = v;
+        } else if (it.type === 'bool') {
+          updates[it.key] = !!v;
+        } else if (it.type === 'int' || it.type === 'float') {
+          const n = Number(v);
+          if (v === null || v === '' || isNaN(n)) {
+            ElMessage.error(it.key + ' 必须是数字！');
+            return;
+          }
+          updates[it.key] = n;
+        } else {
+          updates[it.key] = String(v === null || v === undefined ? '' : v);
+        }
+      }
+      this._busy = true;
+      this.siteConfigSaving = true;
+      const instance = axios.create({ baseURL: '/csdn/siteconfig_save', timeout: 20000 });
+      await instance({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        data: { ...this.authData(), updates },
+      }).then((response) => {
+        if (response.data.ret === 1) {
+          ElMessage.success('站点配置已保存！');
+          // 重新拉取：回显服务器端最终值并重置「已修改」状态
+          this.loadSiteConfig();
+        } else {
+          ElMessage.error(response.data.msg || '保存失败（ret=' + response.data.ret + '）！');
+        }
+      }).catch(() => {
+        ElMessage.error('网络错误，保存站点配置失败！');
+      }).finally(() => {
+        this._busy = false;
+        this.siteConfigSaving = false;
+      });
     },
     async submitCreateUser() {
       const email = (this.createForm.email || '').trim();
@@ -430,12 +784,26 @@ export default {
         this._busy = false;
       });
     },
+    // 删除用户：三次连环确认（任何一步取消即中止）
     confirmDelete(row) {
+      const who = '【' + (row.nickname || row.mail) + '（' + row.mail + '）】';
       ElMessageBox.confirm(
-        '确定删除用户【' + row.mail + '】吗？其个人数据目录会移动到 article/deleted_users 备份。',
-        '删除确认',
-        { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+        '确定要删除用户' + who + '吗？',
+        '删除确认（第 1 / 3 次）',
+        { confirmButtonText: '继续', cancelButtonText: '取消', type: 'warning' }
       ).then(() => {
+        return ElMessageBox.confirm(
+          '第 2 次确认：删除后其个人数据目录会移动到 article/deleted_users 备份，该账号将无法登录。真的要删除' + who + '吗？',
+          '删除确认（第 2 / 3 次）',
+          { confirmButtonText: '继续', cancelButtonText: '取消', type: 'warning' }
+        );
+      }).then(() => {
+        return ElMessageBox.confirm(
+          '第 3 次确认（最后一次）：删除操作不可在线恢复！确定删除' + who + '？',
+          '删除确认（第 3 / 3 次）',
+          { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'error' }
+        );
+      }).then(() => {
         this.submitDelete(row);
       }).catch(() => {});
     },
@@ -499,6 +867,108 @@ export default {
 .admin-table {
   width: 100%;
 }
+/* 站点配置弹窗：搜索工具条 + 分类折叠 + 卡片化条目 + 未保存高亮 */
+.siteconfig-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.siteconfig-search {
+  width: 320px;
+  flex-shrink: 0;
+}
+.siteconfig-count {
+  font-size: 12px;
+  color: #999;
+}
+.siteconfig-list {
+  max-height: 66vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.siteconfig-cat-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.siteconfig-cat-count {
+  font-size: 12px;
+  color: #999;
+  margin-left: 10px;
+}
+.siteconfig-item {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #fafbfc;
+}
+/* 有未保存修改的条目：橙色描边 + 浅橙底，一眼可见 */
+.siteconfig-item-dirty {
+  border-color: #e6a23c;
+  background: #fdf6ec;
+}
+.siteconfig-key {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.siteconfig-restore {
+  margin-left: auto;
+}
+.siteconfig-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid #bbb;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 400;
+  color: #888;
+  cursor: help;
+  flex-shrink: 0;
+}
+.siteconfig-tag {
+  font-size: 11px;
+  color: #e6a23c;
+  border: 1px solid #e6a23c;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+/* 只读项标签（置灰，与可编辑项区分） */
+.siteconfig-tag-readonly {
+  color: #909399;
+  border-color: #c0c4cc;
+}
+/* 已修改标签（橙色实底） */
+.siteconfig-tag-dirty {
+  background: #e6a23c;
+  color: #fff;
+  border-color: #e6a23c;
+}
+/* 说明全文：含义/怎么改/后果是改配置的主要依据，不做行数截断 */
+.siteconfig-doc {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.6;
+  margin: 2px 0 6px;
+  word-break: break-all;
+}
+/* 数字输入统一宽度（桌面），手机端在媒体查询里放开为 100% */
+.siteconfig-number {
+  width: 260px;
+}
+.siteconfig-json :deep(textarea) {
+  font-family: monospace;
+  font-size: 12px;
+}
 /* 移动端适配：表格可横向滚动，弹窗加宽 */
 @media (max-width: 768px) {
   .admin-page {
@@ -515,6 +985,30 @@ export default {
   }
   .admin-dialog {
     width: 95% !important;
+  }
+  /* 站点配置弹窗手机端：近全屏 + 搜索/输入全宽 + 说明可读 */
+  .siteconfig-dialog {
+    width: 98% !important;
+    margin-top: 3vh !important;
+  }
+  .siteconfig-dialog .siteconfig-list {
+    max-height: 68vh;
+  }
+  .siteconfig-dialog .siteconfig-search {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .siteconfig-dialog .siteconfig-number {
+    width: 100%;
+  }
+  .siteconfig-dialog .siteconfig-restore {
+    margin-left: 0;
+  }
+  .siteconfig-dialog .admin-tip {
+    display: block;
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
   }
 }
 </style>

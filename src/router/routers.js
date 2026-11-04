@@ -45,11 +45,12 @@ import getusername from '/src/common.js'
 
 export const constantRoutes = [
   {
-    // 裸域名访问（无 hash）时重定向到站长空间，避免路由 no-match 告警与空白内容区。
-    // 邮箱 URL 已彻底失效：优先用缓存的站长 uid；无缓存时落到中性短名段 /zj，
-    // App.vue loading() 的匿名分支会再跳到后端返回的站长 uid（不经过邮箱形态）
+    // 裸域名访问（无 hash）直接渲染主页组件：不再重定向到任何占位用户段。
+    // App.vue loading() 的匿名分支会把地址换成站长 uid（#/<uid>）并整页刷新，
+    // 登录状态则留在当前位置由各页面自行取数，避免出现 /zj 之类的历史短名。
     path: '/',
-    redirect: () => (localStorage.getItem('site_owner_uid') || '/zj'),
+    component: Home,
+    name: 'home_root',
   },
   {
     path: '/book/:id',
@@ -119,7 +120,7 @@ export const constantRoutes = [
     //   const uri = to.query;
     //   const fromuri = from.fullPath;
     //   console.log(to, from, fromuri);
-    //   if(fromuri!=null && fromuri!='/zj' && fromuri!='/') {
+    //   if(fromuri!=null && fromuri!='/' && fromuri!='/') {
     //     // next(false);
     //     console.log(to, from, from.fullPath);
     //     router.push(from.fullPath);
@@ -141,7 +142,7 @@ export const constantRoutes = [
     //     if(gu && gu.ret > 0) {
     //       router.push({ path: '/'+gu.mail});
     //     } else {
-    //       router.push({path: "/zj"});
+    //       router.push({path: "/"});
     //     }
     //   } else {
     //     next();

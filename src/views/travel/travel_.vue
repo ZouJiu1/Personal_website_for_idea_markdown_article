@@ -709,10 +709,11 @@ h3 {
   overflow:auto;
 }
 .el-card-detail {
-  width: 90%;
+  width: 96%;
   color: #00ff00;
   margin-top: 6px;
-  margin-left: 6%;
+  margin-left: 2%;
+  margin-right: 2%;
 }
 
 /* 与 csdnpg 同步：压缩卡片上下间距；正文内容不做截断/压缩 */

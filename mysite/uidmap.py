@@ -79,9 +79,10 @@ def mail_to_uid(mail):
         mapping, _ = _load()
         if mail in mapping:
             return mapping[mail]
-        # 36 位随机数字，首位不为 0（保持纯数字且视觉上像随机串）
-        uid = str(random.randint(1, 9)) + ''.join(
-            str(random.randint(0, 9)) for _ in range(_UID_LEN - 1))
+        # 36 位随机数字，首位不为 0（保持纯数字且视觉上像随机串）；
+        # 数字 4 不使用（与现网 uid 约定一致：uid 中不出现 4）
+        uid = random.choice("12356789") + ''.join(
+            random.choice("012356789") for _ in range(_UID_LEN - 1))
         _append(mail, uid)
         # 刷新缓存
         mapping[mail] = uid

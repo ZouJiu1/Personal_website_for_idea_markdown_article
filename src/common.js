@@ -31,6 +31,22 @@ export function isOwnerQuanxian(qx) {
   return parseInt(qx) === parseInt(OWNER_QUANXIAN);
 }
 
+// 当前是否处于站长主页：按 URL 隐私方案下的站长 36 位 uid 判断，
+// uid 由 App.vue 初始化时缓存到 localStorage 的 site_owner_uid。
+// 站长主页对未登录访客开放点赞/评论/收藏入口，其他用户的主页要求先登录。
+export function isOwnerPage() {
+  const raw = (window.location.hash || '').replace(/^#\/?/, '');
+  if (!raw) return false;
+  const segs = raw.split('?')[0].split('/').filter(Boolean);
+  // 跳过模块前缀（#/csdn/<uid>、#/think/<uid> 等），取真正的用户段
+  const skip = ['think', 'csdn', 'book', 'zhihu', 'video', 'travel', 'commonuse',
+    'everydayimg', 'admin', 'people', 'article', 'markdown_detail', 'post_article', 'detail'];
+  while (segs.length && skip.includes(segs[0].toLowerCase())) segs.shift();
+  const seg = segs[0] || '';
+  const ownerUid = localStorage.getItem('site_owner_uid') || '';
+  return !!seg && !!ownerUid && seg === ownerUid;
+}
+
 export async function saveFile() {
   try {
     // 创建一个新句柄

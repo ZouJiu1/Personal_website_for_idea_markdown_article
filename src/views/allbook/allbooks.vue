@@ -1191,11 +1191,11 @@ export default {
 }
 
 .el-card-detail {
-  width: 80%;
+  width: 96%;
   color: #303133;
   margin-top: 3px;
-  margin-left: 10%;
-  margin-right: 10%;
+  margin-left: 2%;
+  margin-right: 2%;
 }
 
 /* 卡片悬浮：轻提升 + 阴影加深（克制，不做整卡变色） */

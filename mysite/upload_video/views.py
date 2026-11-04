@@ -41,8 +41,27 @@ def upload(request):
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
     req = request.POST.dict()
     # https://docs.djangoproject.com/zh-hans/5.1/ref/files/uploads/#django.core.files.uploadedfile.UploadedFile
-    uploadImageName = request.FILES['file'].name
-    tail = "." + uploadImageName[-6:].split(".")[-1] 
+
+    # ---------- 安全：服务端二次校验（与前端一致 mp4/webm、≤2G）----------
+    # 1) 大小：防绕过前端直发 3G 垃圾文件占磁盘（nginx 3000m 只是传输兜底）
+    # 2) 扩展名 + 魔数：此前只靠前端，直发 .html/.exe 会落到 nginx 静态直出的
+    #    people 目录（存储型 XSS / 恶意文件分发）
+    if 'file' not in request.FILES:
+        return JsonResponse({ "ret" : -1, "msg": "缺少上传文件" }, safe=False)
+    f = request.FILES['file']
+    if f.size > 2 * 1024 * 1024 * 1024:
+        return JsonResponse({ "ret" : -1, "msg": "视频大小不能超过 2G" }, safe=False)
+    # 3) 文件名消毒：basename 剥离路径成分，防 "../../" 目录穿越写到任意路径
+    uploadImageName = os.path.basename(f.name)
+    tail = "." + uploadImageName[-6:].split(".")[-1]
+    if tail.lower() not in ('.mp4', '.webm'):
+        return JsonResponse({ "ret" : -1, "msg": "仅支持上传 mp4/webm 视频" }, safe=False)
+    head = f.read(12)
+    f.seek(0)
+    # MP4：第 4~7 字节为 "ftyp"；WebM/MKV：EBML 魔数 0x1A45DFA3
+    if head[4:8] != b'ftyp' and not head.startswith(b'\x1a\x45\xdf\xa3'):
+        return JsonResponse({ "ret" : -1, "msg": "文件内容不是合法视频" }, safe=False)
+
     # assert 1==0, (re, uploadImageName)
     # https://docs.djangoproject.com/zh-hans/5.1/ref/files/uploads/#django.core.files.uploadedfile.UploadedFile
     # uploadType = request.FILES['file'].content_type

@@ -308,6 +308,8 @@ export default {
     window.addEventListener("resize", this._onResize);
   },
   beforeUnmount(){
+    // 离开编辑页时恢复左侧栏（兜底：无论发布跳转、返回还是直接切换路由都恢复）
+    this.restore_elaside();
     // 退出编辑页时停止定时器，防止后台持续请求
     if(this.intervalId) {
       clearInterval(this.intervalId);
@@ -556,7 +558,18 @@ export default {
     },
     hidden_elaside() {
       this.elaside = document.getElementById("elaside");
+      // .el-aside 的全局 CSS 设了 display，会盖掉 hidden 属性的 display:none，
+      // 必须直接改内联样式才能真正隐藏
       this.elaside.hidden = true;
+      this.elaside.style.display = "none";
+    },
+    // 恢复侧栏显示：hidden 属性与内联样式一起还原
+    restore_elaside() {
+      const aside = this.elaside || document.getElementById("elaside");
+      if (aside) {
+        aside.hidden = false;
+        aside.style.display = "";
+      }
     },
     async upLoadbutton() {
       if(this.intervalId) {
@@ -1177,6 +1190,7 @@ export default {
               this.draft_id = "";
             }
             this.elaside.hidden = false;
+      this.elaside.style.display = "";
             // this.$router.go(-2);
             if(this.path) {
               let zhihu = this.path.indexOf("zhihu_");
@@ -1190,7 +1204,6 @@ export default {
                   // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
                   this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
                 } else {
-                  // this.$router.push({ path: '/csdn/zj',});
                   this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'),});
                 }
               } 
@@ -1234,6 +1247,7 @@ export default {
         clearInterval(this.intervalId);
       }
       this.elaside.hidden = false;
+      this.elaside.style.display = "";
       this.data.dirname   = "";
       this.data.old_title = "";
       this.data.title     = "";
@@ -1242,6 +1256,7 @@ export default {
       let gu;
       this.elaside = document.getElementById("elaside");
       this.elaside.hidden = false;
+      this.elaside.style.display = "";
       await getusername(document.URL).then((response) => {
         gu = response;
       });
@@ -1256,7 +1271,6 @@ export default {
             // this.$router.push({ path: '/csdn/' + gu.urlmail});
             this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
           } else {
-            // this.$router.push({ path: '/csdn/zj'});
             // this.$router.push({ path: '/csdn/homepage@gmail.com'});
             this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
           }
@@ -1266,7 +1280,6 @@ export default {
           // this.$router.push({ path: '/csdn/' + gu.urlmail});
           this.$router.push({ path: '/csdn/' + (gu.urluid || gu.urlmail),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         } else {
-          // this.$router.push({ path: '/csdn/zj'});
           // this.$router.push({ path: '/csdn/homepage@gmail.com'});
           this.$router.push({ path: '/csdn/' + (gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com'),  query:{"currentpage": Cookies.get("csdn"), "pagesize": Cookies.get("csdnpage")}});
         }
@@ -1531,11 +1544,11 @@ textarea {
 }
 
 .el-card-detail {
-  width: 80%;
+  width: 96%;
   color: #00ff00;
   margin-top: 3px;
-  margin-left: 10%;
-  margin-right: 10%;
+  margin-left: 2%;
+  margin-right: 2%;
 }
 
 .el-card-detail:hover {

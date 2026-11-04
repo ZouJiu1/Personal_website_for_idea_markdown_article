@@ -37,8 +37,10 @@ genpassword
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-
+/data
+*/data
 # Installer logs
+mysite/uid_map.txt
 pip-log.txt
 pip-delete-this-directory.txt
 

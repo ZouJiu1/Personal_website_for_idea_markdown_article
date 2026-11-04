@@ -9,7 +9,7 @@ A personal website built on **Vue 3 + Element Plus + Django**. Live demo: [http:
 - No database: users, articles, and settings are all stored in plain text files (txt / markdown)
 - Multi-user isolation: every registered user gets an independent `people/<username>/` data directory
 - **URL privacy**: emails never appear in URLs — every account is mapped to a random 36-digit numeric
-  uid (e.g. `/#/165984218734184801318416830165629911`), old email-form links are completely dead,
+  uid (e.g. `/#/165989218739189801318616830165629911`), old email-form links are completely dead,
   and all generated links use the uid (see 4.8)
 - Session persistence via js-cookie (30 days); registration, login, logout, and email-verification password reset
 - Built-in draft box on the article publishing page: save drafts, list drafts, re-edit, delete; drafts auto-cleared after publishing (see 4.4)
@@ -19,6 +19,21 @@ A personal website built on **Vue 3 + Element Plus + Django**. Live demo: [http:
   with the current version protected
 - Login dialog: press Enter in either input to log in (same as clicking the login button)
 - Built-in admin panel: view user list, create users, reset passwords, change roles, delete users
+- Three-layer security: nginx rate limiting (10 req/s + per-IP connection cap) → anti-flood middleware
+  (100 req/s burst, 3000 req/min sustained, separate limiter for admin paths) → sensitive-API limiting
+  (login 20/10min, register 5/hour, verification code 1/min per mailbox); server-side re-validation on
+  all uploads (images ≤13MB + magic bytes, videos mp4/webm ≤2G + magic bytes, filenames stripped of
+  path components against directory traversal)
+- Credential isolation: member.txt (user table) and oldpassword/ (password history backups) live in the
+  private `data/` directory (not served by nginx; auto-migrated from the old static directory on
+  first start); nginx also denies direct downloads of all data txt files under article/
+- Site configuration: every key in site_config.json is editable in an admin-panel dialog visible only to
+  the site owner; changes require clicking Confirm, deletions require triple confirmation
+- Real-time online-user count in the sidebar (green pulsing badge, 60s polling); no cap on online users
+- Waifu mouse-interaction engine: 1792 random interaction presets (14 move force-fields × 16 click
+  effects × 8 cursor trails, rotating with the effects every 10 minutes); about one third of presets carry
+  a waifu force-field (particles orbit the character / glow aura); hover blows stars, fast sweeps stir up
+  particle wind, clicking/spam-clicking the character triggers lines and bursts (see 6.1)
 - Built-in Live2D widget: 23 open-source characters in 9 categories, per-account memory (works across devices),
   all-day greetings + full-screen mouse-interactive particle effects on 29 Chinese & international festivals,
   plus everyday effects on normal days (900 shape families / 10000 variants)
@@ -39,11 +54,15 @@ Personal_website_for_idea_markdown_article/
 │   └── assets/main.css     # Global styles + responsive rules
 ├── mysite/                 # Django backend
 │   ├── mysite/projectpaths.py  # Auto-locates the project root (no hardcoded absolute paths)
+│   ├── mysite/antiflood.py # Anti-flood middleware (burst/sustained + admin limits + online counting, first in MIDDLEWARE)
 │   ├── csdn/               # Articles + user registration/login/admin APIs
 │   ├── uidmap.py           # Email ↔ 36-digit uid mapping for URL privacy (persisted in uid_map.txt)
+│   ├── ratelimit.py        # Sliding-window rate limiter (login/register/verification endpoints)
+│   ├── online.py           # Online-user counting (5-minute sliding window, deduped per IP)
 │   ├── zhihu/ think/ video/ travel/ commonuse/ markdown_detail/ upload_video/
 │   └── manage.py
-├── article/                # Shared data (member.txt user table, register.txt codes, articles, etc.)
+├── data/                   # Private data (member.txt user table, oldpassword/ history backups; not served by nginx)
+├── article/                # Shared data (register.txt codes, articles, etc.)
 ├── people/<username>/      # Per-user isolated data directory
 ├── public/live2d/          # Live2D widget assets (engine/styles/scripts/lunar library/23 model dirs)
 ├── vite.config.js          # Vite config (dev proxy to Django, build code splitting)
@@ -94,12 +113,12 @@ npm run dev -- --port 9000
 # Terminal 2: backend
 source ./venv/bin/activate
 cd mysite
-python3 manage.py runserver localhost:7009
+python3 manage.py runserver localhost:7290
 ```
 
 Open `http://localhost:9000` in your browser.
 
-- The backend address can be overridden via env var: `DJANGO_TARGET=http://127.0.0.1:7009 npm run dev`
+- The backend address can be overridden via env var: `DJANGO_TARGET=http://127.0.0.1:7290 npm run dev`
 - In DEBUG mode Django serves `/article`, `/people`, and `/hls` static files directly
 
 ## 3. Production Deployment (nginx)
@@ -111,7 +130,7 @@ npm run build
 # Start the backend (in production set DJANGO_DEBUG=0 and let nginx serve static files)
 source ./venv/bin/activate
 cd mysite
-DJANGO_DEBUG=0 python3 manage.py runserver localhost:7009
+DJANGO_DEBUG=0 python3 manage.py runserver localhost:7290
 ```
 
 ### Release Checklist
@@ -126,7 +145,12 @@ DJANGO_DEBUG=0 python3 manage.py runserver localhost:7009
   custom APIs authenticate via body params (no cookies) and are inherently CSRF-immune
 - Passwords are only stored in salted format (`sha256s$<salt>$<digest>`); the legacy bare-sha256 format is fully
   deprecated and always fails verification — legacy users must re-register (see 4.1)
-- Upload APIs only accept image extensions (jpg/jpeg/png/bmp/gif) and file names are stripped of path components
+- Upload APIs get server-side re-validation: images only jpg/jpeg/png/bmp/gif ≤13MB, videos only
+  mp4/webm ≤2G, both verified by file-header magic bytes (blocks renamed scripts/HTML), filenames
+  stripped of path components against directory traversal
+- Credential store is outside static dirs: member.txt / oldpassword/ live in `data/`
+  (auto-migrated on first start); nginx denies all data txt downloads under article/, so the user
+  table cannot be downloaded
 - nginx serves `/article` and `/people` with `Cache-Control: no-cache` (revalidation): unchanged files still
   hit a cheap 304, while images deleted via image management turn 404 immediately — no stale browser cache
 - Delete APIs and admin proxy-edit/proxy-upload are confined to the project's `people/` and `article/` directories to prevent path traversal
@@ -136,7 +160,7 @@ See [nginx_http.conf](./nginx_http.conf) or [nginx_https.conf](./nginx_https.con
 
 - `dist/` as the frontend static root
 - `/article`, `/people`, `/hls` mapped to the same-named directories under the project root
-- API prefixes such as `/csdn`, `/zhihu`, `/think`, `/video`, `/travel`, `/commonuse`, `/markdown_detail`, `/upload_video` proxied via proxy_pass to `http://localhost:7009`
+- API prefixes such as `/csdn`, `/zhihu`, `/think`, `/video`, `/travel`, `/commonuse`, `/markdown_detail`, `/upload_video` proxied via proxy_pass to `http://localhost:7290`
 
 Common commands:
 
@@ -150,7 +174,8 @@ nginx -s stop                  # stop
 
 ### 4.1 User File Format
 
-Users are stored in `article/member.txt`, one per line, fields separated by `<》!=$)(=$@`:
+Users are stored in `data/member.txt` (private directory, not served by nginx; auto-migrated
+from the old static `article/member.txt` on first start), one per line, fields separated by `<》!=$)(=$@`:
 
 ```
 <password hash><》!=$)(=$@<email><》!=$)(=$@<nickname><》!=$)(=$@<role>
@@ -180,7 +205,7 @@ cd <project root>
 python3 genpassword.py --pw <new password>
 ```
 
-Replace the first field of the admin row in `article/member.txt` with the printed `sha256s$salt$digest`
+Replace the first field of the admin row in `data/member.txt` with the printed `sha256s$salt$digest`
 (the frontend sends the sha256 value on login; the backend verifies the salted format).
 
 ### 4.4 Draft Box (Article Publishing Page)
@@ -248,7 +273,7 @@ editor scrolls the right preview in sync:
 ### 4.8 URL Privacy: Email → UID Mapping
 
 URLs never expose emails (or phone-like prefixes). Every account is mapped to a random
-**36-digit numeric uid**, so user-space URLs look like `/#/165984218734184801318416830165629911`
+**36-digit numeric uid**, so user-space URLs look like `/#/165989218739189801318616830165629911`
 or `/#/think/<uid>?currentpage=1&pagesize=9` instead of containing the email.
 
 - Mapping module: `mysite/uidmap.py`, persisted in `mysite/uid_map.txt` (auto-created, thread-safe,
@@ -264,7 +289,7 @@ or `/#/think/<uid>?currentpage=1&pagesize=9` instead of containing the email.
   python3 manage.py shell -c '
   import os, uidmap
   from csdn import views as cv
-  member = os.path.join(os.path.abspath(cv.__file__ + "/../../"), "..", "article", "member.txt")
+  member = cv.MEMBER_TXT   # credential store now lives at data/member.txt
   n = 0
   for parts in cv._read_members(member)[1]:
       mail = parts[1]
@@ -290,7 +315,22 @@ or `/#/think/<uid>?currentpage=1&pagesize=9` instead of containing the email.
 
 ## 5. Concurrency & Multi-user Notes
 
-- Design targets: up to 1,000 concurrent users and 100 requests per second
+- Design targets: up to 100 requests per second; no cap on concurrent online users (shown live in the sidebar)
+- Three-layer rate limiting:
+  - nginx `limit_req` (10 req/s, burst 20, nodelay) + `limit_conn` (20 connections per IP), shared
+    across all API locations
+  - Django anti-flood middleware `mysite/mysite/antiflood.py` (first in MIDDLEWARE): 100 req/s burst,
+    3000 req/min sustained, 60/min for `/admin*`; over-limit returns 429 + Retry-After; online
+    counting `mysite/online.py` (5-minute sliding window, deduped per IP) is refreshed here too
+  - Sensitive-API limiting `mysite/ratelimit.py`: login 20/10min, register 5/hour, verification code
+    1/min per mailbox and 10/hour per IP, password-recovery check 15/10min
+- Server-side upload re-validation (on top of the frontend checks): images (`/csdn/uploadImg`,
+  `/csdn/mainpageuploadImg`) only jpg/jpeg/png/bmp/gif ≤13MB; videos (`/upload_video/upload`) only
+  mp4/webm ≤2G; both verify file-header magic bytes (blocks renamed scripts/HTML), and filenames are
+  basename-stripped to prevent directory traversal
+- Sensitive data blocking: member.txt and oldpassword/ live in `data/` (not served by nginx);
+  nginx denies direct downloads of member.txt, oldpassword/, register/clickpage and other data txt
+  files under `article/`, keeping the user table and stats out of reach
 - File writes are serialized with `threading.Semaphore` (`memmute`, `regmute`, etc.) to prevent concurrent corruption of txt files
 - List caches are isolated per user data directory (`allfile = {}` keyed by basepath), so users never interfere with each other
 - The frontend build applies code splitting (element-plus / katex / vendor as separate chunks) for better browser caching
@@ -341,12 +381,26 @@ or `/#/think/<uid>?currentpage=1&pagesize=9` instead of containing the email.
   mathematicians → function plots / abacuses / pixel grids, Mao Yisheng → arch bridges, Newton →
   prism & apple, astronomers → constellations & galaxies, biologists → cells / DNA / butterflies;
   can be toggled in the theme panel
-- **Mouse interaction**: particles are gently pushed away as the cursor sweeps by (the faster the
-  cursor moves, the stronger the push), nearby particles light up and spin faster; clicking sends
-  out a ripple push-wave (with the firework effect, a burst explodes right at the click point)
-- **Theme panel config**: festival-effect size slider (0.5–4×, default 1.9); everyday-effects toggle; manual
-  selection of the everyday effect's element / palette / speed / size / density (any of them can stay
-  random); settings persist in localStorage and apply instantly
+- **Mouse interaction (1792 random presets)**: 14 move force-fields (push/pull/orbit/vortex/spring/
+  jelly/ignite/freeze/split/ring-push/wind/gravity-well/bounce/magnet-jitter) × 16 click effects
+  (heart/star bursts, confetti ring, spiral, fountain, bloom, black hole, rainbow ring, rain, particle
+  cage, gravity burst, twinkle zone, color shuffle, shockwave, meteor shower) × 8 cursor trails
+  (sparkle/comet/bubble/heart/star/petal/dust/none) — all 1792 named presets sampled randomly and
+  rotated together with the effects every 10 minutes, with 5 random strength tiers; about one third of
+  presets carry a waifu force-field (particles orbit the character as `well`, or glow as an aura around
+  it); clicks fire visible ripple / shockwave rings
+- **Waifu ↔ user interaction**: hovering near the character makes it blow stars toward the cursor,
+  fast sweeps stir up a particle wind, clicking bursts stars & hearts with an occasional spoken reply,
+  5 clicks within 2.5s triggers a big burst + shake + a "stop poking me" line, effects landing near the
+  character startle it into bubble puffs, costume swaps send off the old model with stars and greet the
+  new one with hearts, photo/context-menu easter eggs add sparkles, idle chatter comes with hearts;
+  every 9–16s a small plume of the current palette drifts out of the character, and on festival days the
+  character enters with a confetti flourish
+- **Theme panel config**: festival-effect size slider (0.5–4×, default 1.9); **everyday-effect size
+  slider** (0.5–4×, default 1.8 — stroke widths scale with size and particle counts compensate for
+  area); everyday-effects toggle; manual selection of the everyday effect's element / palette / speed /
+  size (0.5–3 continuous slider) / density (any of them can stay random); settings persist in
+  localStorage and apply instantly
 - **Hide & restore**: click ✖️ to collapse the widget and a fully visible vertical 【看 板 郎】 tab appears
   at the bottom-right; click the tab to bring it back
 - **Robustness**: the 600K-char tips corpus is preloaded into memory on page load and re-fetched

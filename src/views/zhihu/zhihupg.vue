@@ -330,11 +330,11 @@ h3 {
 }
 
 .el-card-detail {
-  width: 80%;
+  width: 96%;
   color: #00ff00;
   margin-top: 3px;
-  margin-left: 10%;
-  margin-right: 10%;
+  margin-left: 2%;
+  margin-right: 2%;
 }
 
 .el-card-detail:hover {

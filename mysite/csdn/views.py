@@ -24,7 +24,38 @@ from manage import timezone, kseamutex
 from markdown_detail.views import remove_code, addback_code, remove_katex, addback_katex
 from mysite.projectpaths import web_dir_of, web_relative_path, find_top_marker, TOP_CSDN
 import siteconfig   # 站点统一配置（mysite/site_config.json，修改即时生效）
+
+# ---------- 用户凭据库私有目录（不进 nginx 静态目录）----------
+# member.txt（全量邮箱+密码哈希）与 oldpassword/（历史密码备份）原先放在部署根 article/
+# 静态目录里，nginx 静态直出可被任何人下载（全量凭据泄露面）；现统一挪到部署根的 data/
+# （nginx 只服务 article/、people/、dist，不服务 data/），代码层根除风险。
+# 此后全部读写一律走这里的常量，不再引用 article/ 下的旧路径。
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir))
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+MEMBER_TXT = os.path.join(DATA_DIR, "member.txt")
+OLDPASSWORD_DIR = os.path.join(DATA_DIR, "oldpassword")
+
+def _migrate_credentials():
+    """把旧位置的凭据库迁到部署根 data/（幂等，只迁一次）。
+
+    兼容两种历史位置：
+      1) mysite/data/  —— 上一版本的私有目录；
+      2) article/      —— 更早的 nginx 静态目录（可被直接下载，已废弃）。
+    新位置已有文件时一律不动，避免覆盖现网数据。
+    """
+    os.makedirs(DATA_DIR, exist_ok=True)
+    for root in (os.path.join(PROJECT_ROOT, "mysite", "data"),
+                 os.path.join(PROJECT_ROOT, "article")):
+        legacy_member = os.path.join(root, "member.txt")
+        if os.path.exists(legacy_member) and not os.path.exists(MEMBER_TXT):
+            shutil.move(legacy_member, MEMBER_TXT)
+        legacy_old = os.path.join(root, "oldpassword")
+        if os.path.isdir(legacy_old) and not os.path.isdir(OLDPASSWORD_DIR):
+            shutil.move(legacy_old, OLDPASSWORD_DIR)
+_migrate_credentials()
 import uidmap       # 邮箱 <-> 36 位数字 uid 映射（URL 隐私方案）
+import ratelimit    # 内存滑动窗口限流（登录防爆破 / 发信防刷 / 验证码防穷举）
+import online       # 同时在线用户计数（antiflood 中间件刷新，此处只读）
 # from commonuse.views import parseTxt
 from django.views.decorators.csrf import csrf_exempt
 from copy import deepcopy
@@ -61,8 +92,9 @@ def index(request):
     basepath = deepcopy(path)
     # https://docs.djangoproject.com/en/5.1/ref/request-response/#top
     # req = request.GET.dict()
-    req = json.loads(request.body)
+    # 请求体解析放进 try：畸形 JSON / 空体直接走兜底引导页，而不是 500（防探测报错）
     try:
+        req = json.loads(request.body)
         try:
             currentpage = int(req["currentpage"])
         except:
@@ -83,9 +115,49 @@ def index(request):
             # if check_logined(req['mail'], req['password']):
             # basepath = basepath.replace("/article/", f"/people/{get['mail']}/")
     except:
-        return HttpResponse("<span style=\"color:#00ffe0;font-weight:600;font-size:30px;\"> \
-            请访问然后点击左侧按钮: </span><a style=\"color:#0000ff;font-size:30px;\" \
-                href=\"http://zoujiu.com.cn\">http://zoujiu.com.cn</a>")
+        # 请求体不合法（缺参数/非 JSON）时的兜底页：独立 HTML，响应式适配手机/电脑，
+        # 自动跟随系统深浅色，无外部依赖，攻击者探测接口也只能看到这个引导页
+        return HttpResponse("""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>请访问主页</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f7fa; color: #303133; padding: 24px;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #1a1c20; color: #e5eaf3; } .card { background: #24262b !important; border-color: #3a3d44 !important; } }
+  .card {
+    background: #fff; border: 1px solid #e4e7ed; border-radius: 12px;
+    padding: 48px 40px; max-width: 480px; width: 100%; text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,.06);
+  }
+  .icon { font-size: 44px; line-height: 1; margin-bottom: 16px; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  p { font-size: 14px; color: #909399; line-height: 1.7; margin-bottom: 24px; }
+  a.btn {
+    display: inline-block; background: #409eff; color: #fff; text-decoration: none;
+    font-size: 15px; font-weight: 500; padding: 10px 28px; border-radius: 6px;
+    transition: background .2s;
+  }
+  a.btn:hover { background: #66b1ff; }
+  .url { display: block; margin-top: 16px; font-size: 12px; color: #c0c4cc; word-break: break-all; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🧭</div>
+    <h1>这里是接口地址，不是网页</h1>
+    <p>请从主页进入并使用左侧导航栏访问内容。<br>直接访问该地址无法获得有效数据。</p>
+    <a class="btn" href="https://zoujiu.com.cn">前往主页</a>
+    <span class="url">https://zoujiu.com.cn</span>
+  </div>
+</body>
+</html>""", content_type="text/html; charset=utf-8")
         # currentpage = 1
         # pagesize = 20
         # search = ""
@@ -304,13 +376,29 @@ def mailsend(mail, modify=False, notify_guanliyuan=None):
     return number
 
 sendmutex = Semaphore(value=1)
+
+def _client_ip(request):
+    """取客户端真实 IP：优先 nginx 代理传的 X-Forwarded-For 首段，回退 REMOTE_ADDR。"""
+    xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if xff:
+        return xff.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '') or 'unknown'
+
 def sendverify(request):
     global sendmutex
     req = request.GET.dict()
     mail = req['mail']
 
+    # 服务端限流（此前只有前端按钮冷却，直接打接口可无限刷信耗尽 SMTP 配额）：
+    #   同一邮箱 60 秒内只能发 1 封；同一 IP 每小时最多 10 封
+    ip = _client_ip(request)
+    if not ratelimit.hit(f'sendverify:mail:{mail}', 1, 60):
+        return JsonResponse({"number": 4}, safe=False)
+    if not ratelimit.hit(f'sendverify:ip:{ip}', 10, 3600):
+        return JsonResponse({"number": 4}, safe=False)
+
     addpa = os.path.abspath(__file__ + "/../../")
-    member = os.path.join(addpa, "..", "article", 'member.txt')
+    member = MEMBER_TXT
     if 'modify' not in req.keys():
         cret = checkYonghu(mail, member)
         if not cret:
@@ -589,15 +677,25 @@ def register(request):
     # origin = infor['origin']
     # if origin!=verifynumber:
     #     return JsonResponse({"ret":0}, safe = False)
+
+    # 防攻击限流：
+    #   每 IP 每小时最多 5 次注册/改密提交（防批量注册）；
+    #   每邮箱 10 分钟内最多 15 次验证码校验（此前可无限穷举 6 位验证码，TTL 长达一天）
+    ip = _client_ip(request)
+    if not ratelimit.hit(f'register:ip:{ip}', 5, 3600):
+        return JsonResponse({"ret": -7, "msg": "操作过于频繁，请一小时后再试"}, safe=False)
+    if not ratelimit.hit(f'verify:mail:{email}', 15, 600):
+        return JsonResponse({"ret": -7, "msg": "验证尝试过于频繁，请 10 分钟后再试"}, safe=False)
+
     addpa = os.path.abspath(__file__ + "/../../")
     yonghu = os.path.join(addpa, "..", "article", 'register.txt')
-    member = os.path.join(addpa, "..", "article", 'member.txt')
+    member = MEMBER_TXT
     
     # tup = []
     fin = -1
     if 'forget' in req.keys():
         prepa = os.path.abspath(__file__ + "/../../../")
-        oldpassword = os.path.join(prepa, 'article', 'oldpassword')
+        oldpassword = OLDPASSWORD_DIR
         if not os.path.exists(oldpassword):
             os.makedirs(oldpassword)
         postDate = datetime.fromtimestamp(time.time() +timezone).isoformat()[:19].replace(":", "_")
@@ -718,8 +816,13 @@ def login(request):
     infor = req["LoginForm"]
     password = infor['password']
     username = infor['username']
+
+    # 防爆破限流：每 IP 10 分钟内最多 20 次登录尝试（含成功，正常用户不会触达）
+    if not ratelimit.hit(f"login:ip:{_client_ip(request)}", 20, 600):
+        return JsonResponse({"ret": -50, "msg": "登录尝试过于频繁，请 10 分钟后再试"}, safe=False)
+
     addpa = os.path.abspath(__file__ + "/../../")
-    member = os.path.join(addpa, "..", "article", 'member.txt')
+    member = MEMBER_TXT
     ret, passw, ml, usern, quanxian = checklogin(password, username, member)
     if ret:
         # 登录成功即返回该用户 uid，前端跳转 /<uid>，URL 不再暴露邮箱
@@ -799,7 +902,7 @@ def _target_level(target):
 
 def _member_file():
     addpa = os.path.abspath(__file__ + "/../../")
-    return os.path.join(addpa, "..", "article", 'member.txt')
+    return MEMBER_TXT
 
 def _read_members(member):
     """读取 member.txt，返回 (原始行列表, 解析后的字段列表)。"""
@@ -870,7 +973,7 @@ def admin_userlist(request):
         if is_super_admin(qx) and not is_super_admin(my_level):
             continue
         userdir = os.path.join(prepa, 'people', ml)
-        users.append({
+        user = {
             "mail": ml,
             "truemail": parts[1],
             "uid": uidmap.mail_to_uid(ml),
@@ -880,8 +983,118 @@ def admin_userlist(request):
             "is_super": is_super_admin(qx),
             "is_owner": is_owner(qx),
             "hasdata": os.path.isdir(userdir),
-        })
+        }
+        # 访客数量仅站长/超级管理员可见（普通管理员列表里不带该字段）
+        if is_owner(my_level) or is_super_admin(my_level):
+            user["traveler"] = read_traveler_count(ml)
+        users.append(user)
     return JsonResponse({"ret": 1, "users": users, "my_level": my_level}, safe=False)
+
+
+@csrf_exempt
+def admin_settraveler(request):
+    """站长/超级管理员修改指定用户的访客数量（管理页「访客」列）。
+
+    直接覆写 people/<mail>/TravelerStatistics.txt；与访问计数写同一文件，
+    用 thememutex 串行化避免互相覆盖。目标必须是已注册会员；数值范围
+    [0, 999999999]，对外始终展示真实值（无下限抬升）。
+    """
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    my_level = _member_level(req)
+    if not (is_owner(my_level) or is_super_admin(my_level)):
+        return JsonResponse({"ret": -100}, safe=False)
+    target = req.get('target', '')
+    tlevel = _target_level(target)
+    if tlevel is None:
+        return JsonResponse({"ret": -2}, safe=False)
+    try:
+        value = int(req.get('value'))
+    except (ValueError, TypeError):
+        return JsonResponse({"ret": -1}, safe=False)
+    if value < 0 or value > 999999999:
+        return JsonResponse({"ret": -1}, safe=False)
+    fileTraveler = os.path.abspath(__file__ + "/../../../")
+    fileTravelerPath = os.path.join(fileTraveler, 'people', target, siteconfig.get('traveler_filename'))
+    thememutex.acquire()
+    try:
+        os.makedirs(os.path.join(fileTraveler, 'people', target), exist_ok=True)
+        with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
+            obj.write(str(value))
+    finally:
+        thememutex.release()
+    return JsonResponse({"ret": 1, "traveler": read_traveler_count(target)}, safe=False)
+
+@csrf_exempt
+def siteconfig_list(request):
+    """站长专属：列出 site_config.json 全部可编辑配置项（含文档说明）。
+
+    严格 is_owner（权限 999999999）校验——超级管理员/普通管理员也一律 -100，
+    配置里含 SMTP 授权码等敏感项，不能让其他管理员看到。smtp_password 按站长
+    要求明文返回（可显示可修改，该页仅站长可见）；READONLY_KEYS 标记只读。
+    """
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    if not is_owner(_member_level(req)):
+        return JsonResponse({"ret": -100}, safe=False)
+    data = siteconfig.raw_data()
+    items = []
+    for key, value in data.items():
+        if not isinstance(key, str) or key.startswith('_'):
+            continue
+        t = siteconfig._type_name(value)
+        if t is None:
+            continue
+        items.append({
+            "key": key, "type": t, "value": value,
+            "doc": data.get('_' + key, ''),
+            "masked": key in siteconfig.MASKED_KEYS,
+            "readonly": key in siteconfig.READONLY_KEYS,
+        })
+    return JsonResponse({"ret": 1, "items": items}, safe=False)
+
+@csrf_exempt
+def siteconfig_save(request):
+    """站长专属：批量保存 site_config.json 配置项（管理页「站点配置」弹窗）。
+
+    权限同 siteconfig_list（仅站长）；updates 为 {配置键: 新值}，键必须已存在、
+    类型必须与现值一致（校验在 siteconfig.save_items，原子写回不损坏其他键/文档键）。
+    只读键（READONLY_KEYS，如 traveler_filename）拒绝修改；打码项空串跳过。
+    """
+    try:
+        req = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ret": -100}, safe=False)
+    if not is_owner(_member_level(req)):
+        return JsonResponse({"ret": -100}, safe=False)
+    updates = req.get('updates')
+    if not isinstance(updates, dict):
+        return JsonResponse({"ret": -1, "msg": "没有可保存的配置项"}, safe=False)
+    # 只读键拒绝修改（前端已置灰，这里是第二道防线）
+    for rk in siteconfig.READONLY_KEYS:
+        if rk in updates:
+            return JsonResponse({"ret": -3, "msg": "配置项 " + rk + " 为只读，不可修改"}, safe=False)
+    # 打码项空串 = 不修改
+    for mk in siteconfig.MASKED_KEYS:
+        if updates.get(mk) == '':
+            updates.pop(mk)
+    ok, err = siteconfig.save_items(updates)
+    if not ok:
+        return JsonResponse({"ret": -2, "msg": err}, safe=False)
+    return JsonResponse({"ret": 1}, safe=False)
+
+@csrf_exempt
+def online_count(request):
+    """当前同时在线人数（公开只读，前端左侧栏轮询显示）。
+
+    在线定义：最近 5 分钟内有过任意请求的独立 IP；计数由 antiflood 中间件
+    在全局入口刷新，此处仅读内存，无文件 IO。在线人数不设上限。
+    """
+    return JsonResponse({"ret": 1, "online": online.count()}, safe=False)
 
 @csrf_exempt
 def admin_createuser(request):
@@ -1230,7 +1443,7 @@ def clear_notice(request):
 
 def check_logined(mailaddr, password):
     addpa = os.path.abspath(__file__ + "/../../")
-    member = os.path.join(addpa, "..", "article", 'member.txt')
+    member = MEMBER_TXT
     usern = ""
     with open(member, 'r', encoding='utf-8') as fp:
         for i in fp.readlines():
@@ -1354,10 +1567,11 @@ def getusername(request):
     mailaddr = req['mail']
     password = req['password']
     addpa = os.path.abspath(__file__ + "/../../")
-    member = os.path.join(addpa, "..", "article", 'member.txt')
+    member = MEMBER_TXT
     usern = ""
     if not os.path.exists(member):
-        os.system("touch \"%s\""%member)
+        # 用 open 创建空文件，避免 os.system fork 子进程（member 为固定服务端路径，无注入面）
+        open(member, 'a').close()
     urlmail = findurlmail(req['url'])
     # URL 原始用户段：uid 形态原样透传，旧邮箱形态升级为 uid，
     # 前端据此重建链接，避免把邮箱再拼回 URL
@@ -1368,8 +1582,8 @@ def getusername(request):
     # 登录者自己的 uid / 站长 uid：前端登录跳转与匿名回退用
     myuid = uidmap.get_uid(mailaddr) if mailaddr else None
     owneruid = uidmap.mail_to_uid(str(siteconfig.get('site_owner_mail') or 'homepage@gmail.com'))
-    # if urlmail=='zj' or len(urlmail)<=6:
-    if urlmail=='zj' or len(urlmail)<=int(siteconfig.get('short_name_guard_max_length')):
+    # 短名守卫：用户段过短（长度 <= 配置值）视为保留名/无效名，按匿名访客处理
+    if len(urlmail)<=int(siteconfig.get('short_name_guard_max_length')):
         getStatisticTravelerCount(request, urlmail)
         return JsonResponse({"ret":0, 'mail':None, 'username':None, 'urlmail':urlmail, 'quanxian':-1, 'truemail':-1,
                              'urluid':rawurl, 'uid':myuid, 'owneruid':owneruid}, safe = False)
@@ -1806,6 +2020,28 @@ def editArticle(request):
 
     return JsonResponse( { "markdown" : markdown , "title": title, "dirname": dirname} , safe = False)
 
+# ---------- 上传图片服务端统一校验（防绕过前端直发大文件/伪装文件）----------
+# 与前端一致：单张 ≤ 13MB；文件头魔数校验防"改后缀伪装成图片"（扩展名白名单由各视图 getTail 把守）
+_IMG_MAGIC = (
+    b'\xff\xd8\xff',        # JPEG
+    b'\x89PNG\r\n\x1a\n',   # PNG
+    b'GIF87a', b'GIF89a',   # GIF
+    b'BM',                  # BMP
+)
+_IMG_MAX_BYTES = 13 * 1024 * 1024
+
+def reject_bad_image(f):
+    """合法图片返回 None；否则返回错误信息字符串"""
+    if f is None or f.size == 0:
+        return "缺少上传文件"
+    if f.size > _IMG_MAX_BYTES:
+        return "图片大小不能超过 13MB"
+    head = f.read(8)
+    f.seek(0)
+    if not any(head.startswith(m) for m in _IMG_MAGIC):
+        return "文件内容不是合法图片"
+    return None
+
 def getTail(uploadName):
     if '.jpg' in uploadName.lower():
         tail = ".jpg"
@@ -1863,6 +2099,10 @@ def uploadImg(request):
     # body = request.body
     # https://docs.djangoproject.com/zh-hans/5.1/ref/request-response/
     req = request.POST.dict()
+    # 安全：服务端二次校验图片大小(≤13MB)与文件头魔数，防绕过前端直发大文件/伪装文件
+    bad_img = reject_bad_image(request.FILES.get('file'))
+    if bad_img:
+        return JsonResponse({ "ret" : -1, "msg" : bad_img }, safe=False)
     # https://docs.djangoproject.com/zh-hans/5.1/ref/files/uploads/#django.core.files.uploadedfile.UploadedFile
     uploadImageName = request.FILES['file'].name
     tail = getTail(uploadImageName)
@@ -2571,6 +2811,10 @@ def mainpageuploadImg(request):
     if 'file' not in request.FILES:
         # 未携带文件字段时返回业务错误而非 MultiValueDictKeyError 500
         return JsonResponse( { "ret" : -105, "msg": "缺少上传文件" } , safe = False)
+    # 安全：服务端二次校验图片大小(≤13MB)与文件头魔数，防绕过前端直发大文件/伪装文件
+    bad_img = reject_bad_image(request.FILES['file'])
+    if bad_img:
+        return JsonResponse( { "ret" : -105, "msg": bad_img } , safe = False)
     uploadImageName = request.FILES['file'].name.replace(" ", "_")
     tail = getTail(uploadImageName)
     basepath = os.sep.join(deepcopy(path).split(os.sep)[:-2]) + os.sep
@@ -2763,13 +3007,13 @@ def NicknameSetting(request):
 
     if (auth['passed'] or not auth['keyok']) and 'modifiednickname' in req.keys() and len(req["modifiednickname"])!=0:
         addpa = os.path.abspath(__file__ + "/../../")
-        member = os.path.join(addpa, "..", "article", 'member.txt')
+        member = MEMBER_TXT
 
         cll = []
         passwd = req.get('password', '')
 
         prepa = os.path.abspath(__file__ + "/../../../")
-        oldpassword = os.path.join(prepa, 'article', 'oldpassword')
+        oldpassword = OLDPASSWORD_DIR
         if not os.path.exists(oldpassword):
             os.makedirs(oldpassword)
         # 读-改-写全程持锁：open('w') 截断瞬间其他线程可能读到空文件并写回空（曾导致 member.txt 被清空）
@@ -3125,15 +3369,14 @@ thememutex = Semaphore(value=1)
 # 访客统计阈值统一收敛到 site_config.json（traveler_* 键），修改 JSON 即时生效
 
 def read_traveler_count(urlmail):
-    """读取指定用户的访客统计值（TravelerStatistics.txt），缺失或损坏时返回下限"""
+    """读取指定用户的访客统计值（TravelerStatistics.txt），始终返回真实值；缺失或损坏时回退默认初值"""
     fileTraveler = os.path.abspath(__file__ + "/../../../")
     fileTravelerPath = os.path.join(fileTraveler, 'people', urlmail, siteconfig.get('traveler_filename'))
-    _baseline = int(siteconfig.get('traveler_baseline'))
     try:
         with open(fileTravelerPath, 'r', encoding='utf-8') as obj:
-            return max(int(obj.read().strip()), _baseline)
+            return int(obj.read().strip())
     except:
-        return _baseline
+        return int(siteconfig.get('traveler_default_init'))
 
 def getStatisticTravelerCount(request, urlmail):
     # 访客统计按 urlmail 隔离：文件是唯一数据源，不再使用跨用户共享的全局变量
@@ -3171,7 +3414,8 @@ def getStatisticTravelerCount(request, urlmail):
         else:
             updated = True
         if updated:
-            TravelerStatistics = max(TravelerStatistics + 1, int(siteconfig.get('traveler_baseline')))
+            # 真实计数：不设下限抬升，新用户/低值用户按真实访问数展示
+            TravelerStatistics = TravelerStatistics + 1
             with open(fileTravelerPath, 'w', encoding='utf-8') as obj:
                 obj.write(str(TravelerStatistics))
     finally:
@@ -3306,15 +3550,22 @@ def set_widget(request):
 @csrf_exempt
 def get_widget_public(request):
     """公开读取任意用户的看板郎配置（形象 + 自定义台词）。
-    用于访客打开某用户主页时展示该主页主人的形象与台词，无需登录。"""
+    用于访客打开某用户主页时展示该主页主人的形象与台词，无需登录。
+    入参是 URL 用户段：现在是 36 位 uid（邮箱 URL 已废弃），先换算成邮箱再读；
+    传邮箱来的（内部调用/旧数据）保持兼容。"""
     try:
         req = json.loads(request.body)
     except Exception:
         req = request.POST.dict()
-    mail = str(req.get('mail', '') or '')
-    if not mail:
+    seg = str(req.get('mail', '') or '')
+    if not seg:
         return JsonResponse({"ret": -1, "widget": None}, safe=False)
-    widget = _read_widget(mail)
+    if uidmap.is_uid(seg):
+        seg = uidmap.uid_to_mail(seg) or ""
+    if not seg:
+        # uid 无法还原（伪造/脏数据）按未配置处理，不报错
+        return JsonResponse({"ret": 1, "widget": None}, safe=False)
+    widget = _read_widget(seg)
     return JsonResponse({"ret": 1, "widget": widget}, safe=False)
 
 

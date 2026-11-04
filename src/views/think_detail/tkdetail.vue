@@ -138,7 +138,7 @@
       确认取消放在最上面
     </el-button>
   </el-dialog>
-  <el-dialog v-model="modifyvisible" title="修改" width="90%" style="height:60%;margin-top:6px;">
+  <el-dialog v-model="modifyvisible" title="修改" width="min(900px, 96%)" style="margin-top:6px;">
     <el-input
       v-model="editcontent"
       style="width: 100%;overflow:auto;height:100%"
@@ -201,7 +201,7 @@
   </el-affix>
   <div id="detailvue" class="detailthink">
   </div>
-  <el-dialog v-model="commentvisible" title="评论" width="90%" style="height:96%;margin-top:6px;">
+  <el-dialog v-model="commentvisible" title="评论" width="min(720px, 94%)" class="dialog-scroll">
     <textarea 
       spellcheck="false"
       id="textarea_input"
@@ -256,7 +256,7 @@ import renderMathInElement from 'katex/contrib/auto-render/auto-render.js'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import Cookies from 'js-cookie';
-import getusername, { isAdminQuanxian, getCookieDays } from '/src/common.js'
+import getusername, { isAdminQuanxian, getCookieDays, isOwnerPage } from '/src/common.js'
 
 export default {
   name: 'markdown_detail',
@@ -312,9 +312,8 @@ export default {
       });
     },
     async shoucang(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -361,9 +360,8 @@ export default {
       });
     },
     async uploadComment() {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -421,9 +419,8 @@ export default {
       });
     },
     commentdialog(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.info("没有登陆不能评论！");
@@ -483,9 +480,8 @@ export default {
       // console.log(uploadFile, uploadFiles);
     },
     async upvoteclick(event) {
-      let id = document.URL;
-      id = id.substring(0, 50);
-      let index = id.indexOf("/zj");
+      // 站长主页（按站长 uid 识别）对未登录访客开放互动入口
+      let index = isOwnerPage() ? 0 : -1;
 
       if(!Cookies.get("mail") && index < 0) {
         ElMessage.error("没有登陆不能操作！");
@@ -655,7 +651,7 @@ export default {
         this.kshoucanglength = this.resultresult['kshoucang'].length;
         // console.log(detailvue);
         // console.log(this.result);
-        // detailvue.innerHTML = "<img src=\"getImage(\"/home/zj/zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg\")\">";
+        // detailvue.innerHTML = "<img src=\"getImage(\"/home//zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg\")\">";
         // detailvue.innerHTML = "<img src=\"https://pic3.zhimg.com/v2-d98fe6a0590ba30f4398094ec902ed3c_r.jpg\">";
         
         // let htmlctl = katex.renderToString(this.result, {throwOnError: false});
@@ -698,9 +694,9 @@ export default {
         // console.log(typeof(src));
         // console.log(imgimg[0].src.replace(imgimg[0].baseURI, "/")); 
         // // imgimg[0].src = new URL(imgimg[0].src.replace(imgimg[0].baseURI, "/"), import.meta.url).href;
-        // let stk = "/home/zj/zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg";
+        // let stk = "/home//zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg";
         // let kk = String(stk);
-        // let kkk = new URL("/home/zj/zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg", import.meta.url).href;
+        // let kkk = new URL("/home//zoujiu_blogown/vue-project/article/csdn_spider_selenium/article/juanzengjiludeneirong/0.jpg", import.meta.url).href;
         // console.log(kkk);
         // imgimg[0].src
 
@@ -755,7 +751,6 @@ export default {
         // uid 化后用 URL 原始段（uid）建链接，避免把邮箱写回地址栏
         this.$router.push({ path: '/think/'+(gu.urluid || gu.urlmail), query:{"currentpage": Cookies.get("think"), "pagesize": Cookies.get("thinkpage")}});
       } else {
-        // this.$router.push({ path: '/think/zj'});
         this.$router.push({ path: '/think/'+(gu.owneruid || localStorage.getItem('site_owner_uid') || 'homepage@gmail.com')});
       }
     },
@@ -1018,19 +1013,19 @@ export default {
 }
 
 .detailthink {
-  margin-left:10%; 
-  margin-right:10%;
+  margin-left:2%;
+  margin-right:2%;
   background-color:#ffffff;
-  padding-left:60px;
-  padding-right: 60px;
+  padding-left:40px;
+  padding-right: 40px;
   padding-top: 30px;
   padding-bottom: 30px;
 }
 
 :deep(#detailvue) {
-  width: 30%;
-  margin-left: 20%;
-  margin-right: 20%;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 :deep(img) {

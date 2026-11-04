@@ -79,27 +79,45 @@ async function fetchPlaylist(source) {
 // —— 播放器独立拖拽/停靠（与看板郎的 attachWaifuDrag 各自独立）——
 // 拖拽手柄限定为封面（.aplayer-pic）与歌名/歌手文本（.aplayer-music），
 // 不碰进度条/音量/播放按钮等交互控件，避免拖动误触。
-// 位置存 localStorage(aplayer_pos)，刷新恢复；双击手柄清除记忆复位默认右下角。
-const POS_KEY = 'aplayer_pos'
+// 位置存 localStorage(aplayer_pos_v2)，刷新恢复；双击手柄清除记忆复位默认右下角。
+// v2：旧键 aplayer_pos 存的是拖拽绑定错位时代的坏数据（恒 {0,0}），直接弃用。
+const POS_KEY = 'aplayer_pos_v2'
 let dragEl = null      // 当前拖拽绑定的播放器容器（换源会重建容器，指向最新实例）
 let dragState = null   // { sx, sy, ox, oy, w, h, moved }
 let docHooksBound = false
 
+// 默认右下角停靠：让出看板郎占位（右 270px）、上抬 34px 避开页脚日期时间。
+// 用内联样式固定，不依赖 CSS 层叠顺序——APlayer 自带 .aplayer-fixed 默认是
+// left:0/bottom:0（左下），若我们的覆盖样式没生效就会跑到左侧，内联可兜底。
+function applyDefaultPos(el) {
+  el.style.left = 'auto'
+  el.style.top = 'auto'
+  el.style.right = '270px'
+  el.style.bottom = '34px'
+}
+
 function applySavedPos(el) {
   let p = null
   try { p = JSON.parse(localStorage.getItem(POS_KEY) || 'null') } catch (e) {}
-  if (p && typeof p.left === 'number' && typeof p.top === 'number') {
-    el.style.right = 'auto'
-    el.style.bottom = 'auto'
-    // 记忆值按当前视口钳制后再应用（不改写记忆）：窗口比保存时窄也不会把播放器
-    // 挪出屏幕，窗口恢复大后自动回到原位——与 resize 钳制行为一致（同看板郎逻辑）
+  if (!(p && typeof p.left === 'number' && typeof p.top === 'number')) {
+    applyDefaultPos(el)
+    return
+  }
+  // 延迟到布局稳定后再恢复：APlayer 挂载瞬间可能尚未排版完成（offsetWidth 为 0、
+  // 或被入场过渡放大到接近视口宽），立即读取尺寸会让钳制把 left/top 误算成 0，
+  // 表现为“刷新后跑回左侧”。等两帧布局定稿后再取真实尺寸。
+  const doApply = () => {
     const w = el.offsetWidth || 0
     const h = el.offsetHeight || 0
-    const nl = Math.min(Math.max(p.left, 0), Math.max(window.innerWidth - w, 0))
-    const nt = Math.min(Math.max(p.top, 0), Math.max(window.innerHeight - h, 0))
-    el.style.left = nl + 'px'
-    el.style.top = nt + 'px'
+    // 尺寸未就绪（0 或异常撑满视口）时不按错误尺寸钳制，退回保守值，避免被误钳到 0
+    const cw = (w > 0 && w < window.innerWidth) ? w : 300
+    const ch = (h > 0 && h < window.innerHeight) ? h : 0
+    el.style.right = 'auto'
+    el.style.bottom = 'auto'
+    el.style.left = Math.min(Math.max(p.left, 0), Math.max(window.innerWidth - cw, 0)) + 'px'
+    el.style.top = Math.min(Math.max(p.top, 0), Math.max(window.innerHeight - ch, 0)) + 'px'
   }
+  requestAnimationFrame(() => requestAnimationFrame(doApply))
 }
 
 function bindDocHooks() {
@@ -145,7 +163,9 @@ function bindDocHooks() {
 }
 
 function attachPlayerDrag(el) {
-  applySavedPos(el)   // 换源重建容器后同样恢复记忆位置
+  // 清理拖拽绑定错位时代的旧键（坏数据恒 {0,0}），避免它继续污染位置恢复
+  try { localStorage.removeItem('aplayer_pos') } catch (e) {}
+  applySavedPos(el)   // 换源重建容器后同样恢复记忆位置（无记忆时回默认右下角）
   dragEl = el
   bindDocHooks()
   el.addEventListener('mousedown', (e) => {
@@ -155,15 +175,16 @@ function attachPlayerDrag(el) {
     dragState = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top,
                   w: r.width, h: r.height, moved: false }
   })
-  // 双击封面/歌名：清除记忆并复位到默认右下角（right:270px 让出看板郎默认占位，bottom:34px 避开页脚时间）
+  // 双击封面/歌名：清除记忆并复位到默认右下角（清空内联定位，交给 PLAYER_CSS 的
+  // right/bottom 锚点——含窄视口媒体查询，避免内联值盖掉响应式让位）
   el.addEventListener('dblclick', (e) => {
     if (!e.target.closest || !e.target.closest('.aplayer-pic, .aplayer-music')) return
     try { localStorage.removeItem(POS_KEY) } catch (err) {}
     el.style.transition = 'none'
-    el.style.left = 'auto'
-    el.style.top = 'auto'
-    el.style.right = '270px'
-    el.style.bottom = '34px'
+    el.style.left = ''
+    el.style.top = ''
+    el.style.right = ''
+    el.style.bottom = ''
     setTimeout(() => { el.style.transition = '' }, 60)
   })
 }
@@ -197,7 +218,6 @@ export function initMusic() {
             }
             container = document.createElement('div')
             document.body.appendChild(container)   // 独立挂载，与看板郎无关
-            attachPlayerDrag(container)            // 独立拖拽/复位/位置记忆
             ap = new APlayer({
               container,
               fixed: true,
@@ -207,6 +227,11 @@ export function initMusic() {
               storageName: 'zoujiu-aplayer', // 记住播放进度/音量
               audio,
             })
+            // 拖拽/位置记忆必须绑在 APlayer 渲染出的 .aplayer.aplayer-fixed（真正
+            // position:fixed 的元素）上：container 本身是 static 空壳，往它身上设
+            // left/top 无效。且要在渲染完成后绑定——此时才有真实尺寸，位置恢复的
+            // 视口钳制才不会被空壳的全宽 offsetWidth 误钳到 0
+            attachPlayerDrag(container.querySelector('.aplayer.aplayer-fixed') || container)
             window.__ap = ap // Live2D 挂件 🎵 按钮通过它播放/暂停
             current = i
             const sourceName = s.name || `${s.server}:${s.id}`

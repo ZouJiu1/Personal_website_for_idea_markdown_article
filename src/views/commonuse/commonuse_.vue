@@ -6,7 +6,7 @@
   >
   修改
   </el-button>
-  <el-dialog v-model="weblinkaddvisible" title="修改" width="90%" height="90%">
+  <el-dialog v-model="weblinkaddvisible" title="修改" width="min(640px, 94%)">
     <span style="font-size: 20px;font-weight: 600;color:#0e0e0e">请严格按照格式修改, 分隔符：===</span>
     <br>
     <span hidden>

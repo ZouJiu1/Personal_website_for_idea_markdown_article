@@ -96,7 +96,7 @@
             查看
           </el-button>
           <span style="margin-left:6px;">音频每小时消耗的流量，当前每小时消耗约16Mb流量。</span>
-          <el-dialog v-model="dialogFormVisible_liulinag" title="纯音频直播每小时消耗流量" width="min(70vh, 92%)">
+          <el-dialog v-model="dialogFormVisible_liulinag" title="纯音频直播每小时消耗流量" width="min(560px, 92%)" class="dialog-scroll">
             <el-table
               :data="tableData"
               style="width: 100%"
@@ -129,7 +129,6 @@
           @change="handleCascaderChange"
           style='margin-left:10px;'/>
         <audio id="liveaudio" controls style='margin-left:20px;width:60%;'>
-          <!-- <source src="/home/zj/zoujiu_blogown/vue-project/hls/output.mpeg"> -->
           <!-- <source :src="valueCascader" id="audioSource" type="audio/mpeg"> -->
           <!-- <source src="/hls/output.mp3" type="audio/mpeg"> -->
         </audio>
@@ -483,10 +482,7 @@ export default {
         videoSrc_lv = videoSrc;
       }
       // videoSrc_lv = 'http://ivi.bupt.edu.cn/hls/cctv1hd.m3u8';
-      // videoSrc_lv = '/home/zj/zoujiu_blogown/vue-project/article/video/IMG_8135(1).MP4';
-      //
       // First check for native browser HLS support
-      //
       if (video__.canPlayType('application/vnd.apple.mpegurl')) {
         video__.src = videoSrc_lv;
         // video__.src = 'http://ivi.bupt.edu.cn/hls/cctv1hd.m3u8';
@@ -756,11 +752,11 @@ video {
 }
 
 .el-card-detail {
-  width: 80%;
+  width: 96%;
   color: #00ff00;
   margin-top: 3px;
-  margin-left: 10%;
-  margin-right: 10%;
+  margin-left: 2%;
+  margin-right: 2%;
 }
 
 /* 与 csdnpg 同步：压缩卡片上下间距 */

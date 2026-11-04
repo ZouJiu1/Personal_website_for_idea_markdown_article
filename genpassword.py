@@ -32,12 +32,12 @@ if __name__ == "__main__":
     parser.add_argument('--pw', type=str, default='')
     args = parser.parse_args()
 
-    password = args.pw or '123ab&^'
+    password = args.pw or '12ab;,.'
     if len(password) == 0:
         raise RuntimeError(password)
 
     ret = salted_from_value(genpassword(password))
 
-    with open('genpassword', 'w') as obj:
-        obj.write(password + "\n" + ret)
+    # with open('genpassword', 'w') as obj:
+    #     obj.write(password + "\n" + ret)
     print(ret)

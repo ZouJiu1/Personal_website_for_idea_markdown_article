@@ -45,7 +45,7 @@ ALLOWED_HOSTS = ['zoujiu.com.cn', 'www.zoujiu.com.cn', '121.40.168.141', 'localh
 DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 # Django admin 跨域场景的 CSRF 来源（站点部署域名 http://zoujiu.com.cn）
 CSRF_TRUSTED_ORIGINS = ['http://zoujiu.com.cn', 'https://zoujiu.com.cn',
-                        'http://localhost:7009', 'http://127.0.0.1:7009']
+                        'http://localhost:7290', 'http://127.0.0.1:7290']
 # PORT = 6000
 # APPEND_SLASH=False
 # Application definition
@@ -81,6 +81,8 @@ https://docs.djangoproject.com/zh-hans/5.1/ref/settings/#std-setting-FILE_UPLOAD
 DATA_UPLOAD_MAX_MEMORY_SIZE=None
 FILE_UPLOAD_MAX_MEMORY_SIZE=2255057830
 MIDDLEWARE = [
+    # 全局每 IP 限流（防 DDoS / 短时大流量 / 管理接口慢速爆破）：放最前，被限请求直接短路
+    'mysite.antiflood.AntiFloodMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     # 自定义 CSRF 中间件：仅对 Django admin 执行校验（本站自定义 API 认证走 body 传参，
@@ -223,3 +225,11 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+# ---------- 安全加固（防护注入/探测/点击劫持等） ----------
+# 响应头 X-Content-Type-Options: nosniff：禁止浏览器猜测 MIME（防把用户上传内容当脚本执行）
+SECURE_CONTENT_TYPE_NOSNIFF = True
+# Referrer 只发同源：不在跳转外站时泄漏站内 uid 链接
+SECURE_REFERRER_POLICY = 'same-origin'
+# 会话/CSRF cookie 不给前端 JS 读（降低 XSS 之后的 Cookie 窃取面；本站业务不依赖 JS 读这些 cookie）
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
